@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="{{ theme.lang or 'en' }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ doc.name }} - {{ doc.title }}</title>
+<style>
+{{ style_css }}
+{% if print_css %}
+@media print {
+{{ print_css }}
+}
+{% endif %}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="header">
+    <h1>{{ doc.name }}</h1>
+    <div class="title-role">{{ doc.title }}</div>
+    <div class="contact">
+      {% for key, val in doc.contacts.items() %}
+      <span>{{ val }}</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="body">
+    {% for section in doc.sections %}
+    {% set section_template = theme.sections.get(section.id, {}).get('template', 'summary.html.j2') %}
+    {% include section_template %}
+    {% endfor %}
+  </div>
+
+</div>
+
+</body>
+</html>

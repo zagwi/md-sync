@@ -1,0 +1,10 @@
+{
+  "name": "md-sync-desktop",
+  "version": "0.1.0",
+  "description": "md-sync desktop shell: Electron + existing FastAPI backend",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron ."
+  }
+}

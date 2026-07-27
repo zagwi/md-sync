@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+
+# 本地同步产物输出目录
+简历/
+output/
+*.pdf
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+.bolt/
+.codebuddy/
+
+# 运行期历史缓存（保留 .translations.json 译文缓存）
+.md-sync/

@@ -1,0 +1,15 @@
+<div class="section">
+  <div class="section-title">{{ section.title }}</div>
+  {% for item in section.items %}
+  <div class="proj-item">
+    <div class="proj-header">
+      <span class="period">{{ item.period }}</span> {{ item.title }}
+      {% if item.role %}<span class="role-tag">{{ item.role }}</span>{% endif %}
+    </div>
+    <div class="proj-desc">{{ t(item.content) | replace_metrics | safe }}</div>
+    {% if item.tags %}
+    <div class="proj-tech">{% if doc.source_lang == 'zh' %}涉及技术：{% else %}Tech Stack: {% endif %}{{ item.tags | join(', ') }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

@@ -1,0 +1,15 @@
+<div class="section">
+  <div class="section-title">{{ section.title }}</div>
+  {% for item in section.items %}
+  <div class="proj-item">
+    <div class="proj-header">{{ item.title }}</div>
+    <div class="proj-desc">
+      {{ item.content | replace_metrics | safe }}
+      {% if item.url %}<br>Open source: {{ item.url }}{% endif %}
+    </div>
+    {% if item.tags %}
+    <div class="proj-tech">Tech Stack: {{ item.tags | join(', ') }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

@@ -1,0 +1,15 @@
+<div class="section">
+  <div class="section-title">{{ section.title }}</div>
+  {% for item in section.items %}
+  <div class="proj-item">
+    <div class="proj-header">{{ item.title }}</div>
+    <div class="proj-desc">
+      {{ t(item.content) | replace_metrics | safe }}
+      {% if item.url %}<br>{% if doc.source_lang == 'zh' %}开源地址：{% else %}Open source: {% endif %}{{ item.url }}{% endif %}
+    </div>
+    {% if item.tags %}
+    <div class="proj-tech">{% if doc.source_lang == 'zh' %}技术栈：{% else %}Tech Stack: {% endif %}{{ item.tags | join(', ') }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

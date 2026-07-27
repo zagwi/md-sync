@@ -1,0 +1,28 @@
+[project]
+name = "md-sync"
+version = "0.1.0"
+description = "Markdown source file watcher — auto-sync to multi-format, multi-language outputs"
+authors = [{ name = "md-sync" }]
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "jinja2>=3.0",
+    "watchdog>=3.0",
+    "fastapi>=0.100",
+    "uvicorn[standard]>=0.20",
+    "httpx>=0.24",
+]
+
+[project.scripts]
+md-sync = "md_sync.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["md_sync*", "themes*"]
+
+[tool.setuptools.package-data]
+themes = ["**/*"]
+templates = ["**/*"]

@@ -1,0 +1,15 @@
+<div class="section">
+  <div class="section-title">{{ section.title }}</div>
+  {% for item in section.items %}
+  <div class="exp-item">
+    <div class="exp-header">
+      <span class="company">{{ item.title }}{% if item.role %} <span class="role-tag">{{ item.role }}</span>{% endif %}</span>
+      <span class="period">{{ item.period }}</span>
+    </div>
+    {% if item.people %}
+    <div class="exp-sub">{{ item.people }} reports</div>
+    {% endif %}
+    <div class="exp-desc">{{ item.content | replace_metrics | safe }}</div>
+  </div>
+  {% endfor %}
+</div>

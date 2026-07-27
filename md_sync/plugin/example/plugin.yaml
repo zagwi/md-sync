@@ -1,0 +1,15 @@
+# Example md-sync rendering plugin
+#   Install:  md-sync plugin install ./path/to/this/dir/
+#   Provides template style "modern-alt" in its templates/ subdirectory
+
+name: my-resume-plugin           # Plugin name (used in cli: md-sync plugin remove my-resume-plugin)
+version: "1.0"
+description: A custom resume render template with company branding
+author: Your Name
+type: render
+templates:                       # Template styles this plugin provides
+  - modern-alt
+  - classic-dark
+hooks:                           # Pipeline hooks this plugin listens to
+  - after_render
+dependencies: []

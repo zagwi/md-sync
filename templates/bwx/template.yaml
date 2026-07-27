@@ -1,0 +1,22 @@
+name: bwx
+label: 黑白商务
+description: Professional black and white resume style, optimized for A4 print
+version: "1.0"
+author: md-sync
+schema: resume
+engine: jinja2
+tags: [resume, print, professional]
+pdf:
+  page_size: A4
+  margin: 5mm 8mm
+sections:
+  professional_summary:
+    template: sections/summary.html.j2
+  education:
+    template: sections/education.html.j2
+  work_experience:
+    template: sections/experience.html.j2
+  project_experience:
+    template: sections/project.html.j2
+  open_source:
+    template: sections/open_source.html.j2

@@ -33,9 +33,10 @@ class _ChangeHandler(FileSystemEventHandler):
         self._callback = callback
         self._debounce = debounce
         self._last_trigger: float = 0
-        # Optional watched output directory. Edits *inside* it (e.g. deleting
-        # generated files) also trigger a resync so outputs are regenerated.
-        self._output_root = Path(output_root).resolve() if output_root else None
+        # NOTE: we deliberately do NOT watch the output directory. Watching it
+        # made the watcher fire on our own generated files, causing an infinite
+        # regenerate loop. The only legitimate trigger is the source MD file.
+        self._output_root = None
 
     def on_modified(self, event):
         if event.is_directory:
@@ -58,15 +59,10 @@ class _ChangeHandler(FileSystemEventHandler):
             self._maybe_trigger(Path(dest).resolve())
 
     def _maybe_trigger(self, event_path: Path):
-        # Source edits always count. Output-dir edits count only when we are
-        # explicitly watching that directory.
+        # Only the source MD file is a legitimate trigger. Edits to anything
+        # else (e.g. our own generated outputs) are ignored to avoid loops.
         if event_path != self._source:
-            if self._output_root is None:
-                return
-            try:
-                event_path.relative_to(self._output_root)
-            except ValueError:
-                return
+            return
         now = time.time()
         if now - self._last_trigger < self._debounce:
             return
@@ -100,13 +96,9 @@ class FileWatcher:
             return
 
         handler = _ChangeHandler(
-            self._source, self._on_change, self._debounce, self._output_root)
+            self._source, self._on_change, self._debounce, None)
         self._observer = Observer()
         self._observer.schedule(handler, str(self._source.parent), recursive=False)
-        if self._output_root:
-            # Watch the whole output tree (recursive) so deletes/renames of
-            # generated files anywhere under it trigger a resync.
-            self._observer.schedule(handler, str(self._output_root), recursive=True)
 
         self._thread = Thread(target=self._observer.start, daemon=True)
         self._thread.start()

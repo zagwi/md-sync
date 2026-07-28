@@ -17,10 +17,9 @@ from .document import Document, Item, Metric, Section
 
 _SECTION_TITLE_RE = re.compile(r"^(#{1,3})\s+(.+)$")
 _BULLET_RE = re.compile(r"^-\s+(.+)$")
-_BOLD_ITEM_RE = re.compile(r"^-\s+\*\*(.+?)\*\*")
-_ENTRY_LINE_RE = re.compile(
-    r"^\*\*(.+?)\*\*\s*(?:（(.+?)）)?\s*$"
-)
+# Bold item: an optional leading "- " then **...**. Bare **bold** lines
+# (without "-") are very common in resume MD, so we accept both forms.
+_BOLD_ITEM_RE = re.compile(r"^(?:\s*-\s+)?\*\*(.+?)\*\*")
 _METRIC_RE = re.compile(
     r"(\d+[Kk]?\s*[+%]?|"
     r"\d+倍|"
@@ -31,7 +30,6 @@ _METRIC_RE = re.compile(
     r"\d+\.\d+%[+]?)"
 )
 
-_DATE_END_RE = re.compile(r"^(\d{4}\.\d{2})\s*[-–]\s*(\d{4}\.\d{2}|至今|Present)\s+(.+)$")
 _DATE_PERIOD_RE = re.compile(r"(\d{4}\.\d{2})\s*[-–]\s*(\d{4}\.\d{2}|至今|Present)")
 
 
@@ -129,10 +127,8 @@ class MdParser:
                 i += 1
                 continue
 
-            # Blank line between sections — skip
+            # Blank line between sections — just skip
             if not line.strip():
-                if current_section and current_section.items:
-                    current_section.items.append(Item(type="separator"))
                 i += 1
                 continue
 
@@ -173,11 +169,29 @@ class MdParser:
         if not stripped:
             return
 
-        # Bold item: - **text** (possibly followed by role/people info)
-        m = _BOLD_ITEM_RE.match(stripped)
-        if m:
-            inner = m.group(1)
-            remaining = stripped[m.end():].strip()
+        # Bold item: optional "- " then **text**
+        bm = _BOLD_ITEM_RE.match(stripped)
+        if bm:
+            inner = bm.group(1).strip()
+            remaining = stripped[bm.end():].strip()
+            # Meta line "**涉及技术：...**" / "**Tech Stack: ...**" → tech tags
+            # for the current (previous) item instead of a standalone item.
+            tech = re.match(r"^涉及技术[：:]?\s*(.*)$", inner) or \
+                   re.match(r"^Tech Stack[：:]?\s*(.*)$", inner)
+            if tech and section.items:
+                raw = (tech.group(1) or "").strip()
+                if remaining:
+                    raw = (raw + " " + remaining).strip() if raw else remaining
+                if raw:
+                    last = section.items[-1]
+                    for t in re.split(r"[、,，/]", raw):
+                        t = t.strip()
+                        if t and t not in last.tags:
+                            last.tags.append(t)
+                    # project_experience reads better with an inline "涉及技术" note
+                    if section.id == "project_experience" and last.content:
+                        last.content += " 涉及技术：" + raw
+                return
             self._add_bold_item(section, inner, remaining)
             return
 
@@ -187,109 +201,84 @@ class MdParser:
             section.items.append(Item(type="bullet", content=m.group(1).strip()))
             return
 
-        # Continuation line (indented text)
+        # Indented continuation → append to the nearest real item
+        # (skip over any separators that may sit between).
         if line.startswith("  ") or line.startswith("\t"):
-            if section.items and section.items[-1].type != "separator":
-                if section.items[-1].content:
-                    section.items[-1].content += " " + stripped
-                else:
-                    section.items[-1].content = stripped
+            for it in reversed(section.items):
+                if it.type != "separator":
+                    if it.content:
+                        it.content += " " + stripped
+                    else:
+                        it.content = stripped
+                    break
             else:
                 section.items.append(Item(type="text", content=stripped))
             return
 
-        # Plain text (not a bullet)
+        # Plain text (not a bullet / bold)
         section.items.append(Item(type="text", content=stripped))
 
     def _add_bold_item(self, section: Section, inner: str, remaining: str = "") -> None:
-        """Parse a **bold** item, which could be education, work, or project entry.
+        """Parse a **bold** item, classifying it by the current section type.
 
-        Args:
-            inner: Text between ** ** markers.
-            remaining: Text after the ** markers on the same line (role, people count).
+        The item text may start with a date range (``YYYY.MM-YYYY.MM``); the rest
+        is the title, with an optional role in ``（…）`` or as trailing words.
         """
-        # Extract role/people from remaining text FIRST (used by multiple paths below)
-        role_from_remaining = None
-        people_from_remaining = None
-        if remaining:
-            ppl_m = re.search(r"（下属(\d+)人）", remaining)
-            if ppl_m:
-                people_from_remaining = ppl_m.group(1)
-                role_from_remaining = remaining[:ppl_m.start()].strip()
-            else:
-                paren_m = re.search(r"[（(](.+?)[）)]", remaining)
-                if paren_m:
-                    role_from_remaining = remaining[:paren_m.start()].strip() or paren_m.group(1)
-                elif remaining:
-                    role_from_remaining = remaining
+        period = None
+        rest = inner
+        pm = _DATE_PERIOD_RE.match(inner)
+        if pm:
+            period = f"{pm.group(1)}-{pm.group(2)}"
+            rest = inner[pm.end():].strip()
 
-        # Check for period-prefixed entries: "2019.11 - 2024.01 Some Entry"
-        dm = _DATE_END_RE.match(inner)
-        if dm:
-            start, end, rest = dm.group(1), dm.group(2), dm.group(3).strip()
-            period = f"{start}-{end}"
-
-            if remaining:
-                # Work entry: has role/people after bold markers
-                section.items.append(Item(
-                    type="entry",
-                    period=period,
-                    title=rest,
-                    subtitle=role_from_remaining,
-                    people=people_from_remaining,
-                ))
-            else:
-                # Project entry: no trailing text
-                # Check for role tag at end of bold text: "Some Project 架构顾问"
-                role = None
-                role_m = re.search(r"\s+（(.+?)）\s*$", rest)
-                if role_m:
-                    role = role_m.group(1)
-                    rest = rest[:role_m.start()].strip()
-                else:
-                    role_m = re.search(r"\s+\((.+?)\)\s*$", rest)
-                    if role_m:
-                        role = role_m.group(1)
-                        rest = rest[:role_m.start()].strip()
-
-                section.items.append(Item(
-                    type="project",
-                    period=period,
-                    title=rest,
-                    role=role,
-                ))
-            return
-
-        # Check for work/education entry: "Company name" or "School name"
-        # Education: "2003.09-2006.06，吉林大学（985）"  or "2003.09-2006.06, Jilin University (985)"
-        edu_m = re.match(r"(\d{4}\.\d{2})[-–](\d{4}\.\d{2})[，,]\s*(.+?)(?:\s*[（(](.+?)[）)])?\s*[-–·]\s*(.+)", inner)
-        if edu_m:
+        sec_id = section.id
+        if sec_id == "work_experience":
+            role, title = self._split_role(rest)
             section.items.append(Item(
-                type="entry",
-                period=f"{edu_m.group(1)}-{edu_m.group(2)}",
-                title=edu_m.group(3).strip(),
-                subtitle=f"{edu_m.group(4) or ''} · {edu_m.group(5).strip()}",
+                type="entry", period=period, title=title,
+                subtitle=role, content=remaining,
             ))
-            return
-
-        # Work: "Company Name" (role) with optional people count
-        # "2000.06-2002.12 迈普通信技术股份有限公司" + remaining="技术主管（下属8人）"
-        work_m = re.match(r"(\d{4}\.\d{2})[-–](\d{4}\.\d{2})[，,＝\s]*(.+?)$", inner)
-        if work_m and not edu_m:
+        elif sec_id == "education":
+            school, major = self._split_edu(rest)
             section.items.append(Item(
-                type="entry",
-                period=f"{work_m.group(1)}-{work_m.group(2)}",
-                title=work_m.group(3).strip(),
-                subtitle=role_from_remaining,
-                people=people_from_remaining,
+                type="entry", period=period, title=school, subtitle=major,
             ))
-            return
-
-        # Fallback: treat as a text entry (or open_source item)
-        if section.id == "open_source":
-            section.items.append(Item(type="open_source", title=inner))
+        elif sec_id == "project_experience":
+            role, title = self._split_role(rest)
+            section.items.append(Item(
+                type="project", period=period, title=title,
+                role=role, content=remaining,
+            ))
+        elif sec_id == "open_source":
+            section.items.append(Item(type="open_source", title=inner, content=remaining))
         else:
-            section.items.append(Item(type="text", content=inner))
+            content = inner if not remaining else f"{inner} {remaining}"
+            section.items.append(Item(type="text", content=content))
+
+    @staticmethod
+    def _split_role(rest: str):
+        """Split ``Company（role）`` / ``Project 架构顾问`` into (role, title)."""
+        role = None
+        m = re.search(r"[（(](.+?)[）)]\s*$", rest)
+        if m:
+            role = m.group(1).strip()
+            rest = rest[:m.start()].strip()
+        else:
+            mm = re.search(
+                r"\s+(架构顾问|技术负责人|技术主管|系统工程师|项目经理|"
+                r"架构师|负责人|主管|技术经理)$", rest)
+            if mm:
+                role = mm.group(1).strip()
+                rest = rest[:mm.start()].strip()
+        return role, rest
+
+    @staticmethod
+    def _split_edu(rest: str):
+        """Split ``School（985）（major）`` into (school, combined subtitle)."""
+        tags = re.findall(r"[（(](.+?)[）)]", rest)
+        school = re.sub(r"[（(].+?[）)]", "", rest).strip()
+        major = " · ".join(tags) if tags else ""
+        return school, major
 
     def _merge_continuations(self, doc: Document) -> None:
         """Merge continuation lines (type=text) into the preceding real item."""

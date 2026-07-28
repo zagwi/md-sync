@@ -672,18 +672,10 @@ class MainWindow(QWidget):
         zh_style = self.tpl_zh.currentData()
         en_style = self.tpl_en.currentData() or zh_style
 
-        # 输出文件名：重名时（多语言共用同一 stem）追加秒级时间戳区分
-        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-        name_map: dict[str, str] = {}
-        seen: set[str] = set()
-        for lang in langs:
-            base = stem
-            if base in seen:
-                base = f"{stem}-{ts}"
-            if base in seen:
-                base = f"{stem}-{lang}-{ts}"
-            seen.add(base)
-            name_map[lang] = base
+        # 输出文件名：稳定、不含时间戳，仅用语言代码区分多语言，避免：
+        #   1) zh/en 重名冲突；2) 每次同步生成新文件导致 watcher 死循环/堆积。
+        # 例如源文件 Foo.md → Foo-zh.html / Foo-en.html（命名一致，都带语言后缀）。
+        name_map = {lang: f"{stem}-{lang}" for lang in langs}
 
         outputs = []
         self._hidden_paths = set()
@@ -754,16 +746,12 @@ class MainWindow(QWidget):
 
     def _on_source_changed(self, path: Path):
         p = Path(path)
-        # An edit inside the *output* directory (e.g. a generated file was
-        # deleted/renamed) means outputs are missing → resync to regenerate.
-        is_output_event = (
-            self.cfg and self.cfg.output_root
-            and str(p).startswith(str(self.cfg.output_root)))
-        if is_output_event:
-            self._append_log(f"· 检测到输出文件变动（{p.name}），正在重新生成…")
-        else:
-            self.source_mtime = p.stat().st_mtime
-            self._append_log(f"· 检测到源文件改动：{p.name}，正在重新同步…")
+        # Only the source MD file should trigger a sync. Edits to generated
+        # outputs must be ignored (watching them caused an infinite loop).
+        if self.cfg and p.resolve() != self.cfg.source_path.resolve():
+            return
+        self.source_mtime = p.stat().st_mtime
+        self._append_log(f"· 检测到源文件改动：{p.name}，正在重新同步…")
         self._run_sync()
 
     def _run_sync(self):

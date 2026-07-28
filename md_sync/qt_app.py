@@ -28,7 +28,7 @@ from typing import Optional
 from PySide6.QtCore import Qt, QEvent, QPoint, QThread, Signal, QUrl, QTimer
 from PySide6.QtGui import QDesktopServices, QFont, QColor
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QGridLayout,
     QSizePolicy,
     QLineEdit, QPushButton, QComboBox, QCheckBox,
     QTextEdit, QLabel, QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem,
@@ -402,46 +402,31 @@ class MainWindow(QWidget):
         header.addWidget(self.refresh_btn)
         parent.addLayout(header)
 
-        # 中文模板 / 英文模板 两列布局：每列一个子表
-        cols = QHBoxLayout()
-        cols.setSpacing(12)
-        self.lang_lists = {}
-        for lang in ("zh", "en"):
-            col = QVBoxLayout()
-            col.setSpacing(6)
-            col_title = QLabel(LANG_LABELS.get(lang, lang) + "模板")
-            col_title.setObjectName(f"col_title_{lang}")
-            col.addWidget(col_title)
-            tbl = QTableWidget(0, 4)
-            tbl.setObjectName(f"file_table_{lang}")
-            tbl.setHorizontalHeaderLabels(
-                ["状态", "格式", "文件", "操作"])
-            tbl.setSelectionBehavior(QAbstractItemView.SelectRows)
-            tbl.setSelectionMode(QAbstractItemView.SingleSelection)
-            tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
-            tbl.setAlternatingRowColors(True)
-            tbl.verticalHeader().setVisible(False)
-            tbl.setMinimumHeight(150)
-            tbl.verticalHeader().setDefaultSectionSize(54)  # 行高足够容纳文件名+大小两行
-            tbl.verticalHeader().setMinimumSectionSize(54)
-            th = tbl.horizontalHeader()
-            # 操作列宽度自适应内容，避免"打开"按钮被截断；状态/格式列保持紧凑
-            th.setSectionResizeMode(0, QHeaderView.Fixed)
-            th.setSectionResizeMode(1, QHeaderView.Fixed)
-            th.setSectionResizeMode(2, QHeaderView.Stretch)
-            th.setSectionResizeMode(3, QHeaderView.ResizeToContents)
-            tbl.setColumnWidth(0, 62)
-            tbl.setColumnWidth(1, 58)
-            # 列 3 由 ResizeToContents 自动决定，无需 setColumnWidth
-            tbl.setContextMenuPolicy(Qt.CustomContextMenu)
-            tbl.customContextMenuRequested.connect(
-                lambda pos, t=tbl: self._on_file_context(pos, t))
-            tbl.itemDoubleClicked.connect(
-                lambda item, t=tbl: self._on_file_activated(item, t))
-            col.addWidget(tbl, 2)
-            cols.addLayout(col)
-            self.lang_lists[lang] = tbl
-        parent.addLayout(cols, 2)
+        self.file_tbl = QTableWidget(0, 5)
+        self.file_tbl.setObjectName("file_table")
+        self.file_tbl.setHorizontalHeaderLabels(
+            ["状态", "格式", "语言", "文件", "操作"])
+        self.file_tbl.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.file_tbl.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.file_tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.file_tbl.setAlternatingRowColors(True)
+        self.file_tbl.verticalHeader().setVisible(False)
+        self.file_tbl.setMinimumHeight(150)
+        self.file_tbl.verticalHeader().setDefaultSectionSize(54)
+        self.file_tbl.verticalHeader().setMinimumSectionSize(54)
+        th = self.file_tbl.horizontalHeader()
+        th.setSectionResizeMode(0, QHeaderView.Fixed)
+        th.setSectionResizeMode(1, QHeaderView.Fixed)
+        th.setSectionResizeMode(2, QHeaderView.Fixed)
+        th.setSectionResizeMode(3, QHeaderView.Stretch)
+        th.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        self.file_tbl.setColumnWidth(0, 62)
+        self.file_tbl.setColumnWidth(1, 58)
+        self.file_tbl.setColumnWidth(2, 58)
+        self.file_tbl.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.file_tbl.customContextMenuRequested.connect(self._on_file_context)
+        self.file_tbl.itemDoubleClicked.connect(self._on_file_activated)
+        parent.addWidget(self.file_tbl, 2)
 
     def _build_log(self, parent: QVBoxLayout):
         label = QLabel("同步日志")
@@ -603,6 +588,12 @@ class MainWindow(QWidget):
         /* 格式 tag */
         .tag_fmt {
             background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe;
+            border-radius: 7px; padding: 3px 10px; font-size: 11px;
+            font-weight: 700; letter-spacing: 0.3px;
+        }
+        /* 语言 tag */
+        .tag_lang {
+            background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0;
             border-radius: 7px; padding: 3px 10px; font-size: 11px;
             font-weight: 700; letter-spacing: 0.3px;
         }
@@ -826,7 +817,7 @@ class MainWindow(QWidget):
         return dt.strftime("%Y-%m-%d %H:%M:%S.") + f"{dt.microsecond // 1000:03d}"
 
     def _iter_output_files(self):
-        """按语言分组输出文件： yield (lang, [(path, fmt, color), ...])"""
+        """按语言分组输出文件： yield (path, fmt, color, lang)"""
         if self.cfg is None:
             return
         groups: dict[str, list] = {}
@@ -843,80 +834,86 @@ class MainWindow(QWidget):
                 groups.setdefault(lang, []).append((t, fmt, color))
         for lang in ("zh", "en"):
             if lang in groups:
-                yield lang, groups[lang]
+                for path, fmt, color in groups[lang]:
+                    yield path, fmt, color, lang
 
     def _refresh_file_list(self):
-        # 清空两列子表并重新注册本帧状态标签
-        for tbl in self.lang_lists.values():
-            tbl.setRowCount(0)
+        # 清空单表并重新注册本帧状态标签
+        self.file_tbl.setRowCount(0)
         self._status_tags = []
         if self.cfg is None:
             return
         if self.cfg.source_path.exists():
             self.source_mtime = self.cfg.source_path.stat().st_mtime
         any_row = False
-        for lang, files in self._iter_output_files():
-            tbl = self.lang_lists.get(lang)
-            if tbl is None:
-                continue
-            for path, fmt, color in files:
-                any_row = True
-                p = Path(path)
-                exists = p.exists()
-                size = f"{p.stat().st_size // 1024}KB" if exists else "--"
-                # 同步进行中：整行显示为蓝色“同步中…”并闪烁，表示动态持续过程
-                if self._syncing:
-                    color = C_RUNNING
-                st_text = _status_text(color)
-                # 闪烁规则：同步中（蓝）必闪；待同步（黄，表示待重新生成）也轻微闪烁
-                pulse = self._syncing or color == C_PENDING
-                row = tbl.rowCount()
-                tbl.insertRow(row)
-                tbl.setRowHeight(row, 54)  # 固定行高，确保文件名+大小两行有足够高度可点击
+        for path, fmt, color, lang in self._iter_output_files():
+            any_row = True
+            p = Path(path)
+            exists = p.exists()
+            size = f"{p.stat().st_size // 1024}KB" if exists else "--"
+            if self._syncing:
+                color = C_RUNNING
+            st_text = _status_text(color)
+            pulse = self._syncing or color == C_PENDING
+            row = self.file_tbl.rowCount()
+            self.file_tbl.insertRow(row)
+            self.file_tbl.setRowHeight(row, 54)
 
-                status = StatusTag(color, st_text, pulse=pulse)
-                tbl.setCellWidget(row, 0, status)
-                self._status_tags.append(status)
+            status = StatusTag(color, st_text, pulse=pulse)
+            self.file_tbl.setCellWidget(row, 0, status)
+            self._status_tags.append(status)
 
-                # 格式 → 单个 tag 标签
-                fmt_tag = QLabel(fmt)
-                fmt_tag.setObjectName("tag_fmt")
-                fmt_tag.setProperty("class", "tag")
-                tag_cell = QWidget()
-                tag_cell.setObjectName("tag_cell")
-                tl = QHBoxLayout(tag_cell)
-                tl.setContentsMargins(8, 0, 8, 0)
-                tl.setSpacing(6)
-                tl.addWidget(fmt_tag)
-                tl.addStretch(1)
-                tbl.setCellWidget(row, 1, tag_cell)
+            # 格式 badge
+            fmt_tag = QLabel(fmt)
+            fmt_tag.setObjectName("tag_fmt")
+            fmt_tag.setProperty("class", "tag")
+            fmt_cell = QWidget()
+            fmt_cell.setObjectName("tag_cell")
+            tl = QHBoxLayout(fmt_cell)
+            tl.setContentsMargins(8, 0, 8, 0)
+            tl.setSpacing(6)
+            tl.addWidget(fmt_tag)
+            tl.addStretch(1)
+            self.file_tbl.setCellWidget(row, 1, fmt_cell)
 
-                # 文件名 + 元信息（大小 · 修改时间）两行，形成层级
-                file_cell = QWidget()
-                file_cell.setObjectName("file_cell")
-                file_cell.setProperty("path", path)
-                fc = QVBoxLayout(file_cell)
-                fc.setContentsMargins(6, 6, 6, 6)
-                fc.setSpacing(4)
-                name_lbl = QLabel(p.name)
-                name_lbl.setObjectName("file_name")
-                name_lbl.setToolTip(path)
-                name_lbl.setWordWrap(True)
-                meta_lbl = QLabel(
-                    f"{size} · {self._fmt_mtime(p.stat().st_mtime)}" if exists else "— 尚未生成")
-                meta_lbl.setObjectName("file_meta")
-                fc.addWidget(name_lbl)
-                fc.addWidget(meta_lbl)
-                tbl.setCellWidget(row, 2, file_cell)
+            # 语言 badge
+            lang_tag = QLabel(LANG_LABELS.get(lang, lang))
+            lang_tag.setObjectName("tag_lang")
+            lang_tag.setProperty("class", "tag")
+            lang_cell = QWidget()
+            lang_cell.setObjectName("tag_cell")
+            ll = QHBoxLayout(lang_cell)
+            ll.setContentsMargins(8, 0, 8, 0)
+            ll.setSpacing(6)
+            ll.addWidget(lang_tag)
+            ll.addStretch(1)
+            self.file_tbl.setCellWidget(row, 2, lang_cell)
 
-                btn = QPushButton("打开")
-                btn.setObjectName("cell_btn")
-                btn.clicked.connect(lambda _=False, p=path: self._open_file(p))
-                tbl.setCellWidget(row, 3, btn)
+            # 文件名 + 元信息
+            file_cell = QWidget()
+            file_cell.setObjectName("file_cell")
+            file_cell.setProperty("path", path)
+            fc = QVBoxLayout(file_cell)
+            fc.setContentsMargins(6, 6, 6, 6)
+            fc.setSpacing(4)
+            name_lbl = QLabel(p.name)
+            name_lbl.setObjectName("file_name")
+            name_lbl.setToolTip(path)
+            name_lbl.setWordWrap(True)
+            meta_lbl = QLabel(
+                f"{size} · {self._fmt_mtime(p.stat().st_mtime)}" if exists else "— 尚未生成")
+            meta_lbl.setObjectName("file_meta")
+            fc.addWidget(name_lbl)
+            fc.addWidget(meta_lbl)
+            self.file_tbl.setCellWidget(row, 3, file_cell)
+
+            btn = QPushButton("打开")
+            btn.setObjectName("cell_btn")
+            btn.clicked.connect(lambda _=False, p=path: self._open_file(p))
+            self.file_tbl.setCellWidget(row, 4, btn)
         if not any_row:
-            for tbl in self.lang_lists.values():
-                tbl.insertRow(0)
-                tbl.setItem(0, 0, QTableWidgetItem("（未配置输出）"))
+            self.file_tbl.insertRow(0)
+            self.file_tbl.setItem(0, 0, QTableWidgetItem("（未配置输出）"))
         if not self._syncing:
             self._update_status_pill()
 
@@ -948,28 +945,28 @@ class MainWindow(QWidget):
         if path and Path(path).exists():
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).resolve())))
 
-    def _on_file_activated(self, item: QTableWidgetItem, tbl: QTableWidget):
-        if item is None or tbl is None:
+    def _on_file_activated(self, item: QTableWidgetItem):
+        if item is None or self.file_tbl is None:
             return
-        cell = tbl.cellWidget(item.row(), 2)
+        cell = self.file_tbl.cellWidget(item.row(), 3)
         if cell is None:
             return
         self._open_file(cell.property("path"))
 
-    def _on_file_context(self, pos, tbl: QTableWidget):
-        item = tbl.itemAt(pos)
+    def _on_file_context(self, pos):
+        item = self.file_tbl.itemAt(pos)
         if item is None:
             return
-        cell = tbl.cellWidget(item.row(), 2)
+        cell = self.file_tbl.cellWidget(item.row(), 3)
         if cell is None:
             return
         path = cell.property("path")
         if not path:
             return
-        menu = tbl.createStandardContextMenu(pos)
+        menu = self.file_tbl.createStandardContextMenu(pos)
         act_open = menu.addAction("打开文件")
         act_copy = menu.addAction("复制路径")
-        choice = menu.exec(tbl.mapToGlobal(pos))
+        choice = menu.exec(self.file_tbl.mapToGlobal(pos))
         if choice == act_open:
             self._open_file(path)
         elif choice == act_copy:

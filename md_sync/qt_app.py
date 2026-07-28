@@ -339,29 +339,33 @@ class MainWindow(QWidget):
         parent.addWidget(card)
 
     def _build_options(self, parent: QVBoxLayout):
-        """输出设置：每种格式一行，标题在左、语言勾选在右，纵向排列，不挤压。"""
+        """输出设置：网格布局，3 行 × 3 列，格式标签与语言勾选严格对齐，无大片空白。"""
         label = QLabel("输出设置")
         label.setObjectName("section_title")
         parent.addWidget(label)
 
-        self.fmt_checks: dict[tuple[str, str], QCheckBox] = {}
-        for fmt, label_txt in [("html", "HTML"), ("md", "Markdown"), ("pdf", "PDF")]:
-            row = QHBoxLayout()
-            row.setSpacing(12)
-            row.setContentsMargins(0, 0, 0, 0)
+        grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(20)
+        grid.setVerticalSpacing(10)
+        grid.setColumnStretch(0, 0)   # 格式标签，固定宽
+        grid.setColumnStretch(1, 1)   # 中文勾选，自然宽
+        grid.setColumnStretch(2, 1)     # 英文勾选，自然宽
 
+        self.fmt_checks: dict[tuple[str, str], QCheckBox] = {}
+        for row_idx, (fmt, label_txt) in enumerate([("html", "HTML"), ("md", "Markdown"), ("pdf", "PDF")]):
             t = QLabel(label_txt)
             t.setObjectName("fmt_card_title")
             t.setMinimumWidth(70)
-            row.addWidget(t)
+            grid.addWidget(t, row_idx, 0, alignment=Qt.AlignLeft | Qt.AlignVCenter)
 
-            for lang in ("zh", "en"):
+            for col_idx, lang in enumerate(("zh", "en"), start=1):
                 cb = QCheckBox(LANG_LABELS.get(lang, lang))
                 cb.setObjectName("fmt_cb")
                 self.fmt_checks[(fmt, lang)] = cb
-                row.addWidget(cb)
-            row.addStretch(1)
-            parent.addLayout(row)
+                grid.addWidget(cb, row_idx, col_idx, alignment=Qt.AlignLeft | Qt.AlignVCenter)
+
+        parent.addLayout(grid)
 
         # 默认：所有格式 × 所有语言 全部选中
         for cb in self.fmt_checks.values():

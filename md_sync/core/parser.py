@@ -109,6 +109,10 @@ class MdParser:
 
         # ── Sections ────────────────────────────────────────────────────
         current_section: Optional[Section] = None
+        # Fallback section for documents that have NO resume-style sections
+        # (e.g. plain articles / resource lists). Keeps stray content instead
+        # of discarding it, so the output is never blank.
+        body_section = Section(id="body", title="", level=1)
 
         while i < n:
             line = lines[i]
@@ -127,19 +131,29 @@ class MdParser:
                 i += 1
                 continue
 
-            # Blank line between sections — just skip
+            # Blank line: in resume mode skip; in body (plain-doc) mode insert
+            # a separator so paragraphs become distinct items instead of one
+            # giant merged blob.
             if not line.strip():
+                if current_section is None:
+                    body_section.items.append(Item(type="separator"))
                 i += 1
                 continue
 
-            # Non-section content goes to current section as text
-            if current_section is not None:
-                self._parse_content_line(line, current_section)
+            # Non-section content: route to the current section, or to the
+            # body fallback when no resume section has been opened yet.
+            target = current_section if current_section is not None else body_section
+            self._parse_content_line(line, target)
             i += 1
 
-        # Last section
+        # Last real section
         if current_section:
             doc.sections.append(current_section)
+
+        # If the document had no resume sections at all, surface the body
+        # section so plain documents still render their content.
+        if not doc.sections and body_section.items:
+            doc.sections.append(body_section)
 
         # Post-process: merge continuation lines
         self._merge_continuations(doc)
@@ -281,19 +295,26 @@ class MdParser:
         return school, major
 
     def _merge_continuations(self, doc: Document) -> None:
-        """Merge continuation lines (type=text) into the preceding real item."""
+        """Merge continuation lines (type=text) into the preceding real item.
+
+        A ``separator`` item acts as a hard break: text after a separator
+        starts a fresh item instead of being merged into the previous one.
+        """
         for section in doc.sections:
             merged: list[Item] = []
+            prev_sep = False
             for item in section.items:
                 if item.type == "separator":
+                    prev_sep = True
                     continue
-                if item.type == "text" and merged:
+                if item.type == "text" and merged and not prev_sep:
                     # It's a continuation — append to the last item's content
                     if item.content:
                         sep = "\n" if merged[-1].content else ""
                         merged[-1].content += sep + item.content
                 else:
                     merged.append(item)
+                prev_sep = False
             section.items = merged
             self._extract_metrics(section)
             self._extract_tech_tags(section)

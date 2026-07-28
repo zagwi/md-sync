@@ -10,6 +10,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 import re
+from markupsafe import escape
 
 from md_sync.core.document import Document
 
@@ -41,6 +42,28 @@ def _replace_metrics(text: str) -> str:
     return _METRIC_RX.sub(_wrap, text)
 
 
+_URL_RX = re.compile(r"(https?://[^\s，。、）)）]+)")
+
+
+def _linkify(text: str) -> str:
+    """Jinja2 filter: turn bare URLs in plain text into clickable links.
+
+    Non-URL text is escaped; only ``http(s)://`` runs are wrapped in an
+    ``<a>`` tag, so any HTML in the source is neutralised.
+    """
+    out = []
+    pos = 0
+    for m in _URL_RX.finditer(text):
+        out.append(escape(text[pos:m.start()]))
+        url = m.group(1)
+        out.append(
+            f'<a class="ext-link" href="{escape(url)}" target="_blank" '
+            f'rel="noopener noreferrer">{escape(url)}</a>')
+        pos = m.end()
+    out.append(escape(text[pos:]))
+    return "".join(out)
+
+
 class HtmlRenderer:
     """Render a Document to HTML using a theme's Jinja2 templates."""
 
@@ -58,6 +81,7 @@ class HtmlRenderer:
             finalize=lambda v: "" if v is None else v,
         )
         self._env.filters["replace_metrics"] = _replace_metrics
+        self._env.filters["linkify"] = _linkify
         self._load_theme_meta()
 
     def _load_theme_meta(self) -> None:

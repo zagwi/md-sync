@@ -1,5 +1,14 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* 正文内可点击外链 */
+.ext-link {
+  color: #2563eb;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(37, 99, 235, .35);
+  word-break: break-all;
+}
+.ext-link:hover { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+
 body {
   font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Helvetica Neue", Arial, sans-serif;
   font-size: 13px;

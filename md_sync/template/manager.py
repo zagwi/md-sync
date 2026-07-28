@@ -8,7 +8,6 @@ TemplateManager discovers templates from multiple sources:
 """
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -312,9 +311,13 @@ class TemplateManager:
 
     @staticmethod
     def _find_install_dir() -> Path:
-        """Find the md-sync installation directory."""
+        """Find the md-sync installation directory.
+
+        ``templates/`` and ``themes/`` live inside the ``md_sync`` package so
+        they are distributed with the wheel and resolvable at runtime.
+        """
         import md_sync
-        return Path(md_sync.__file__).resolve().parent.parent
+        return Path(md_sync.__file__).resolve().parent
 
     @staticmethod
     def _copy_template(src: Path, dst: Path) -> None:

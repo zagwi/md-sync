@@ -6,6 +6,8 @@ __pycache__/
 build/
 dist/
 *.egg
+md-sync.spec
+*.spec
 
 # 本地同步产物输出目录
 简历/

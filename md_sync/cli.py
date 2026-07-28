@@ -358,3 +358,7 @@ def _start_web_ui(cfg, pipeline) -> None:
     )
     t.start()
     print(f"[web] 🖥 Dashboard: http://{host}:{port}")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

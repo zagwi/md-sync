@@ -1,12 +1,29 @@
 # md-sync
 
-把一份 Markdown 源文件，**自动同步**成多种格式（HTML / Markdown）和多种语言（中文 / 英文）的输出，
-并通过文件监听（watcher）在源文件变动时自动重新生成。
+把一份 Markdown 源文件，**自动同步**成多种格式（HTML / PDF 等等）和多种语言（中文 / 英文）的输出，
+并通过文件监听（watcher）在源文件变动时自动重新生成。适合文档工作者的效率提升神器。
 
-- 一份源 → 多份产物：`html/zh`、`md/zh`、`md/en`、`html/en` …
+- 一份源 → 多份产物：`html/zh`、`html/en`、`pdf/en`、`pdf/en`、`md/zh`、`md/en`、 …
 - 源文件改了 → 自动重新同步（带防抖 / debounce）
 - 翻译走 **缓存优先**：已有译文直接复用，缺失才回退到 AI
-- 自带 Web 仪表盘（可独立运行，也可包进桌面 GUI）
+- 自带 Web 风格UI
+
+---
+
+## 为什么需要 md-sync？
+
+AI 工具确实能翻译文档、也能转换格式——但那解决的是"一次性"需求。
+真正繁琐的是**频繁修改源文件**的场景：你每改一个词，就要手动走完
+**修改 → 翻译 → 转换格式** 这一整条链路，而且往往要同时维护多个语言、多种格式的产物。
+人工反复操作，不仅费时，更容易漏翻、漏转、版本对不齐。
+
+**md-sync 就是为这个场景而生：你只管改源文件，其余交给工具。**
+
+- **所改即所得**：基于文件监听，源文件一保存，所有语言 / 格式的产物在秒级内自动重新生成。
+- **一次配置，长期受益**：翻译缓存 + 多输出配置只需设定一次，后续每次修改零额外操作。
+- **不易出错**：译文与格式由工具统一处理，避免人工复制粘贴导致的漏翻、漏转、错版。
+
+把"重复的体力活"交给 md-sync，你专注内容本身。
 
 ---
 
@@ -14,7 +31,7 @@
 
 | 能力 | 说明 |
 |------|------|
-| **多格式输出** | `html`（带模板/主题渲染，可导出 PDF）与 `md`（纯文本） |
+| **多格式输出** | `html` `PDF` `md` （支持插件扩展docx等格式）|
 | **多语言输出** | `zh` / `en`，翻译基于 `.translations.json` 缓存，缺失回退 AI（provider `auto`） |
 | **文件监听** | 基于 `watchdog` 监听源文件，`debounce` 默认 1.5s，改动即同步 |
 | **模板 / 主题** | `bwx`、`modern` 等样式，支持插件扩展（`md-sync template` / `md-sync plugin`） |
@@ -87,7 +104,7 @@ npm install        # 仅首次，安装 electron（若未全局可用）
 electron .         # 或：bash start.sh
 ```
 
-> 系统已自带 `/usr/bin/electron` 时，直接 `electron .` 即可，无需 `npm install`。
+> 如果系统已自带 `/usr/bin/electron` 时，直接 `electron .` 即可，无需 `npm install`。
 > 若 8580 端口已有后端在跑，Electron 会直接复用，不会重复启动。
 
 ### 方式 B：Web 仪表盘（浏览器访问）
@@ -182,14 +199,55 @@ python -m build
 
 CLI 入口：`md-sync`（见 `pyproject.toml` 的 `[project.scripts]`）。
 
-### 2. 桌面应用（Electron + PyInstaller，可选）
+### 2. 单文件可执行程序（PyInstaller，推荐）
 
-把 Python 后端用 PyInstaller 打成可执行文件，再让 Electron 指向它（替代 `spawn('python', ...)`）：
+仓库自带跨平台构建脚本 `build_app.py`，在当前系统上产出免 Python 环境的可执行文件：
 
 ```bash
-pip install pyinstaller
-pyinstaller --onefile start_server.py      # 生成 dist/start_server
-# 修改 electron/main.js 中 startBackend() 的 spawn 命令为 ./dist/start_server
+pip install pyinstaller            # 或 pip install -e ".[build]"
+python build_app.py                # 产出 dist/md-sync (Linux/macOS) 或 dist/md-sync.exe (Windows)
+python build_app.py --clean        # 清缓存后重新构建
+```
+
+**产物位置（均在本项目 `dist/` 目录下）：**
+
+| 平台 | 产物路径 | 说明 |
+|------|----------|------|
+| Linux   | `dist/md-sync`        | ELF 可执行文件，直接 `./dist/md-sync --help` 运行 |
+| macOS   | `dist/md-sync`        | 同 Linux 命名，需在 macOS 上构建 |
+| Windows | `dist/md-sync.exe`    | 需在 Windows 上构建 |
+
+> 当前环境是 Linux，本地构建只会得到 `dist/md-sync`；Windows / macOS 二进制需在对应系统
+> 或下面的 CI 上产出。`dist/`、`build/`、`*.spec` 都已写入 `.gitignore`，不会进版本库。
+
+- 脚本自动把 `md_sync/templates`、`md_sync/themes`、`md_sync/web` 等资源打进 bundle，
+  运行时通过 `md_sync.template.manager._find_install_dir()` 解析，**无需用户机器安装任何东西**。
+- **构建 Python 版本建议用 3.12**（PyInstaller 官方稳定支持）。在 3.14 上需排除 `mypy`
+  （脚本已默认 `--exclude-module mypy`，因其 mypyc 扩展与 3.14 的 CArchive 压缩不兼容会导致
+  exe 启动即崩溃 `decompression resulted in return code -3`）。
+
+### 3. 跨平台自动构建（GitHub Actions）
+
+`.github/workflows/build.yml` 在 `ubuntu-latest` / `windows-latest` / `macos-latest`
+三个 runner 上分别运行 `build_app.py`，将三个平台的可执行文件作为 Release artifact 上传。
+
+```bash
+# 打 tag 触发自动构建并发布 Release
+git tag v1.0.0 && git push origin v1.0.0
+# 到 GitHub Releases 页面下载：md-sync-linux / md-sync-windows.exe / md-sync-macos
+```
+
+若只想临时取三平台二进制（不发 Release），在 Actions 对应 run 的 Artifacts 里下载即可，
+artifact 命名为 `md-sync-ubuntu-latest` / `md-sync-windows-latest` / `md-sync-macos-latest`。
+
+### 4. 桌面应用（Electron，可选）
+
+把上述可执行文件交给 Electron 壳调用（替代 `spawn('python', ...)`）：
+
+```bash
+# 先产出后端可执行文件
+python build_app.py
+# 修改 electron/main.js 中 startBackend() 的 spawn 命令为 ./dist/md-sync
 cd electron && npm install && npx electron-packager . md-sync-desktop
 ```
 
@@ -209,4 +267,4 @@ cd electron && npm install && npx electron-packager . md-sync-desktop
 
 ## 许可证
 
-MIT（示例项目，按需修改）。
+MIT。

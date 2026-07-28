@@ -339,40 +339,33 @@ class MainWindow(QWidget):
         parent.addWidget(card)
 
     def _build_options(self, parent: QVBoxLayout):
-        """输出设置：每种格式一组，组内横向排列中文/英文勾选，各组平分宽度。"""
+        """输出设置：每种格式一行，标题在左、语言勾选在右，纵向排列，不挤压。"""
         label = QLabel("输出设置")
         label.setObjectName("section_title")
         parent.addWidget(label)
 
-        row = QHBoxLayout()
-        row.setSpacing(12)
         self.fmt_checks: dict[tuple[str, str], QCheckBox] = {}
         for fmt, label_txt in [("html", "HTML"), ("md", "Markdown"), ("pdf", "PDF")]:
-            card = QWidget()
-            card.setObjectName("fmt_card")
-            cl = QVBoxLayout(card)
-            cl.setContentsMargins(0, 0, 0, 0)
-            cl.setSpacing(10)
+            row = QHBoxLayout()
+            row.setSpacing(12)
+            row.setContentsMargins(0, 0, 0, 0)
+
             t = QLabel(label_txt)
             t.setObjectName("fmt_card_title")
-            cl.addWidget(t)
-            cb_row = QHBoxLayout()
-            cb_row.setSpacing(20)
-            cb_row.addStretch(1)
+            t.setMinimumWidth(70)
+            row.addWidget(t)
+
             for lang in ("zh", "en"):
                 cb = QCheckBox(LANG_LABELS.get(lang, lang))
                 cb.setObjectName("fmt_cb")
                 self.fmt_checks[(fmt, lang)] = cb
-                cb_row.addWidget(cb)
-                cb_row.addStretch(1)
-            cl.addLayout(cb_row)
-            row.addWidget(card, 1)  # 三组等分，占满整行宽度
+                row.addWidget(cb)
+            row.addStretch(1)
+            parent.addLayout(row)
 
         # 默认：所有格式 × 所有语言 全部选中
         for cb in self.fmt_checks.values():
             cb.setChecked(True)
-
-        parent.addLayout(row)
 
     def _build_actions(self, parent: QVBoxLayout):
         btn_row = QHBoxLayout()
@@ -428,11 +421,14 @@ class MainWindow(QWidget):
             tbl.verticalHeader().setDefaultSectionSize(54)  # 行高足够容纳文件名+大小两行
             tbl.verticalHeader().setMinimumSectionSize(54)
             th = tbl.horizontalHeader()
+            # 操作列宽度自适应内容，避免"打开"按钮被截断；状态/格式列保持紧凑
+            th.setSectionResizeMode(0, QHeaderView.Fixed)
+            th.setSectionResizeMode(1, QHeaderView.Fixed)
             th.setSectionResizeMode(2, QHeaderView.Stretch)
-            th.setSectionResizeMode(3, QHeaderView.Fixed)
-            tbl.setColumnWidth(0, 78)
-            tbl.setColumnWidth(1, 70)
-            tbl.setColumnWidth(3, 72)
+            th.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+            tbl.setColumnWidth(0, 62)
+            tbl.setColumnWidth(1, 58)
+            # 列 3 由 ResizeToContents 自动决定，无需 setColumnWidth
             tbl.setContextMenuPolicy(Qt.CustomContextMenu)
             tbl.customContextMenuRequested.connect(
                 lambda pos, t=tbl: self._on_file_context(pos, t))
@@ -594,7 +590,7 @@ class MainWindow(QWidget):
             background: #ffffff;
             border: 1px solid #e6e8ef;
             border-radius: 9px;
-            padding: 8px 16px;
+            padding: 5px 12px;
             color: #4f46e5;
             font-size: 12px;
             font-weight: 600;

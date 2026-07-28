@@ -31,6 +31,10 @@ def derive_output_path(
     sub-directories and names files by language automatically.
     """
     base = (name_map or {}).get(lang) or source_stem
+    # Guarantee a non-empty filename: fall back to the language code so we
+    # never produce an extension-only path like "pdf/.pdf".
+    if not base:
+        base = lang or format
     if pdf:
         return str(output_root / "pdf" / f"{base}.pdf")
     return str(output_root / format / f"{base}.{format}")

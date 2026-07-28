@@ -280,7 +280,7 @@ def _render_setup_page(project: str, templates: list[dict], history_projects: Op
       <label for="sourcePath">输入 Markdown 源文件路径</label>
       <div style="display:flex;gap:8px;">
         <input type="text" id="sourcePath" placeholder="/path/to/your/document.md" style="flex:1;">
-        <button class="btn" onclick="confirmSource()" style="white-space:nowrap;">确定</button>
+        <button class="btn" onclick="browseSource()" style="white-space:nowrap;background:#1a56db;color:#fff;">打开</button>
       </div>
       <div class="hint">输入 .md 文件的完整路径或相对路径</div>
     </div>
@@ -357,6 +357,14 @@ def _render_setup_page(project: str, templates: list[dict], history_projects: Op
   </div>
 </div>
 
+<div class="card" style="margin-top:16px;">
+  <label style="display:block;font-size:14px;font-weight:600;margin-bottom:10px;">输出目录</label>
+  <div style="display:flex;gap:8px;">
+    <input id="outputDir" type="text" placeholder="留空则输出到源文件所在目录" style="flex:1;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:14px;">
+    <button type="button" class="btn btn-secondary" onclick="browseOutputDir()">浏览…</button>
+  </div>
+</div>
+
 <button class="btn" onclick="createProject()">✨ 创建项目并同步</button>
 <div id="result"></div>
 
@@ -379,6 +387,28 @@ function confirmSource() {{
   document.getElementById('sourceDisplayArea').style.display = 'block';
   input.value = '';
   document.getElementById('result').textContent = '';
+}}
+
+async function browseSource() {{
+  var input = document.getElementById('sourcePath');
+  try {{
+    if (window.mdSync && window.mdSync.openFile) {{
+      var p = await window.mdSync.openFile();
+      if (p) {{ input.value = p; confirmSource(); return; }}
+    }}
+  }} catch (e) {{}}
+  input.focus();
+}}
+
+async function browseOutputDir() {{
+  var input = document.getElementById('outputDir');
+  try {{
+    if (window.mdSync && window.mdSync.openDirectory) {{
+      var p = await window.mdSync.openDirectory();
+      if (p) {{ input.value = p; return; }}
+    }}
+  }} catch (e) {{}}
+  input.focus();
 }}
 
 function toggleFmtLang(cb) {{
@@ -429,15 +459,21 @@ async function createProject() {{
       body:JSON.stringify({{
         source: source,
         formats: formats,
+        output_root: document.getElementById('outputDir').value.trim(),
         style_zh: document.getElementById('tplZh').value,
         style_en: document.getElementById('tplEn').value,
       }})
     }});
     var data = await resp.json();
     if (data.status === 'ok') {{
-      r.textContent = '✓ 项目已创建！正在跳转…';
+      r.textContent = '✓ 项目已创建，正在生成文件…';
       r.style.color = '#22c55e';
-      setTimeout(function(){{ location.href = '/'; }}, 1000);
+      // 立即触发一次真正的转换，生成输出文件
+      try {{
+        await fetch('/api/sync', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:'{{}}' }});
+      }} catch(e) {{}}
+      r.textContent = '✓ 文件已生成！正在跳转…';
+      setTimeout(function(){{ location.href = '/'; }}, 1200);
     }} else {{
       r.textContent = '✗ ' + (data.error || '创建失败');
       r.style.color = '#ef4444';
@@ -725,7 +761,7 @@ def _render_dashboard(
   <div id="sourceInputArea" style="display:none;">
     <div style="display:flex;gap:8px;align-items:center;">
       <input type="text" id="sourcePath" value=\"{src_path}\" style="flex:1;">
-      <button class="btn btn-sm" onclick="confirmSource()">确定</button>
+      <button class="btn btn-sm" onclick="browseSource()" style="background:#1a56db;">打开</button>
       <button class="btn btn-sm" onclick="cancelChange()" style="background:#999;">取消</button>
     </div>
   </div>
@@ -763,8 +799,8 @@ def _render_dashboard(
   <div style="margin:10px 0 14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">
     <div style="font-size:13px;color:#334155;margin-bottom:6px;">输出根目录（只需填写<b>一个</b>目录，工具会在其下自动建立 <code>pdf/</code>、<code>html/</code>、<code>md/</code> 子目录，并按语言命名文件）：</div>
     <div style="display:flex;gap:8px;align-items:center;">
-      <input type="text" id="outputRoot" value="{output_root}" placeholder="例如 /home/你/Obsidian/简历" style="flex:1;padding:7px 10px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;">
-      <button class="btn" onclick="saveOutputRoot()">保存根目录</button>
+      <input type="text" id="outputRoot" value="{output_root}" placeholder="例如 /home/你/Obsidian/简历" style="flex:1;padding:7px 10px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;" onkeydown="if(event.key==='Enter'){{saveOutputRoot();}}">
+      <button class="btn" onclick="browseOutputRoot()">设置输出目录</button>
     </div>
   </div>
   <div style="margin-top:8px;">
@@ -1015,6 +1051,17 @@ async function confirmSource() {{
   }}
 }}
 
+async function browseSource() {{
+  var input = document.getElementById('sourcePath');
+  try {{
+    if (window.mdSync && window.mdSync.openFile) {{
+      var p = await window.mdSync.openFile();
+      if (p) {{ input.value = p; confirmSource(); return; }}
+    }}
+  }} catch (e) {{}}
+  input.focus();
+}}
+
 async function updateStyle(format, lang, style) {{
   var res = document.getElementById('res_style_' + format + '_' + lang);
   res.textContent = '…'; res.style.color = '#999';
@@ -1066,6 +1113,20 @@ async function saveOutputRoot() {{
     r.style.color = data.status === 'ok' ? '#22c55e' : '#ef4444';
     if (data.status === 'ok') setTimeout(function(){{ location.reload(); }}, 400);
   }} catch(e) {{ r.textContent = '✗ 保存失败'; r.style.color = '#ef4444'; }}
+}}
+
+// Open a native directory picker (Electron) and save the chosen output root.
+// Falls back to focusing the text field for manual entry when running in a
+// plain browser without the mdSync bridge.
+async function browseOutputRoot() {{
+  var el = document.getElementById('outputRoot');
+  try {{
+    if (window.mdSync && window.mdSync.openDirectory) {{
+      var p = await window.mdSync.openDirectory();
+      if (p) {{ el.value = p; await saveOutputRoot(); return; }}
+    }}
+  }} catch (e) {{}}
+  el.focus();
 }}
 </script>
 
@@ -1229,18 +1290,25 @@ def create_app(
         formats = body.get("formats", [])  # [{format: "html", langs: ["zh","en"]}, ...]
         style_zh = body.get("style_zh", "bwx")
         style_en = body.get("style_en", "modern")
+        output_root = (body.get("output_root") or "").strip()
 
         if not source:
             return {"status": "error", "error": "源文件路径不能为空"}
 
-        src_path = Path(source).resolve()
+        src_path = Path(source).expanduser().resolve()
         if not src_path.exists():
             return {"status": "error", "error": f"文件不存在: {src_path}"}
 
         try:
-            # Build outputs — names are derived from the source file name
-            # (zh = suffix swap, en = name_map translation). Directories follow
-            # the format, placed as siblings of the source's own md/ directory.
+            # Build outputs. The output root is the user-configured output
+            # directory if already set; otherwise fall back to the source's
+            # parent directory so paths are never placed inside the source file
+            # itself. After the user sets the output directory, api_config_output_root
+            # re-derives every path against that root.
+            if output_root:
+                root = Path(output_root).expanduser().resolve()
+            else:
+                root = config.output_root_path if (config and getattr(config, "output_root", None)) else src_path.parent
             outputs = []
             name_map = body.get("name_map") or {}
             for fmt_entry in formats:
@@ -1251,45 +1319,47 @@ def create_app(
                         style = style_zh if lang == "zh" else style_en
                         out = OutputConfig(
                             format="html", lang=lang,
-                            path=derive_output_path(src_path, "html", lang, name_map),
+                            path=derive_output_path(root, "html", lang, name_map, src_path.stem),
                             style=style,
                         )
                         outputs.append(out)
                     elif fmt == "md":
                         outputs.append(OutputConfig(
                             format="md", lang=lang,
-                            path=derive_output_path(src_path, "md", lang, name_map),
+                            path=derive_output_path(root, "md", lang, name_map, src_path.stem),
                         ))
                     elif fmt == "pdf":
                         # PDF is a flag on the HTML output of the same lang
                         html_out = next((o for o in outputs if o.format == "html" and o.lang == lang), None)
                         if html_out:
                             html_out.pdf = True
-                            html_out.pdf_path = derive_output_path(src_path, "html", lang, name_map, pdf=True)
+                            html_out.pdf_path = derive_output_path(root, "html", lang, name_map, src_path.stem, pdf=True)
                         else:
                             outputs.append(OutputConfig(
                                 format="html", lang=lang,
-                                path=derive_output_path(src_path, "html", lang, name_map),
+                                path=derive_output_path(root, "html", lang, name_map, src_path.stem),
                                 style=style_zh if lang == "zh" else style_en,
                                 pdf=True,
-                                pdf_path=derive_output_path(src_path, "html", lang, name_map, pdf=True),
+                                pdf_path=derive_output_path(root, "html", lang, name_map, src_path.stem, pdf=True),
                             ))
 
             # Create config
             cfg = ProjectConfig(
                 project=src_path.stem,
-                source=str(source),
+                source=str(src_path),
                 schema="resume",
                 outputs=outputs,
             )
             cfg.source_path = src_path.resolve()
+            cfg.output_root = str(root)
             cfg.config_path = Path.cwd() / "md-sync.yaml"
 
             # Save to YAML
             raw = {
                 "project": cfg.project,
-                "source": str(source),
+                "source": str(src_path),
                 "schema": "resume",
+                "output_root": str(root),
                 "outputs": [],
                 "watch": {"enabled": True, "debounce": 1.5},
                 "web_ui": {"enabled": True, "host": "127.0.0.1", "port": 8580},
@@ -1649,7 +1719,7 @@ def create_app(
                             o["pdf"] = active
                             if active and not o.get("pdf_path"):
                                 o["pdf_path"] = derive_output_path(
-                                    config.source_path, "html", o["lang"], config.name_map, pdf=True
+                                    config.output_root_path, "html", o["lang"], config.name_map, config.source_path.stem, pdf=True
                                 )
                     cfg_file.write_text(yaml.dump(raw, allow_unicode=True, default_flow_style=False), encoding="utf-8")
                 return {"status": "ok", "format": fmt, "active": active}
@@ -1659,12 +1729,15 @@ def create_app(
                     if fmt == "html":
                         config.outputs.append(OutputConfig(
                             format=fmt, lang=lang,
+                            path=derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem),
                             style="bwx" if lang == "zh" else "modern",
                             pdf=True,
+                            pdf_path=derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, pdf=True),
                         ))
                     elif fmt == "md":
                         config.outputs.append(OutputConfig(
                             format=fmt, lang=lang,
+                            path=derive_output_path(config.output_root_path, "md", lang, config.name_map, config.source_path.stem),
                         ))
             elif not active and fmt in existing:
                 config.outputs = [o for o in config.outputs if o.format != fmt]
@@ -1678,12 +1751,15 @@ def create_app(
                         if fmt == "html":
                             raw["outputs"].append({
                                 "format": "html", "lang": lang,
+                                "path": derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem),
                                 "style": "bwx" if lang == "zh" else "modern",
                                 "pdf": True,
+                                "pdf_path": derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, pdf=True),
                             })
                         elif fmt == "md":
                             raw["outputs"].append({
                                 "format": "md", "lang": lang,
+                                "path": derive_output_path(config.output_root_path, "md", lang, config.name_map, config.source_path.stem),
                             })
                 else:
                     raw["outputs"] = [o for o in raw.get("outputs", []) if o.get("format") != fmt]

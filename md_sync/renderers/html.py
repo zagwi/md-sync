@@ -54,6 +54,8 @@ class HtmlRenderer:
             autoescape=select_autoescape(["html", "xml"]),
             trim_blocks=True,
             lstrip_blocks=True,
+            # Render None as empty string instead of the literal "None"
+            finalize=lambda v: "" if v is None else v,
         )
         self._env.filters["replace_metrics"] = _replace_metrics
         self._load_theme_meta()

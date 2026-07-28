@@ -3,10 +3,10 @@
 把一份 Markdown 源文件，**自动同步**成多种格式（HTML / PDF 等等）和多种语言（中文 / 英文）的输出，
 并通过文件监听（watcher）在源文件变动时自动重新生成。适合文档工作者的效率提升神器。
 
-- 一份源 → 多份产物：`html/zh`、`html/en`、`pdf/en`、`pdf/en`、`md/zh`、`md/en`、 …
+- 一份源 → 多份产物：`html/zh`、`html/en`、`pdf/zh`、`pdf/en`、`md/zh`、`md/en`、 …
 - 源文件改了 → 自动重新同步（带防抖 / debounce）
 - 翻译走 **缓存优先**：已有译文直接复用，缺失才回退到 AI
-- 自带 Web 风格UI
+- 自带 Web 风格UI 与原生桌面 GUI
 
 ---
 
@@ -37,7 +37,7 @@ AI 工具确实能翻译文档、也能转换格式——但那解决的是"一�
 | **模板 / 主题** | `bwx`、`modern` 等样式，支持插件扩展（`md-sync template` / `md-sync plugin`） |
 | **翻译缓存** | `strategy: mapping` + `mapping_file`，译文只更新缓存字典、不直接出文件，渲染时再取用 |
 | **Web 仪表盘** | 浏览器里配置源文件、查看解析信息、启动/停止监听、手动同步、查看同步事件与历史项目 |
-| **桌面 GUI（Electron）** | 复用同一套 Web 仪表盘与 FastAPI 后端，零 UI 重写 |
+| **桌面 GUI（Qt 原生）** | PySide6 原生界面，直接调用核心 pipeline，持续监听同步，零 HTTP 服务器 |
 
 ### 两个独立维度（重要）
 
@@ -56,7 +56,7 @@ AI 工具确实能翻译文档、也能转换格式——但那解决的是"一�
 ```
 md_sync/
 ├── md_sync/
-│   ├── cli.py              # 命令行入口（md-sync start / sync / status …）
+│   ├── cli.py              # 命令行入口（md-sync start / sync / gui / status …）
 │   ├── config.py           # ProjectConfig 解析（md-sync.yaml）
 │   ├── watcher.py          # 文件监听（watchdog + debounce）
 │   ├── core/pipeline.py    # 同步主流程编排
@@ -65,11 +65,8 @@ md_sync/
 │   ├── exporters/          # PDF 导出（Chromium）
 │   ├── template/           # 模板管理
 │   ├── plugin/             # 插件系统
-│   └── web/app.py          # FastAPI 后端 + 仪表盘
-├── electron/               # 桌面壳（Electron + main.js）
-│   ├── main.js
-│   ├── package.json
-│   └── start.sh
+│   ├── web/app.py          # FastAPI 后端 + 仪表盘
+│   └── qt_app.py           # 原生 PySide6 桌面 GUI（md-sync gui 启动）
 ├── projects/              # 示例 / 项目配置（md-sync.yaml）
 ├── templates/ themes/     # 内置模板与主题
 ├── start_server.py         # 直接以 Web 模式启动（加载 projects/resume 配置）
@@ -89,23 +86,34 @@ pip install -e .
 
 依赖：`pyyaml`、`jinja2`、`watchdog`、`fastapi`、`uvicorn[standard]`、`httpx`。
 
+桌面 GUI（Qt）额外需要 PySide6：
+
+```bash
+pip install PySide6
+```
+
 ---
 
 ## 使用方式
 
-### 方式 A：桌面 GUI（推荐，Electron）
+### 方式 A：桌面 GUI（Qt 原生）
 
-Web 仪表盘原样复用，Electron 只负责拉起 Python 后端并打开窗口。
-后端进程由 Electron 自动管理，关闭窗口即退出。
+原生 PySide6 界面，**直接调用核心 pipeline，不启动任何 HTTP 服务器**。
+选好源文件、输出目录并勾选需要的格式/语言后点「开始监听」（两者都填好按钮才可点），源文件一改动（防抖 1.5s）即自动重新生成，
+并在「输出文件」列表（中文模板 / 英文模板两列）里显示每个产物的状态（已同步 / 待同步 / 不存在），可双击直接打开。
 
 ```bash
-cd md_sync/electron
-npm install        # 仅首次，安装 electron（若未全局可用）
-electron .         # 或：bash start.sh
+python -m md_sync.qt_app      # 或：md-sync gui
 ```
 
-> 如果系统已自带 `/usr/bin/electron` 时，直接 `electron .` 即可，无需 `npm install`。
-> 若 8580 端口已有后端在跑，Electron 会直接复用，不会重复启动。
+GUI 功能对照 Web 仪表盘：
+
+- **📄 源文件**：选择 `.md` 源文件，自动检测源语言、章节数与待译条数（同时作为「开始监听」的必填项）
+- **🎯 输出设置**：按格式分组（HTML / Markdown / PDF），每组内可勾选中文、英文；三种格式 × 两种语言**默认全部选中**
+- **〔开始监听 / 停止监听〕**：选定源文件且填好输出目录后按钮才可点击；开启监听后源改动自动同步，首次启动立即同步一次
+- **输出文件列表**：拆成「中文模板」「英文模板」两列，每个产物带状态点、大小，双击〔打开文件〕或右键〔复制路径〕
+- **〔打开输出目录〕**：一键打开生成文件所在目录
+- **同步日志**：本次会话的同步日志（时间、生成文件、耗时、错误）
 
 ### 方式 B：Web 仪表盘（浏览器访问）
 
@@ -240,28 +248,14 @@ git tag v1.0.0 && git push origin v1.0.0
 若只想临时取三平台二进制（不发 Release），在 Actions 对应 run 的 Artifacts 里下载即可，
 artifact 命名为 `md-sync-ubuntu-latest` / `md-sync-windows-latest` / `md-sync-macos-latest`。
 
-### 4. 桌面应用（Electron，可选）
-
-把上述可执行文件交给 Electron 壳调用（替代 `spawn('python', ...)`）：
-
-```bash
-# 先产出后端可执行文件
-python build_app.py
-# 修改 electron/main.js 中 startBackend() 的 spawn 命令为 ./dist/md-sync
-cd electron && npm install && npx electron-packager . md-sync-desktop
-```
-
-> 当前 `electron/main.js` 直接调用系统 `python`，适合开发/本机使用；
-> 若要分发免 Python 环境的安装包，按上述步骤把后端打包进 Electron 即可。
-
 ---
 
 ## 常见问题
 
 - **「打开」选完文件后输入框清空**：这是预期行为——选文件即加载，无需手填路径。
 - **翻译后为什么还有 HTML？** 翻译只换文字，HTML 由渲染器（转换）生成；两者独立，详见「两个独立维度」。
-- **后端日志在哪？** Web 模式下打到启动终端；Electron 模式下在 Electron 启动的那个终端。
-- **端口被占用？** 8580 已被占用时，Electron 会直接复用现有后端，不会重复拉起。
+- **Qt GUI 的同步日志在哪？** 直接显示在 GUI 的「同步日志」面板中。
+- **端口被占用？** Web 模式默认使用 8580；若该端口被占用，改 `web_ui.port` 即可。
 
 ---
 

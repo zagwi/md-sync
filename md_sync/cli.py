@@ -49,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
         ("sync", "Run a one-shot sync"),
         ("status", "Show project status"),
         ("dry-run", "Show what would change without writing"),
+        ("gui", "Launch the native Qt GUI (no server)"),
     ]:
         sp = sub.add_parser(cmd, help=help_text)
         _add_common_args(sp)
@@ -85,6 +86,7 @@ def main(argv: list[str] | None = None) -> int:
         "dry-run": lambda: _cmd_dry_run(cfg_path),
         "template": lambda: _cmd_template(args),
         "plugin": lambda: _cmd_plugin(args),
+        "gui": lambda: _cmd_gui(),
     }
 
     handler = handlers.get(args.command)
@@ -358,6 +360,13 @@ def _start_web_ui(cfg, pipeline) -> None:
     )
     t.start()
     print(f"[web] 🖥 Dashboard: http://{host}:{port}")
+
+
+def _cmd_gui() -> int:
+    """Launch the native Qt GUI (no HTTP server)."""
+    from md_sync.qt_app import main as gui_main
+    gui_main()
+    return 0
 
 
 if __name__ == "__main__":

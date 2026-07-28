@@ -589,13 +589,15 @@ class MainWindow(QWidget):
         .tag_fmt {
             background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe;
             border-radius: 7px; padding: 3px 10px; font-size: 11px;
-            font-weight: 700; letter-spacing: 0.3px;
+            font-weight: 700; letter-spacing: 0.3px; min-width: 48px;
+            text-align: center;
         }
         /* 语言 tag */
         .tag_lang {
             background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0;
             border-radius: 7px; padding: 3px 10px; font-size: 11px;
-            font-weight: 700; letter-spacing: 0.3px;
+            font-weight: 700; letter-spacing: 0.3px; min-width: 40px;
+            text-align: center;
         }
         /* 文件单元格：文件名 + 元信息两行 */
         #file_cell { background: transparent; }
@@ -867,6 +869,8 @@ class MainWindow(QWidget):
             fmt_tag = QLabel(fmt)
             fmt_tag.setObjectName("tag_fmt")
             fmt_tag.setProperty("class", "tag")
+            fmt_tag.setAlignment(Qt.AlignCenter)
+            fmt_tag.setMinimumWidth(48)
             fmt_cell = QWidget()
             fmt_cell.setObjectName("tag_cell")
             tl = QHBoxLayout(fmt_cell)
@@ -880,6 +884,8 @@ class MainWindow(QWidget):
             lang_tag = QLabel(LANG_LABELS.get(lang, lang))
             lang_tag.setObjectName("tag_lang")
             lang_tag.setProperty("class", "tag")
+            lang_tag.setAlignment(Qt.AlignCenter)
+            lang_tag.setMinimumWidth(40)
             lang_cell = QWidget()
             lang_cell.setObjectName("tag_cell")
             ll = QHBoxLayout(lang_cell)

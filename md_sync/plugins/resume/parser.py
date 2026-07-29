@@ -82,7 +82,6 @@ def _enrich_resume(doc: Document) -> None:
         _extract_metrics(sec)
         _extract_tech_tags(sec)
 
-    _extract_badges(doc)
 
 
 def _process_md_block(sec: Section, content: str, out: list[Item]) -> None:
@@ -414,15 +413,6 @@ def _extract_tech_tags(section: Section) -> None:
             after = after.lstrip("\n \t")
             item.content = (before + "\n\n" + after).strip() if before and after else (before or after).strip()
 
-
-def _extract_badges(doc: Document) -> None:
-    """Extract badge info from section titles."""
-    badge_map = {
-        "professional_summary": "20年" if doc.source_lang == "zh" else "20 Yrs",
-    }
-    for section in doc.sections:
-        if section.id in badge_map:
-            section.badge = badge_map[section.id]
 
 
 class ResumeParser(ParserPlugin):

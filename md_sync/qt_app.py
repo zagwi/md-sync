@@ -218,7 +218,12 @@ class TitleBar(QWidget):
 class SyncWorker(QThread):
     """Run the conversion in a background thread (pipeline is blocking)."""
     log = Signal(str)
-    finished = Signal(bool, str, list)  # (success, message, files)
+    sync_finished = Signal(bool, str, list)  # (success, message, files)
+
+    # NOTE: The signal is named ``sync_finished`` instead of the built-in
+    # ``finished`` to avoid overriding ``QThread.finished``.  PySide6 emits
+    # the inherited ``finished()`` (no args) when ``run()`` exits; overriding
+    # it with a different signature would crash the event loop.
 
     def __init__(self, cfg: ProjectConfig):
         super().__init__()
@@ -238,7 +243,7 @@ class SyncWorker(QThread):
                     self.log.emit(f"  ❌ {err}")
                 msg = f"同步失败（{time.time()-t0:.1f}s）：管道报告了 {len(errors)} 个错误"
                 self.log.emit(msg)
-                self.finished.emit(False, msg, [])
+                self.sync_finished.emit(False, msg, [])
                 return
 
             # 检查每个输出文件是否已生成
@@ -262,11 +267,11 @@ class SyncWorker(QThread):
             else:
                 msg = f"同步完成（{elapsed}），生成 {len(ok)} 个文件"
                 self.log.emit(msg)
-                self.finished.emit(True, msg, files)
+                self.sync_finished.emit(True, msg, files)
         except Exception as e:
             tb = traceback.format_exc()
             self.log.emit("同步失败：\n" + tb)
-            self.finished.emit(False, str(e), [])
+            self.sync_finished.emit(False, str(e), [])
 
 
 class MainWindow(QWidget):
@@ -1237,7 +1242,7 @@ class MainWindow(QWidget):
         self._refresh_file_list()  # 立即显示“同步中…”闪烁
         self.worker = SyncWorker(self.cfg)
         self.worker.log.connect(self._append_log)
-        self.worker.finished.connect(self._on_finished)
+        self.worker.sync_finished.connect(self._on_finished)
         self.worker.start()
 
     def _on_finished(self, success: bool, msg: str, files: list):

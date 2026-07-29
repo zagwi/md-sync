@@ -8,7 +8,7 @@ Mirrors the web UI feature-for-feature but calls the core pipeline directly:
   · 选择源 Markdown 文件（自动检测源语言）
   · 选择中文 / 英文模板、输出格式（HTML / Markdown / PDF）
   · 「启动多格式同步输出」→ 后台持续同步：源文件一改动（防抖 1.5s）即自动重新生成
-  · 输出文件表格：状态点、格式/语言、文件、大小、修改时间(ms)、〔打开〕
+  · 输出文件表格：状态点、格式/语言、文件、大小、最后更新时间、〔打开〕
   · 同步日志（时间精确到毫秒、生成文件、耗时、错误）
   · 一键打开输出目录
 
@@ -34,6 +34,7 @@ from PySide6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPainter, QPix
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QFileDialog,
@@ -43,6 +44,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QRadioButton,
     QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
@@ -341,7 +343,7 @@ class MainWindow(QWidget):
         sel_h = QHBoxLayout(sel_row)
         sel_h.setContentsMargins(0, 0, 0, 0)
         sel_h.setSpacing(8)
-        sel_lbl = QLabel("插件包")
+        sel_lbl = QLabel("插件")
         sel_lbl.setFixedWidth(60)
         sel_h.addWidget(sel_lbl)
         self._plugins: list[PluginManifest] = []
@@ -582,10 +584,23 @@ class MainWindow(QWidget):
                 mh.addWidget(QLabel("页边距"))
                 self.margin_combo = QComboBox()
                 self.margin_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                for val, label in [("15mm", "15mm（标准）"), ("20mm", "20mm（宽松）"), ("25mm", "25mm（宽边距）")]:
+                for val, label in [
+                    ("", "自适应（按尺寸）"),
+                    ("15mm", "15mm（标准）"),
+                    ("20mm", "20mm（宽松）"),
+                    ("25mm", "25mm（宽边距）"),
+                ]:
                     self.margin_combo.addItem(label, val)
                 self.margin_combo.setCurrentIndex(0)
                 mh.addWidget(self.margin_combo)
+                mh.addStretch(8)
+                mh.addWidget(QLabel("页面尺寸"))
+                self.page_size_combo = QComboBox()
+                self.page_size_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                for val in ("A4", "A3", "A5", "Letter", "Legal"):
+                    self.page_size_combo.addItem(val, val)
+                self.page_size_combo.setCurrentText("A4")
+                mh.addWidget(self.page_size_combo)
                 group_lay.addWidget(margin_w)
 
             fmt_row.addWidget(group, 1)
@@ -612,11 +627,6 @@ class MainWindow(QWidget):
         btn_row.addStretch(1)
         parent.addLayout(btn_row)
 
-        self.src_info = QLabel("")
-        self.src_info.setObjectName("src_info")
-        self.src_info.setVisible(False)  # 初始隐藏，有内容时才显示
-        parent.addWidget(self.src_info)
-
     def _build_file_list(self, parent: QVBoxLayout):
         """Card 3: 输出文件"""
         card = QWidget()
@@ -629,6 +639,21 @@ class MainWindow(QWidget):
         title = QLabel("输出文件")
         title.setObjectName("card_title")
         header.addWidget(title)
+        # ── 重名处理 — 与标题同一行，选插件后显示 ──
+        self._naming_label = QLabel("重名处理")
+        self._naming_label.setObjectName("naming_label")
+        self._naming_label.setVisible(False)
+        header.addWidget(self._naming_label)
+        self.naming_ts = QRadioButton("加时间戳")
+        self.naming_ts.setVisible(False)
+        self.naming_overwrite = QRadioButton("覆盖")
+        self.naming_overwrite.setVisible(False)
+        self._naming_group = QButtonGroup(self)
+        self._naming_group.addButton(self.naming_ts)
+        self._naming_group.addButton(self.naming_overwrite)
+        self.naming_ts.setChecked(True)
+        header.addWidget(self.naming_ts)
+        header.addWidget(self.naming_overwrite)
         header.addStretch(1)
         self.open_btn = QPushButton("打开输出目录")
         self.open_btn.setEnabled(False)
@@ -644,10 +669,15 @@ class MainWindow(QWidget):
         header.addWidget(self.clear_all_btn)
         cv.addLayout(header)
 
+        self.src_info = QLabel("")
+        self.src_info.setObjectName("src_info")
+        self.src_info.setVisible(False)  # 初始隐藏，有内容时才显示
+        cv.addWidget(self.src_info)
+
         self.file_tbl = QTableWidget(0, 6)
         self.file_tbl.setObjectName("file_table")
         self.file_tbl.setHorizontalHeaderLabels(
-            ["状态", "格式", "语言", "文件", "修改时间", "操作"])
+            ["状态", "格式", "语言", "文件", "最后更新时间", "操作"])
         self.file_tbl.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.file_tbl.setSelectionMode(QAbstractItemView.SingleSelection)
         self.file_tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -663,10 +693,10 @@ class MainWindow(QWidget):
         th.setSectionResizeMode(3, QHeaderView.Stretch)
         th.setSectionResizeMode(4, QHeaderView.Fixed)
         th.setSectionResizeMode(5, QHeaderView.Fixed)
-        self.file_tbl.setColumnWidth(0, 62)
+        self.file_tbl.setColumnWidth(0, 96)
         self.file_tbl.setColumnWidth(1, 80)
         self.file_tbl.setColumnWidth(2, 70)
-        self.file_tbl.setColumnWidth(4, 170)
+        self.file_tbl.setColumnWidth(4, 210)
         self.file_tbl.setColumnWidth(5, 200)
         self.file_tbl.setContextMenuPolicy(Qt.CustomContextMenu)
         self.file_tbl.customContextMenuRequested.connect(self._on_file_context)
@@ -701,7 +731,7 @@ class MainWindow(QWidget):
         for p in self._plugins:
             # 选项名用中文显示名（用户语言），回退到机器名；保留 Typora 等专名
             self.plugin_combo.addItem(p.label or p.name, p.name)
-        # 默认选中第一个（应是 builtin-resume）
+        # 默认选中第一个（应是 resume）
         if self._plugins:
             self._on_plugin_changed(0)
         else:
@@ -712,6 +742,9 @@ class MainWindow(QWidget):
         if idx < 0 or not self._plugins:
             self._detail_area.setVisible(False)
             self._style_row_w.setVisible(False)
+            self._naming_label.setVisible(False)
+            self.naming_ts.setVisible(False)
+            self.naming_overwrite.setVisible(False)
             # Also hide source row
             self._source_row.setVisible(False)
             return
@@ -762,6 +795,14 @@ class MainWindow(QWidget):
             infos = []
         self._reload_style_combos(infos)
         self._style_row_w.setVisible(True)
+
+        # ── 显示「重名处理」并按当前策略勾选 ──
+        self._naming_label.setVisible(True)
+        self.naming_ts.setVisible(True)
+        self.naming_overwrite.setVisible(True)
+        naming = getattr(self.cfg, "output_naming", "timestamp") or "timestamp"
+        (self.naming_overwrite if naming == "overwrite"
+         else self.naming_ts).setChecked(True)
 
         self._append_log(
             f"已选择插件包「{plugin.name}」schema={schema}，"
@@ -860,6 +901,7 @@ class MainWindow(QWidget):
             border-radius: 10px;
         }
         QLabel#card_title { color:#52525b; font-weight:700; font-size:14px; }
+        QLabel#naming_label { color:#71717a; font-size:13px; padding-left: 6px; }
         QWidget#fmt_card {
             background: #f8f9fb;
             border: 1px solid #e8ebf0;
@@ -897,6 +939,13 @@ class MainWindow(QWidget):
             width: 17px; height: 17px;
             border: 1.5px solid #cbd5e1; border-radius: 5px; background: #ffffff;
         }
+        /* 重名处理单选（亮色主题） */
+        QRadioButton { color: #27272a; spacing: 6px; font-size: 13px; }
+        QRadioButton::indicator {
+            width: 16px; height: 16px; border-radius: 8px;
+            border: 1.5px solid #cbd5e1; background: #ffffff;
+        }
+        QRadioButton::indicator:checked { background: #1890ff; border: 1.5px solid #1890ff; }
         QCheckBox::indicator:checked {
             background: #4f46e5; border: 1.5px solid #4f46e5;
             image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgdmlld0JveD0iMCAwIDEyIDEyIj48cGF0aCBkPSJNMSAxLjVMNC41IDUgMTAgMSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==);
@@ -1095,6 +1144,7 @@ class MainWindow(QWidget):
                 outputs.append(OutputConfig(
                     format="html", lang=lang, path=html_path,
                     pdf=want_pdf, pdf_path=pdf_path, style=style,
+                    page_size=self.page_size_combo.currentData(),
                     page_margin=self.margin_combo.currentData()))
                 if not want_html:
                     self._hidden_paths.add(html_path)
@@ -1105,7 +1155,8 @@ class MainWindow(QWidget):
             if want_docx:
                 docx_path = derive_output_path(root, "docx", lang, name_map, stem)
                 outputs.append(OutputConfig(
-                    format="docx", lang=lang, path=docx_path, style=style))
+                    format="docx", lang=lang, path=docx_path, style=style,
+                    page_size=self.page_size_combo.currentData()))
             if want_epub:
                 epub_path = derive_output_path(root, "epub", lang, name_map, stem)
                 outputs.append(OutputConfig(
@@ -1117,6 +1168,9 @@ class MainWindow(QWidget):
             outputs=outputs, output_root=str(root), source_lang="zh",
             name_map=name_map)
         cfg.source_path = src_path.resolve()
+        # 重名处理策略：来自设置面板的「重名处理」单选（默认时间戳）
+        cfg.output_naming = (
+            "overwrite" if self.naming_overwrite.isChecked() else "timestamp")
         self._last_out_dir = str(root)
         return cfg
 
@@ -1341,7 +1395,7 @@ class MainWindow(QWidget):
             ts_cell = QWidget()
             ts_cell.setObjectName("tag_cell")
             ts_lo = QHBoxLayout(ts_cell)
-            ts_lo.setContentsMargins(8, 0, 4, 0)
+            ts_lo.setContentsMargins(4, 0, 4, 0)
             ts_lo.addWidget(ts_lbl)
             ts_lo.addStretch(1)
             self.file_tbl.setCellWidget(row, 4, ts_cell)
@@ -1385,14 +1439,16 @@ class MainWindow(QWidget):
         try:
             info = SyncPipeline(self.cfg).run_dry()
             sl = info.get("source_lang", "") or "?"
-            tl = "en" if sl == "zh" else ("zh" if sl == "en" else "?")
+            # 目标语言 = 实际配置的输出语言（不再按源语言反推），避免误导
+            out_langs = sorted({o.lang for o in self.cfg.outputs})
+            tl_txt = "、".join(LANG_LABELS.get(l, l) for l in out_langs) or "未配置"
             pend = info.get("pending_translations", [])
             pend_txt = "、".join(
                 f"{LANG_LABELS.get(p.get('lang'), p.get('lang'))} 待译 {p.get('missing')} 条"
                 for p in pend) or "无"
             secs = len(info.get("sections", []))
             self.src_info.setText(
-                f"源语言：{LANG_LABELS.get(sl, sl)} → 目标：{LANG_LABELS.get(tl, tl)} ｜ "
+                f"源语言：{LANG_LABELS.get(sl, sl)} ｜ 目标：{tl_txt} ｜ "
                 f"章节 {secs} ｜ {pend_txt} ｜ 文件：{self.cfg.source_path.name}")
             self.src_info.setVisible(True)
         except Exception as e:
@@ -1607,6 +1663,18 @@ class MainWindow(QWidget):
 
 
 def main():
+    # Avoid the Qt warning "invalid style override 'kvantum' passed" that
+    # appears when QT_STYLE_OVERRIDE names a style plugin not available in
+    # this Qt build (e.g. running headless / minimal Qt with only Windows/Fusion).
+    # Only clear it when the requested style is genuinely unavailable, so a
+    # valid user preference in a real desktop session is preserved.
+    if "QT_STYLE_OVERRIDE" in os.environ:
+        try:
+            from PySide6.QtWidgets import QStyleFactory
+            if os.environ["QT_STYLE_OVERRIDE"] not in QStyleFactory.keys():
+                os.environ.pop("QT_STYLE_OVERRIDE")
+        except Exception:
+            pass
     app = QApplication(sys.argv)
     win = MainWindow()
     win.show()

@@ -111,7 +111,7 @@ class PluginRegistry:
         its schema name from the registry.
 
         Returns::
-            {"schema": "resume", "name": "builtin-resume", "method": "detect", "confidence": "high"}
+            {"schema": "resume", "name": "resume", "method": "detect", "confidence": "high"}
             or None if no parser matches.
         """
         parser = self.find_parser(text)

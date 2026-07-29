@@ -22,6 +22,7 @@ from md_sync.core.document import Document
 logger = logging.getLogger(__name__)
 from md_sync.core.parser import MdParser
 from md_sync.exporters.pandoc import export_via_pandoc
+from md_sync.exporters.page import resolve_margin
 from md_sync.exporters.pdf import export_pdf as _export_pdf
 from md_sync.plugin.registry import PluginRegistry
 from md_sync.renderers.html import HtmlRenderer
@@ -114,6 +115,11 @@ class SyncPipeline:
 
     def _process_output(self, doc: Document, out_cfg: OutputConfig) -> dict:
         result = {"format": out_cfg.format, "lang": out_cfg.lang, "path": out_cfg.path, "ok": False}
+        style_name = out_cfg.style or out_cfg.theme or (
+            "standard" if self._config.schema == "markdown" else "bwx")
+        # Normalize typora-* to just the sub-name for display
+        if style_name.startswith("typora-"):
+            style_name = "typora/" + style_name[7:]
 
         # The source-language *Markdown* output is a copy of the source file.
         # We copy it into the output directory so the output set is complete
@@ -191,11 +197,13 @@ class SyncPipeline:
                     input_path=html_tmp,
                     output_path=out_path,
                     to_format=out_cfg.format,
+                    page_size=out_cfg.page_size,
+                    margin=out_cfg.page_margin,
                 )
                 if pandoc_ok:
                     result["ok"] = True
                     size_kb = out_path.stat().st_size // 1024 if out_path.exists() else 0
-                    logger.info("  ✓ %s (%d KB, via pandoc)", out_path.name, size_kb)
+                    logger.info("  ✓ %s (%d KB, via pandoc) [%s]", out_path.name, size_kb, style_name)
                     # ② 插件机制：转换产物写出后触发 after_render hook
                     self._plugin_registry.emit_after_render(
                         out_path,
@@ -217,7 +225,7 @@ class SyncPipeline:
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(content, encoding="utf-8")
                 result["ok"] = True
-                logger.info("  ✓ %s (%d chars)", out_path.name, len(content))
+                logger.info("  ✓ %s (%d chars) [%s]", out_path.name, len(content), style_name)
                 # ② 插件机制：HTML 写出后触发 after_render hook
                 self._plugin_registry.emit_after_render(
                     out_path,
@@ -230,7 +238,9 @@ class SyncPipeline:
                     pdf_ok = _export_pdf(
                         html_path=out_path,
                         pdf_path=out_cfg.pdf_path,
-                        page_margin=out_cfg.page_margin,
+                        page_margin=resolve_margin(out_cfg.page_size, out_cfg.page_margin),
+                        page_size=out_cfg.page_size,
+                        style_name=style_name,
                     )
                     result["pdf"] = pdf_ok
                     # ② 插件机制：PDF 生成后触发 after_render hook
@@ -266,7 +276,8 @@ class SyncPipeline:
         default ``style.css``.
         """
         # Determine template name: style > theme (legacy) > default
-        template_name = out_cfg.style or out_cfg.theme or "bwx"
+        template_name = out_cfg.style or out_cfg.theme or (
+            "standard" if self._config.schema == "markdown" else "bwx")
 
         # Typora theme handling
         typora_css = None
@@ -325,11 +336,29 @@ class SyncPipeline:
         kwargs = {}
         if typora_css:
             kwargs["typora_css"] = typora_css
+
+        # Both schemas are rendered by a single HtmlRenderer whose *layout*
+        # strategy is selected by the schema, not by a separate code path:
+        #   * "raw"        — linear docs (markdown / typora) in the source
+        #                    language: render the whole source in one shot via
+        #                    markdown-it (maximal fidelity, no Item splitting).
+        #   * "structured" — resume-style docs (per-item chrome) and any
+        #                    translation target (per-item translation cache).
+        layout = (
+            "raw"
+            if (
+                self._config.schema in ("markdown", "typora")
+                and target_lang == doc.source_lang
+                and doc.source_raw
+            )
+            else "structured"
+        )
         return renderer.render(
             doc,
             sections_meta=catalog.sections,
             translator=self._translator,
             lang=target_lang,
+            layout=layout,
             **kwargs,
         )
 

@@ -6,16 +6,18 @@
   {% elif item.type == "code" %}
   {% include '_code.html.j2' %}
   {% else %}
+  {% if item.type == 'open_source' or item.type == 'text' or item.title %}
   <div class="proj-item">
-    <div class="proj-header">
-      <span class="period">{{ item.period }}</span> {{ item.title }}
-      {% if item.role %}<span class="role-tag">{{ item.role }}</span>{% endif %}
+    <div class="proj-header">{{ item.title or '' }}</div>
+    <div class="proj-desc">
+      {{ t(item.content) | rich | safe }}
+      {% if item.url %}<br>{% if doc.source_lang == 'zh' %}开源地址：{% else %}Open source: {% endif %}{{ item.url }}{% endif %}
     </div>
-    <div class="proj-desc">{{ t(item.content) | replace_metrics | safe }}</div>
     {% if item.tags %}
     <div class="proj-tech">{% if doc.source_lang == 'zh' %}涉及技术：{% else %}Tech Stack: {% endif %}{{ item.tags | join(', ') }}</div>
     {% endif %}
   </div>
+  {% endif %}
   {% endif %}
   {% endfor %}
 </div>

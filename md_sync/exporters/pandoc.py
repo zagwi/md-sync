@@ -32,6 +32,8 @@ def export_via_pandoc(
     from_format: str = "html",
     metadata: dict[str, str] | None = None,
     reference_doc: Path | str | None = None,
+    page_size: str = "",
+    margin: str = "",
     extra_args: list[str] | None = None,
 ) -> bool:
     """Convert a file to another format using pandoc CLI.
@@ -70,6 +72,7 @@ def export_via_pandoc(
         for key, val in metadata.items():
             cmd.extend(["-M", f"{key}={val}"])
 
+    temp_refs: list[Path] = []
     # Reference docx for styling
     if reference_doc:
         ref = Path(reference_doc)
@@ -77,6 +80,17 @@ def export_via_pandoc(
             cmd.extend(["--reference-doc", str(ref.resolve())])
         else:
             print(f"[pandoc] WARNING: reference-doc not found: {ref}")
+    elif to_format == "docx" and page_size and (
+        page_size != "A4" or (margin or "").strip()
+    ):
+        # No user reference doc but a non-default page size or an explicit margin
+        # is requested: build a minimal reference docx carrying the page setup so
+        # pandoc adopts it. The default A4 / auto-margin case is left untouched so
+        # pandoc's own default reference styling is preserved.
+        from .page import build_reference_docx
+        ref = build_reference_docx(page_size, margin or "")
+        temp_refs.append(ref)
+        cmd.extend(["--reference-doc", str(ref.resolve())])
 
     if extra_args:
         cmd.extend(extra_args)
@@ -98,3 +112,9 @@ def export_via_pandoc(
     except subprocess.TimeoutExpired:
         print("[pandoc] ERROR: pandoc timed out after 60s")
         return False
+    finally:
+        for t in temp_refs:
+            try:
+                t.unlink(missing_ok=True)
+            except OSError:
+                pass

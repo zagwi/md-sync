@@ -11,13 +11,13 @@
     {%- if not _sep.found %}
     <thead><tr>
     {%- for cell in cells %}
-    <th>{{ t(cell.strip()) | md_inline | linkify | safe }}</th>
+    <th>{{ t(cell.strip()) | rich | safe }}</th>
     {%- endfor %}
     </tr></thead><tbody>
     {%- else %}
     <tr>
     {%- for cell in cells %}
-    <td>{{ t(cell.strip()) | md_inline | linkify | safe }}</td>
+    <td>{{ t(cell.strip()) | rich | safe }}</td>
     {%- endfor %}
     </tr>
     {%- endif %}

@@ -7,9 +7,9 @@
   {% include '_code.html.j2' %}
   {% else %}
     {% if item.type == "bullet" %}
-    <p class="bullet-item">{{ t(item.content) | linkify | replace_metrics | safe }}</p>
+    <p class="bullet-item">{{ t(item.content) | rich | safe }}</p>
     {% else %}
-    <p>{{ t(item.content) | linkify | replace_metrics | safe }}</p>
+    <p>{{ t(item.content) | rich | safe }}</p>
     {% endif %}
   {% endif %}
   {% endfor %}

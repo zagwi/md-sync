@@ -3,14 +3,18 @@
 # Provides:
 #   - template.md       → 通用 Markdown 模板指南
 #   - parser.py         → 标准 Markdown 解析器（标题、列表、段落）
-#   - [bwx, modern]     → HTML 渲染模板（复用系统内置风格）
+#   - templates/standard → 通用 Markdown 标准风格（安装即带，不依赖 Typora）
 #
 # Schema: markdown  (任意标准 Markdown 文档均可使用)
+#
+# 说明: 本插件自带 standard 标准风格,随包分发、安装即有,不依赖用户是否
+# 安装 Typora。markdown schema 走 raw layout(整篇 source 渲染)。Typora
+# 主题(typora-*)属 typora schema,不会混入通用 markdown 的风格列表。
 
 name: generic-markdown
-label: 通用 Markdown 插件包
+label: 通用Markdown
 version: "1.0"
-description: 通用 Markdown 插件包 — 支持任意标准 Markdown 文档的解析与渲染，无需特定模板格式
+description: 通用Markdown — 支持任意标准 Markdown 文档的解析与渲染，无需特定模板格式
 author: md-sync
 type: pack
 
@@ -23,8 +27,7 @@ template: template.md
 requires_template: false
 
 templates:
-  - bwx
-  - modern
+  - standard
 
 hooks: []
 dependencies: []

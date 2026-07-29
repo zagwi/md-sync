@@ -114,7 +114,7 @@ md-sync/
 │   ├── template/           # 模板管理
 │   ├── plugin/             # 插件引擎（接口 / 注册表 / 加载器 / 钩子），不含插件实例
 │   └── web/app.py          # FastAPI 后端 + 仪表盘
-├── plugins/                # 内置插件（typora / builtin-resume / generic-markdown），各自携带模板
+├── plugins/                # 内置插件（typora / resume / generic-markdown），各自携带模板
 ├── docs/example-plugin/    # 插件开发示例（resume-pack：源模板 + 解析器 + 渲染风格）
 ├── projects/               # 示例 / 项目配置（md-sync.yaml）
 ├── scripts/                # 构建与启动脚本
@@ -387,6 +387,9 @@ outputs:
     pdf: true                       # 是否导出 PDF（需 Chromium）
     pdf_path: output/zh.pdf
     style: bwx                      # 模板/主题名
+    page_size: A4                   # 页面尺寸：A4 / A3 / A5 / Letter / Legal（PDF、DOCX 通用）
+    page_margin: ""                 # 留空 = 该尺寸的标准边距（A4→15mm、Letter→25.4mm…）；
+                                    # 也可显式指定，如 "15mm" 或 "5mm 8mm"（上/下 左/右）
   - format: md
     lang: en
   - format: html
@@ -485,3 +488,4 @@ artifact 命名为 `md-sync-ubuntu-latest` / `md-sync-windows-latest` / `md-sync
 ## 许可证
 
 MIT。
+

@@ -1,0 +1,32 @@
+@page { margin: 5mm 8mm; }
+body { background: #fff; padding: 0; font-size: 11.5px; line-height: 1.4; }
+.page { max-width: 100%; margin: 0; border: none; overflow: visible !important; }
+.header { padding: 12px 10mm 10px; }
+.header h1 { font-size: 22px; margin-bottom: 2px; }
+.header .title-role { font-size: 13px; margin-bottom: 8px; }
+.header .contact { font-size: 11px; gap: 4px 16px; }
+.body { padding: 12px 10mm 10mm; }
+.section-title { font-size: 13px; margin-bottom: 5px; padding-bottom: 3px; break-after: avoid; }
+.section { margin-bottom: 10px; padding-top: 3px; }
+.summary-list li { font-size: 11.5px; line-height: 1.4; margin-bottom: 3px; }
+.edu-item { font-size: 11.5px; padding: 3px 0; break-inside: avoid; }
+.exp-item { margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #ddd; break-inside: avoid; }
+.exp-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 4px; }
+.exp-header .company { font-size: 12px; font-weight: 700; }
+.exp-header .period { font-size: 11px; color: #555; margin-left: auto; }
+.exp-desc { display: block; font-size: 11.5px; line-height: 1.4; margin-top: 2px; padding-left: 2px; }
+.exp-sub { font-size: 11px; }
+.proj-item { margin-bottom: 8px; padding-bottom: 7px; border-bottom: 1px solid #eee; break-inside: avoid; }
+.proj-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: 12px; margin-bottom: 4px; }
+.proj-header .proj-title { font-weight: 700; }
+.proj-header .period { color: #555; margin-left: auto; }
+.proj-desc { display: block; font-size: 11.5px; line-height: 1.4; margin-top: 2px; }
+.proj-tech { font-size: 11px; margin-top: 2px; }
+.section-title .badge { display: none; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 4px 8px; text-align: left; border: 1px solid #ccc; }
+th { background: #f0f0f0; font-weight: 700; }
+
+/* 允许代码块在页间自然断开，避免大块空白 */
+pre { page-break-inside: auto; break-inside: auto; }
+code { word-wrap: break-word; white-space: pre-wrap; }

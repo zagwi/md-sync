@@ -344,7 +344,7 @@ def _render_setup_page(
     <label for="schemaSelect">选择文档格式</label>
     <select id="schemaSelect" onchange="onSchemaChange()">{schema_options}</select>
     <div id="schemaHint" class="hint" style="margin-top:6px;font-weight:500;"></div>
-    <div class="hint">选择解析器：内置简历 (resume) 或插件包的格式。不同 schema 对应不同的源 MD 模板格式。选择源文件后会自动检测推荐 schema。</div>
+    <div class="hint">选择解析器：专业简历 (resume) 或插件格式。不同 schema 对应不同的源 MD 模板格式。选择源文件后会自动检测推荐 schema。</div>
   </div>
 </div>
 
@@ -435,6 +435,12 @@ def _render_setup_page(
 
 <script>
 var confirmedSource = '';
+
+// Apply template-selector visibility based on the initially selected schema.
+(function initTemplateVisibility() {{
+  var sel = document.getElementById('schemaSelect');
+  applyTemplateVisibility(sel ? sel.value : 'resume');
+}})();
 
 function confirmSource() {{
   var input = document.getElementById('sourcePath');
@@ -584,6 +590,30 @@ function onSchemaChange() {{
   }} else {{
     r.textContent = '';
   }}
+  applyTemplateVisibility(val);
+}}
+
+// Templates that belong to the generic "markdown" schema. For other schemas
+// (e.g. typora) these should be hidden so only that schema's own themes show.
+var GENERIC_TEMPLATES = {{'bwx': true, 'modern': true}};
+
+function applyTemplateVisibility(schema) {{
+  var isTypora = (schema === 'typora');
+  ['tplZh', 'tplEn'].forEach(function(id) {{
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var firstVisible = null;
+    Array.prototype.forEach.call(sel.options, function(opt) {{
+      var isGeneric = GENERIC_TEMPLATES[opt.value] === true;
+      // Hide generic templates when schema is typora; show everything otherwise.
+      opt.hidden = isTypora && isGeneric;
+      if (!opt.hidden && firstVisible === null) firstVisible = opt.value;
+    }});
+    // If the currently selected option was hidden, fall back to first visible.
+    if (sel.selectedOptions.length && sel.selectedOptions[0].hidden && firstVisible !== null) {{
+      sel.value = firstVisible;
+    }}
+  }});
 }}
 
 async function autoDetectSchema(sourcePath) {{
@@ -699,6 +729,7 @@ def _render_dashboard(
     source_missing: bool = False,
     source_path: str = "",
     output_root: str = "",
+    output_naming: str = "timestamp",
     project_history: list[dict] | None = None,
 ) -> str:
     info = info or {}
@@ -957,6 +988,18 @@ def _render_dashboard(
     <div style="display:flex;gap:8px;align-items:center;">
       <input type="text" id="outputRoot" value="{output_root}" placeholder="例如 /home/你/Obsidian/简历" style="flex:1;padding:7px 10px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;" onkeydown="if(event.key==='Enter'){{saveOutputRoot();}}">
       <button class="btn" onclick="browseOutputRoot()">设置输出目录</button>
+    </div>
+  </div>
+
+  <div style="margin:10px 0 14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">
+    <div style="font-size:13px;color:#334155;margin-bottom:8px;">文件名重名处理：</div>
+    <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+      <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+        <input type="radio" name="namingPolicy" value="timestamp" {'checked' if output_naming != 'overwrite' else ''} onchange="saveNamingPolicy('timestamp')"> 文件名加时间戳（保留每次文件）
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+        <input type="radio" name="namingPolicy" value="overwrite" {'checked' if output_naming == 'overwrite' else ''} onchange="saveNamingPolicy('overwrite')"> 直接覆盖
+      </label>
     </div>
   </div>
   <div style="margin-top:8px;">
@@ -1231,6 +1274,21 @@ async function updateStyle(format, lang, style) {{
   setTimeout(function(){{ res.textContent = ''; }}, 3000);
 }}
 
+async function saveNamingPolicy(policy) {{
+  var r = document.getElementById('result');
+  r.textContent = '保存中…'; r.style.color = '#666';
+  try {{
+    var resp = await fetch('/api/config/naming_policy', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{policy: policy}})}});
+    var data = await resp.json();
+    if (data.status === 'ok') {{
+      r.textContent = '✓ 已更新（下次同步生效）'; r.style.color = '#22c55e';
+      setTimeout(function(){{ location.reload(); }}, 500);
+    }} else {{
+      r.textContent = '✗ ' + (data.error || '保存失败'); r.style.color = '#ef4444';
+    }}
+  }} catch(e) {{ r.textContent = '✗ 保存失败'; r.style.color = '#ef4444'; }}
+}}
+
 async function toggleFormat(format, checked) {{
   var r = document.getElementById('result');
   r.textContent = '保存中…';
@@ -1459,6 +1517,7 @@ def create_app(
                                   src_mtime, templates=tpl_list,
                                   formats_data=fmt_data, source_missing=source_missing,
                                   source_path=str(src), output_root=str(config.output_root),
+                                  output_naming=config.output_naming,
                                   project_history=_load_history())
         return HTMLResponse(html)
 
@@ -1510,6 +1569,7 @@ def create_app(
                 root = config.output_root_path if (config and getattr(config, "output_root", None)) else src_path.parent
             outputs = []
             name_map = body.get("name_map") or {}
+            page_size = body.get("page_size") or "A4"
             for fmt_entry in formats:
                 fmt = fmt_entry.get("format")
                 langs = fmt_entry.get("langs", [])
@@ -1519,7 +1579,7 @@ def create_app(
                         out = OutputConfig(
                             format="html", lang=lang,
                             path=derive_output_path(root, "html", lang, name_map, src_path.stem),
-                            style=style,
+                            style=style, page_size=page_size,
                         )
                         outputs.append(out)
                     elif fmt == "md":
@@ -1540,6 +1600,7 @@ def create_app(
                                 style=style_zh if lang == "zh" else style_en,
                                 pdf=True,
                                 pdf_path=derive_output_path(root, "html", lang, name_map, src_path.stem, pdf=True),
+                                page_size=page_size,
                             ))
 
             # Create config
@@ -1979,6 +2040,43 @@ def create_app(
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
+    @app.post("/api/config/naming_policy")
+    async def api_config_naming_policy(request: Request):
+        if config is None:
+            return {"status": "error", "error": "项目尚未配置"}
+        body = await request.json()
+        policy = body.get("policy", "timestamp")
+        if policy not in ("timestamp", "overwrite"):
+            return {"status": "error", "error": "无效的命名策略"}
+        try:
+            # Re-derive every output path (and pdf path) under the new policy so
+            # the next sync writes to the correct (timestamped or clean) name.
+            for o in config.outputs:
+                if o.format == "md" and o.lang == config.source_lang:
+                    continue  # source-language md IS the source file itself
+                o.path = config.output_path(o.format, o.lang)
+                if o.format == "html" and o.pdf:
+                    o.pdf_path = config.output_path("html", o.lang, pdf=True)
+            config.output_naming = policy
+            cfg_file = config.config_path
+            raw: dict[str, object] = yaml.safe_load(cfg_file.read_text(encoding="utf-8")) if cfg_file.exists() else {}
+            raw["output_naming"] = policy
+            raw["outputs"] = [
+                {
+                    "format": o.format,
+                    "lang": o.lang,
+                    "path": o.path,
+                    **({"style": o.style} if o.style else {}),
+                    **({"pdf": True} if o.pdf else {}),
+                    **({"pdf_path": o.pdf_path} if (o.pdf and o.pdf_path) else {}),
+                }
+                for o in config.outputs
+            ]
+            cfg_file.write_text(yaml.dump(raw, allow_unicode=True, default_flow_style=False), encoding="utf-8")
+            return {"status": "ok", "policy": policy}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+
     @app.post("/api/config/toggle_format")
     async def api_config_toggle_format(request: Request):
         if config is None:
@@ -2007,7 +2105,7 @@ def create_app(
                             o["pdf"] = active
                             if active and not o.get("pdf_path"):
                                 o["pdf_path"] = derive_output_path(
-                                    config.output_root_path, "html", o["lang"], config.name_map, config.source_path.stem, pdf=True
+                                    config.output_root_path, "html", o["lang"], config.name_map, config.source_path.stem, pdf=True, naming=config.output_naming
                                 )
                     cfg_file.write_text(yaml.dump(raw, allow_unicode=True, default_flow_style=False), encoding="utf-8")
                 return {"status": "ok", "format": fmt, "active": active}
@@ -2017,15 +2115,17 @@ def create_app(
                     if fmt == "html":
                         config.outputs.append(OutputConfig(
                             format=fmt, lang=lang,
-                            path=derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem),
-                            style="bwx" if lang == "zh" else "modern",
+                            path=derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, naming=config.output_naming),
+                            style=("standard" if config.schema == "markdown"
+                                   else "typora" if config.schema == "typora"
+                                   else "bwx" if lang == "zh" else "modern"),
                             pdf=True,
-                            pdf_path=derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, pdf=True),
+                            pdf_path=derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, pdf=True, naming=config.output_naming),
                         ))
                     elif fmt == "md":
                         config.outputs.append(OutputConfig(
                             format=fmt, lang=lang,
-                            path=derive_output_path(config.output_root_path, "md", lang, config.name_map, config.source_path.stem),
+                            path=derive_output_path(config.output_root_path, "md", lang, config.name_map, config.source_path.stem, naming=config.output_naming),
                         ))
             elif not active and fmt in existing:
                 config.outputs = [o for o in config.outputs if o.format != fmt]
@@ -2039,15 +2139,15 @@ def create_app(
                         if fmt == "html":
                             raw["outputs"].append({
                                 "format": "html", "lang": lang,
-                                "path": derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem),
+                                "path": derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, naming=config.output_naming),
                                 "style": "bwx" if lang == "zh" else "modern",
                                 "pdf": True,
-                                "pdf_path": derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, pdf=True),
+                                "pdf_path": derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, pdf=True, naming=config.output_naming),
                             })
                         elif fmt == "md":
                             raw["outputs"].append({
                                 "format": "md", "lang": lang,
-                                "path": derive_output_path(config.output_root_path, "md", lang, config.name_map, config.source_path.stem),
+                                "path": derive_output_path(config.output_root_path, "md", lang, config.name_map, config.source_path.stem, naming=config.output_naming),
                             })
                 else:
                     raw["outputs"] = [o for o in raw.get("outputs", []) if o.get("format") != fmt]

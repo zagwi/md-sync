@@ -5,7 +5,7 @@ Parser dispatch chain (in order):
   2. Plugin parser (by auto-detection via ``detect()``)
   3. Generic Markdown fallback (any standard MD document — always succeeds)
 
-The built-in resume parser has been moved to ``md_sync/plugins/builtin-resume/``
+The built-in resume parser has been moved to ``md_sync/plugins/resume/``
 as a proper ``ParserPlugin``, auto-discovered by the plugin registry.
 """
 from __future__ import annotations
@@ -72,7 +72,7 @@ class MdParser:
       3. Generic Markdown fallback (always succeeds)
 
     The built-in resume parser is provided as a plugin pack at
-    ``md_sync/plugins/builtin-resume/``, auto-discovered by ``PluginRegistry``,
+    ``md_sync/plugins/resume/``, auto-discovered by ``PluginRegistry``,
     and registered under the ``resume`` schema name.
     """
 

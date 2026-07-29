@@ -1,0 +1,10 @@
+name: standard
+label: 标准
+description: 通用 Markdown 标准风格（安装即带，不依赖 Typora 环境）
+version: 1.0
+author: md-sync
+schema: markdown
+engine: jinja2
+pdf:
+  page_size: A4
+  margin: 16mm 18mm

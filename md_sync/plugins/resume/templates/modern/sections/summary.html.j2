@@ -6,6 +6,8 @@
     {% include '_table.html.j2' %}
     {% elif item.type == "code" %}
     {% include '_code.html.j2' %}
+    {% elif item.type == "md" %}
+    <div class="md-block">{{ t(item.content) | md_block | safe }}</div>
     {% else %}
     <li>{{ t(item.content) | linkify | replace_metrics | safe }}</li>
     {% endif %}

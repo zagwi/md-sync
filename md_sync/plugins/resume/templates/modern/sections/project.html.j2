@@ -8,8 +8,9 @@
   {% else %}
   <div class="proj-item">
     <div class="proj-header">
-      <span class="period">{{ item.period }}</span> {{ item.title }}
+      <span class="proj-title">{{ item.title }}</span>
       {% if item.role %}<span class="role-tag">{{ item.role }}</span>{% endif %}
+      <span class="period">{{ item.period }}</span>
     </div>
     <div class="proj-desc">{{ t(item.content) | replace_metrics | safe }}</div>
     {% if item.tags %}

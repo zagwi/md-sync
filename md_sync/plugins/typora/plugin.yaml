@@ -12,9 +12,9 @@
 #   选择 typora 插件 → 选择 Typora 主题 → 编写/选择源 .md 文件 → 同步输出
 
 name: typora
-label: Typora 主题插件包
+label: Typora 主题
 version: "1.0"
-description: Typora 主题插件包 — 将 Typora 的 40+ CSS 主题库接入 md-sync 渲染管线，支持标准 Markdown 文档与多格式同步输出
+description: Typora 主题 — 将 Typora 的 40+ CSS 主题库接入 md-sync 渲染管线，支持标准 Markdown 文档与多格式同步输出
 author: md-sync
 type: pack
 

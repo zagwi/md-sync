@@ -27,7 +27,9 @@ def export_pdf(
     pdf_path: Path | str,
     chromium_path: str | None = None,
     page_margin: str = "15mm",
+    page_size: str = "A4",
     extra_args: list[str] | None = None,
+    style_name: str = "",
 ) -> bool:
     """Convert an HTML file to PDF using headless Chromium.
 
@@ -47,6 +49,9 @@ def export_pdf(
     html_path = Path(html_path).resolve()
     pdf_path = Path(pdf_path).resolve()
 
+    from .page import normalize_page_size
+    page_size = normalize_page_size(page_size)
+
     if not html_path.exists():
         print(f"[pdf] ERROR: HTML not found: {html_path}")
         return False
@@ -62,29 +67,33 @@ def export_pdf(
     #  - @page { margin: 0 } removes the default white page-edge margin band
     #    that Chromium prints regardless of background colors, so the theme
     #    background fills the whole page (no white border).
-    #  - The original page_margin is converted to #write padding. Because a
+    #  - The original page_margin is converted to padding on the content
+    #    container (#write for typora, .body for resume templates). Because a
     #    plain padding only applies at the element's first/last edge (so inner
-    #    pages lose top/bottom margin), box-decoration-break: clone makes every
-    #    page fragment repeat the padding — giving a consistent margin on all
-    #    four sides of every page, including the bottom.
+    #    pages lose top/bottom margin), ``box-decoration-break: clone`` makes
+    #    every page fragment repeat the padding — giving a consistent margin on
+    #    all four sides of every page, including the bottom.
     #  - print-color-adjust: exact forces Chromium to KEEP background colors
-    #    when printing (otherwise html/body/#write backgrounds are dropped).
+    #    when printing (otherwise html/body/container backgrounds are dropped).
     #  - Header/footer (date, URL, page number) are suppressed via the CLI
     #    flags --no-pdf-header-footer / --no-print-header-footer (spellings
     #    differ across Chromium builds; both are passed harmlessly).
     html_text = html_path.read_text(encoding="utf-8")
-    pdf_css = (
-        "\n@page { margin: 0; }\n"
-        "@media print {\n"
-        f"  #write {{ padding: {page_margin}; "
+    _margin_pad = (
         "-webkit-box-sizing: border-box; box-sizing: border-box; "
-        "-webkit-box-decoration-break: clone; box-decoration-break: clone; }}\n"
+        "-webkit-box-decoration-break: clone; box-decoration-break: clone;"
+    )
+    pdf_css = (
+        f"\n@page {{ size: {page_size}; margin: 0; }}\n"
+        "@media print {\n"
+        f"  #write, .body {{ padding: {page_margin}; {_margin_pad} }}\n"
         # Code blocks: themes set `overflow: auto`, which renders an ugly
         # horizontal scrollbar in print (looks like a raw HTML dump). In print
         # we kill the scroll container and wrap long lines (including unbreakable
         # tokens like long URLs) instead, so the block paginates cleanly with no
         # scrollbar. Applies to every template/theme uniformly.
-        "  #write pre, #write pre code {\n"
+        "  #write pre, .body pre,"
+        "  #write pre code, .body pre code {\n"
         "    overflow: visible !important;\n"
         "    max-height: none !important;\n"
         "    white-space: pre-wrap !important;\n"
@@ -92,7 +101,7 @@ def export_pdf(
         "    overflow-wrap: anywhere !important;\n"
         "  }\n"
         "}\n"
-        "html, body, #write, #write * {\n"
+        "html, body, #write, .body, #write *, .body * {\n"
         "  -webkit-print-color-adjust: exact !important;\n"
         "  print-color-adjust: exact !important;\n"
         "}\n"
@@ -129,7 +138,8 @@ def export_pdf(
             print(f"[pdf] ERROR: {result.stderr.strip()}")
             return False
         if pdf_path.exists() and pdf_path.stat().st_size > 1000:
-            print(f"[pdf] ✓ {pdf_path.name} ({pdf_path.stat().st_size // 1024} KB)")
+            suffix = f" [{style_name}]" if style_name else ""
+            print(f"[pdf] ✓ {pdf_path.name} ({pdf_path.stat().st_size // 1024} KB){suffix}")
             return True
         print(f"[pdf] WARNING: output may be empty ({pdf_path})")
         return False

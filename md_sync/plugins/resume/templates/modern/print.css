@@ -1,0 +1,34 @@
+@page { margin: 6mm 10mm; }
+body { background: #fff; padding: 0; font-size: 11px; line-height: 1.4; }
+.page { max-width: 100%; margin: 0; border-radius: 0; box-shadow: none; overflow: visible !important; }
+.header { padding: 14px 12mm 12px; }
+.header h1 { font-size: 20px; }
+.header .title-role { font-size: 12px; margin-bottom: 6px; }
+.header .contact { font-size: 10.5px; gap: 4px 16px; }
+.body { padding: 14px 12mm 14mm; }
+.section-title { font-size: 12px; margin-bottom: 6px; padding-bottom: 3px; break-after: avoid; }
+.section { margin-bottom: 10px; padding-top: 3px; }
+.summary-list li { font-size: 11px; line-height: 1.4; margin-bottom: 3px; }
+.edu-item { font-size: 11px; padding: 3px 0; break-inside: avoid; }
+.exp-item { margin-bottom: 8px; padding-bottom: 7px; break-inside: avoid; }
+.exp-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 4px; }
+.exp-header .company { font-size: 12px; font-weight: 700; }
+.exp-header .period { font-size: 11px; color: #555; margin-left: auto; }
+.exp-desc { display: block; font-size: 11px; line-height: 1.4; margin-top: 2px; }
+.exp-sub { font-size: 10.5px; }
+.proj-item { margin-bottom: 8px; padding-bottom: 7px; break-inside: avoid; }
+.proj-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: 12px; margin-bottom: 4px; }
+.proj-header .proj-title { font-weight: 700; }
+.proj-header .period { color: #555; margin-left: auto; }
+.proj-desc { display: block; font-size: 11px; line-height: 1.4; margin-top: 2px; }
+.proj-tech { font-size: 10.5px; margin-top: 2px; }
+.metric { font-weight: 700; color: #000; }
+.metric-blue { font-weight: 700; color: #000; }
+.section-title::before { display: none; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 4px 8px; text-align: left; border: 1px solid #ccc; }
+th { background: #f0f0f0; font-weight: 700; }
+
+/* 允许代码块在页间自然断开，避免大块空白 */
+pre { page-break-inside: auto; break-inside: auto; }
+code { word-wrap: break-word; white-space: pre-wrap; }

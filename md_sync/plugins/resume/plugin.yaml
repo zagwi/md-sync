@@ -7,10 +7,10 @@
 #
 # Schema:  resume  (默认值，兼容现有配置 schema: resume)
 
-name: builtin-resume
-label: 内置简历插件包
+name: resume
+label: 专业简历
 version: "1.0"
-description: 内置简历插件包 — 提供源模板、解析器、bwx/modern 渲染风格
+description: 专业简历 — 提供源模板、解析器、bwx/modern 渲染风格
 author: md-sync
 type: pack
 

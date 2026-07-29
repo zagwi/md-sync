@@ -34,20 +34,26 @@ def derive_output_path(
     source_stem: str = "",
     *,
     pdf: bool = False,
+    naming: str = "timestamp",
 ) -> str:
     """Build an output file path under the user-specified *output root*.
 
-    Each output filename includes a millisecond timestamp to avoid
-    name conflicts (e.g. ``README-zh-20260728_143052_123.html``).
+    ``naming`` controls how filename collisions are handled:
+      - ``"timestamp"`` (default): append a millisecond timestamp so every
+        derived name is unique, e.g. ``README-zh-20260728_143052_123.html``.
+      - ``"overwrite"``: use a clean name with no timestamp, so repeated syncs
+        overwrite the same file, e.g. ``README-zh.html``.
     """
     base = (name_map or {}).get(lang) or source_stem
     # Guarantee a non-empty filename: fall back to the language code so we
     # never produce an extension-only path like "pdf/.pdf".
     if not base:
         base = lang or format
-    # Append millisecond timestamp to avoid filename collisions
-    ts = _timestamp()
-    base = f"{base}-{ts}"
+    # Append millisecond timestamp to avoid filename collisions, unless the
+    # user chose to overwrite (clean name, no suffix).
+    if naming != "overwrite":
+        ts = _timestamp()
+        base = f"{base}-{ts}"
     ext_map = {
         "html": "html",
         "md": "md",
@@ -74,7 +80,8 @@ class OutputConfig:
     style: str | None = None   # template style name (e.g. "bwx", "modern")
     pdf: bool = False
     pdf_path: str | None = None
-    page_margin: str = "15mm"  # PDF @page margin, e.g. "15mm", "20mm", "25mm"
+    page_size: str = "A4"      # PDF/DOCX page size, e.g. "A4", "Letter", "A5"
+    page_margin: str = ""      # override margin; empty => standard margin for page_size
 
 
 @dataclass
@@ -121,6 +128,9 @@ class ProjectConfig:
     # (pdf/ html/ md/ sub-directories + language-based file names). Empty means
     # "unconfigured" — the user must set it before outputs can be generated.
     output_root: str = ""
+    # How to handle output filename collisions: "timestamp" (default) appends a
+    # millisecond timestamp; "overwrite" uses a clean name (no suffix).
+    output_naming: str = "timestamp"
     # Language of the source document. The Markdown output for THIS language IS
     # the source file itself (not a generated copy), so it must point back at
     # the source path and be flagged as the source in the UI.
@@ -147,6 +157,7 @@ class ProjectConfig:
             web_ui=WebUIConfig(**(raw.get("web_ui", {}))),
             name_map=raw.get("name_map", {}),
             output_root=raw.get("output_root", ""),
+            output_naming=raw.get("output_naming", "timestamp"),
             source_lang=raw.get("source_lang", "zh"),
             config_path=path,
         )
@@ -229,7 +240,7 @@ class ProjectConfig:
         """Output base name (no extension) for a language."""
         return self.name_map.get(lang) or self.source_path.stem
 
-    def output_path(self, format: str, lang: str, *, pdf: bool = False) -> str:
+    def output_path(self, format: str, lang: str, *, pdf: bool = False, naming: str | None = None) -> str:
         """Derive a single output path for (format, lang) from output_root.
 
         Returns "" when no output root is configured (i.e. unconfigured).
@@ -237,4 +248,6 @@ class ProjectConfig:
         root = self.output_root_path
         if root is None:
             return ""
-        return derive_output_path(root, format, lang, self.name_map, self.source_path.stem, pdf=pdf)
+        if naming is None:
+            naming = self.output_naming
+        return derive_output_path(root, format, lang, self.name_map, self.source_path.stem, pdf=pdf, naming=naming)

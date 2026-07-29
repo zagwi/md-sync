@@ -16,6 +16,7 @@
 <body>
 
 <div class="page">
+  {% if not body_html %}
   <div class="header">
     <h1>{{ doc.name }}</h1>
     <div class="title-role">{{ doc.title }}</div>
@@ -25,11 +26,16 @@
       {% endfor %}
     </div>
   </div>
+  {% endif %}
   <div class="body">
+    {% if body_html %}
+    {{ body_html | safe }}
+    {% else %}
     {% for section in doc.sections %}
     {% set section_tpl = sections_meta.get(section.id, {}).get('template', 'sections/summary.html.j2') %}
     {% include 'sections/' + section_tpl.split('/')[-1] %}
     {% endfor %}
+    {% endif %}
   </div>
 </div>
 

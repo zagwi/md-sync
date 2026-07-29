@@ -75,11 +75,26 @@ html, body {
   }
 }
 {% endif %}
+/* 表格拉满宽度 */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 6px 10px; text-align: left; border: 1px solid #ddd; }
+th { background: #f5f5f5; font-weight: 700; }
+@media print {
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 4px 8px; text-align: left; border: 1px solid #ccc; }
+  th { background: #f0f0f0; font-weight: 700; }
+  /* 允许代码块在页间自然断开，避免大块空白 */
+  pre { page-break-inside: auto; break-inside: auto; }
+  code { word-wrap: break-word; white-space: pre-wrap; }
+}
 </style>
 </head>
 <body>
 
 <div id="write">
+{% if body_html %}
+{{ body_html | safe }}
+{% else %}
 <h1>{{ doc.name }}</h1>
 
 {% for section in doc.sections %}
@@ -87,12 +102,12 @@ html, body {
   {% for item in section.items %}
     {% if item.type == "bullet" %}
     <ul>
-      <li>{{ t(item.content) | linkify | md_inline | safe }}</li>
+      <li>{{ t(item.content) | md_inline | linkify | safe }}</li>
     </ul>
     {% elif item.type == "text" %}
-    <p>{{ t(item.content) | linkify | md_inline | safe }}</p>
+    <p>{{ t(item.content) | md_inline | linkify | safe }}</p>
     {% elif item.type == "code" %}
-    <pre{% if item.language %} class="language-{{ item.language }}"{% endif %}><code>{{ item.content }}</code></pre>
+    <pre{% if item.language %} class="language-{{ item.language }}"{% endif %}><code>{{ item.content | e }}</code></pre>
     {% elif item.type == "table" %}
     <table>
     {% set rows = item.content.split(chr(10)) %}
@@ -120,17 +135,20 @@ html, body {
     </tbody></table>
     {% elif item.type == "hr" %}
     <hr>
+    {% elif item.type == "md" %}
+    <div class="md-block">{{ t(item.content) | md_block | safe }}</div>
     {% elif item.type == "entry" %}
     <p><strong>{{ item.title }}</strong>{% if item.subtitle %} — {{ item.subtitle }}{% endif %}{% if item.period %} ({{ item.period }}){% endif %}</p>
-    {% if item.content %}<p>{{ t(item.content) | linkify | md_inline | safe }}</p>{% endif %}
+    {% if item.content %}<p>{{ t(item.content) | md_inline | linkify | safe }}</p>{% endif %}
     {% elif item.type == "project" %}
     <p><strong>{{ item.title }}</strong>{% if item.role %} — {{ item.role }}{% endif %}</p>
-    {% if item.content %}<p>{{ t(item.content) | linkify | md_inline | safe }}</p>{% endif %}
+    {% if item.content %}<p>{{ t(item.content) | md_inline | linkify | safe }}</p>{% endif %}
     {% else %}
-    <p>{{ t(item.content) | linkify | md_inline | safe }}</p>
+    <p>{{ t(item.content) | md_inline | linkify | safe }}</p>
     {% endif %}
   {% endfor %}
 {% endfor %}
+{% endif %}
 </div>
 
 </body>

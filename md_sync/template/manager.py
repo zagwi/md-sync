@@ -69,8 +69,9 @@ class TemplateManager:
         (see ``PluginRegistry.get_template_dirs``).
 
         Typora themes from ``~/.config/Typora/themes/`` are auto-discovered
-        and registered under the ``typora-<name>`` prefix. They support any
-        schema (``schema="*"``) so they appear for all document types.
+        and registered under the ``typora-<name>`` prefix. They belong to the
+        ``typora`` schema only (``schema="typora"``), so they never appear for
+        the generic ``markdown`` schema and never mix into the universal set.
         """
         results: list[TemplateInfo] = []
         seen: set[str] = set()
@@ -102,16 +103,18 @@ class TemplateManager:
                 # Skip Typora user override files
                 if css_file.stem.endswith(".user") or css_file.stem == "base":
                     continue
-                # Typora themes are universal (render any doc.sections), so they
-                # appear for ALL schemas — do not gate on `schema` here, otherwise
-                # selecting the resume plugin hides every typora theme.
+                # Typora themes belong to the typora schema only. Skip them unless
+                # the caller asked for the typora schema (or no filter), so they
+                # never leak into the generic markdown / resume style lists.
+                if schema is not None and schema != "typora":
+                    continue
                 results.append(TemplateInfo(
                     name=name,
                     label=f"Typora {css_file.stem.title()}",
                     description=f"Typora 主题: {css_file.stem}",
                     version="1.0",
                     author="Typora Community",
-                    schema="*",
+                    schema="typora",
                     engine="jinja2",
                     directory=typora_base,
                 ))

@@ -5,15 +5,13 @@ through its corresponding component template.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-
-import re
-from markupsafe import escape, Markup
+from markupsafe import Markup, escape
 
 from md_sync.core.document import Document
-
 
 # Metric pattern: digits followed by K/k/+/%/×/倍 etc.
 _METRIC_RX = re.compile(
@@ -28,7 +26,7 @@ _NUMBER_RX = re.compile(r"(\d+[+]?)([人]?)")
 
 def _replace_metrics(text: str) -> str:
     """Jinja2 filter: wrap metric values with <span class='metric'>.
-    
+
     Numbers ≥ 100 are wrapped in metric-blue, others in metric.
     """
     def _wrap(m):
@@ -38,7 +36,7 @@ def _replace_metrics(text: str) -> str:
         is_high = nums and int(nums[0]) >= 100 and '%' not in val
         cls = "metric-blue" if is_high else "metric"
         return f'<span class="{cls}">{val}</span>'
-    
+
     return _METRIC_RX.sub(_wrap, text)
 
 

@@ -13,13 +13,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
 from md_sync.config import ProjectConfig
 from md_sync.core.pipeline import SyncPipeline
 from md_sync.plugin.interface import DirectoryPlugin
-from md_sync.plugin.loader import install_plugin, remove_plugin
+from md_sync.plugin.loader import remove_plugin
 from md_sync.plugin.registry import PluginRegistry
 from md_sync.template.manager import TemplateManager
 from md_sync.watcher import FileWatcher
@@ -36,6 +37,7 @@ def _extract_config(args: argparse.Namespace) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(
         prog="md-sync",
         description="Markdown → multi-format, multi-language sync engine",
@@ -325,7 +327,7 @@ def _cmd_plugin(args: argparse.Namespace) -> int:
         out_path = Path(args.output)
         out_path.write_text(source, encoding="utf-8")
         print(f"✓ Generated template.md from '{args.plugin_name}' → {out_path}")
-        print(f"  Edit this file to write your document, then run 'md-sync sync'.")
+        print("  Edit this file to write your document, then run 'md-sync sync'.")
         return 0
 
     elif args.plugin_action == "show":
@@ -351,7 +353,7 @@ def _cmd_plugin(args: argparse.Namespace) -> int:
                     src = plugin.get_template_source()
                     if src:
                         preview = src[:300].replace("\n", "\n              ")
-                        print(f"\n  Template.md preview (first 300 chars):\n")
+                        print("\n  Template.md preview (first 300 chars):\n")
                         print(f"  {preview}...")
             if m.hooks:
                 print(f"Hooks:       {', '.join(m.hooks)}")
@@ -377,8 +379,9 @@ def _load_config(config_path: str) -> ProjectConfig:
 
 
 def _start_web_ui(cfg, pipeline) -> None:
-    from md_sync.web.app import run_web_ui
     import threading
+
+    from md_sync.web.app import run_web_ui
 
     host = "127.0.0.1"
     port = 8580

@@ -36,6 +36,12 @@ Documentation = "https://github.com/md-sync/md-sync#readme"
 
 [project.optional-dependencies]
 build = ["pyinstaller>=6.0"]
+dev = [
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pre-commit>=3.7",
+    "pytest>=8.0",
+]
 
 [project.scripts]
 md-sync = "md_sync.cli:main"
@@ -58,3 +64,27 @@ md_sync = [
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["md_sync"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM", "PTH"]
+ignore = ["E501", "F403", "F405", "E402", "B027", "C401", "SIM102", "SIM110", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B", "SIM", "PTH"]
+"md_sync/qt_app.py" = ["B", "SIM", "PTH"]
+"md_sync/web/app.py" = ["B", "SIM"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_ignores = true
+ignore_missing_imports = true
+disallow_untyped_defs = false

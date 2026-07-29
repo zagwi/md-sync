@@ -10,8 +10,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any
 
+if TYPE_CHECKING:
+    from md_sync.core.document import Document
 
 # ── Plugin types ────────────────────────────────────────────────────────────
 
@@ -36,15 +38,15 @@ class PluginManifest:
     author: str = ""
     plugin_type: str = PLUGIN_TYPE_RENDER
     entry_point: str = ""           # Python module path, e.g. "my_plugin.main"
-    directory: Optional[Path] = None
+    directory: Path | None = None
     templates: list[str] = field(default_factory=list)  # template names provided
     dependencies: list[str] = field(default_factory=list)
     hooks: list[str] = field(default_factory=list)      # hook names provided
 
     # Plugin Pack fields (type="pack")
-    template: Optional[str] = None   # relative path to source template.md
-    parser_schema: Optional[str] = None  # schema identifier, e.g. "my-resume"
-    parser_class: Optional[str] = None   # Python class path, e.g. "parser.MyParser"
+    template: str | None = None   # relative path to source template.md
+    parser_schema: str | None = None  # schema identifier, e.g. "my-resume"
+    parser_class: str | None = None   # Python class path, e.g. "parser.MyParser"
     requires_template: bool = False      # 是否要求用户必须使用生成的源模板（如简历格式）
 
 
@@ -87,7 +89,7 @@ class RenderPlugin(ABC):
     # ── Built-in discovery ──────────────────────────────────────────────
 
     @classmethod
-    def from_directory(cls, directory: Path) -> "DirectoryPlugin":
+    def from_directory(cls, directory: Path) -> DirectoryPlugin:
         """Create a DirectoryPlugin from a plugin directory."""
         return DirectoryPlugin(directory)
 
@@ -196,7 +198,7 @@ class DirectoryPlugin(RenderPlugin):
                     return mod.filters
         return {}
 
-    def load_parser(self) -> Optional[ParserPlugin]:
+    def load_parser(self) -> ParserPlugin | None:
         """Load the parser from parser.py if it exists and is configured."""
         if not self._manifest.parser_class:
             return None
@@ -219,7 +221,7 @@ class DirectoryPlugin(RenderPlugin):
             return None
         return cls()
 
-    def get_template_source(self) -> Optional[str]:
+    def get_template_source(self) -> str | None:
         """Get the content of the plugin's template.md source template."""
         if not self._manifest.template:
             return None

@@ -17,10 +17,9 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 
-def _find_pandoc() -> Optional[str]:
+def _find_pandoc() -> str | None:
     """Return the pandoc binary path, or None if not found."""
     import shutil
     return shutil.which("pandoc")
@@ -31,9 +30,9 @@ def export_via_pandoc(
     output_path: Path | str,
     to_format: str = "docx",
     from_format: str = "html",
-    metadata: Optional[dict[str, str]] = None,
-    reference_doc: Optional[Path | str] = None,
-    extra_args: Optional[list[str]] = None,
+    metadata: dict[str, str] | None = None,
+    reference_doc: Path | str | None = None,
+    extra_args: list[str] | None = None,
 ) -> bool:
     """Convert a file to another format using pandoc CLI.
 

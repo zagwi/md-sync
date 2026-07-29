@@ -9,12 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
 from md_sync.plugin.registry import PluginRegistry
-
 
 # ── Data ────────────────────────────────────────────────────────────────────
 
@@ -28,13 +26,13 @@ class TemplateInfo:
     version: str = "1.0"
     author: str = "md-sync"
     schema: str = "resume"          # which document schema this works with
-    inherits: Optional[str] = None  # base template name
+    inherits: str | None = None  # base template name
     engine: str = "jinja2"
     tags: list[str] = field(default_factory=list)
-    preview: Optional[str] = None   # preview image path
+    preview: str | None = None   # preview image path
 
     # Resolved
-    directory: Optional[Path] = None
+    directory: Path | None = None
 
 
 @dataclass
@@ -55,7 +53,7 @@ class TemplateCatalog:
 class TemplateManager:
     """Discover and resolve templates across sources."""
 
-    def __init__(self, project_dir: Optional[Path] = None):
+    def __init__(self, project_dir: Path | None = None):
         self._project_dir = Path(project_dir).resolve() if project_dir else None
         self._install_dir = self._find_install_dir()
         self._cache: dict[str, TemplateCatalog] = {}
@@ -63,7 +61,7 @@ class TemplateManager:
 
     # ── Listing ─────────────────────────────────────────────────────────
 
-    def list_templates(self, schema: Optional[str] = None) -> list[TemplateInfo]:
+    def list_templates(self, schema: str | None = None) -> list[TemplateInfo]:
         """List all available templates, optionally filtered by schema.
 
         Template styles are no longer shipped in a central ``templates/`` dir:
@@ -146,7 +144,7 @@ class TemplateManager:
 
     # ── Internal ────────────────────────────────────────────────────────
 
-    def _try_load_from_plugins(self, name: str) -> Optional[TemplateCatalog]:
+    def _try_load_from_plugins(self, name: str) -> TemplateCatalog | None:
         """Search plugin-provided template directories."""
         for plugin_tpl_dir in self._plugin_registry.get_template_dirs():
             target = plugin_tpl_dir / name
@@ -156,7 +154,7 @@ class TemplateManager:
                     return cat
         return None
 
-    def _load_from_dir(self, directory: Path) -> Optional[TemplateCatalog]:
+    def _load_from_dir(self, directory: Path) -> TemplateCatalog | None:
         yaml_path = directory / "template.yaml"
         if not yaml_path.exists():
             return None

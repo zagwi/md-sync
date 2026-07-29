@@ -28,22 +28,33 @@ if __name__ == "__main__" and __package__ is None:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
-from PySide6.QtCore import Qt, QEvent, QPoint, QThread, Signal, QUrl, QTimer
-from PySide6.QtGui import QDesktopServices, QFont, QColor, QPixmap, QPainter, QIcon
+from PySide6.QtCore import QEvent, QPoint, Qt, QThread, QTimer, QUrl, Signal
+from PySide6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout,
+    QAbstractItemView,
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
     QSizePolicy,
-    QLineEdit, QPushButton, QComboBox, QCheckBox,
-    QTextEdit, QLabel, QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
-from md_sync.config import ProjectConfig, OutputConfig, derive_output_path
+from md_sync.config import OutputConfig, ProjectConfig, derive_output_path
 from md_sync.core.pipeline import SyncPipeline
-from md_sync.plugin.registry import PluginRegistry
 from md_sync.plugin.interface import DirectoryPlugin, PluginManifest
+from md_sync.plugin.registry import PluginRegistry
 from md_sync.template.manager import TemplateManager
 from md_sync.watcher import FileWatcher
 
@@ -135,7 +146,7 @@ def _status_text(color: str) -> str:
 class TitleBar(QWidget):
     """Custom draggable title bar with minimize / maximize / close."""
 
-    def __init__(self, parent: "MainWindow"):
+    def __init__(self, parent: MainWindow):
         super().__init__(parent)
         self._parent = parent
         self.setFixedHeight(40)
@@ -167,7 +178,7 @@ class TitleBar(QWidget):
         layout.addWidget(self.btn_max)
         layout.addWidget(self.btn_close)
 
-        self._drag_pos: Optional[QPoint] = None
+        self._drag_pos: QPoint | None = None
 
     def _make_btn(self, text: str, name: str, slot) -> QPushButton:
         b = QPushButton(text)
@@ -266,10 +277,10 @@ class MainWindow(QWidget):
 
         self.tmgr = TemplateManager()
         self._plugin_registry = PluginRegistry()
-        self._last_out_dir: Optional[str] = None
-        self.cfg: Optional[ProjectConfig] = None
-        self.worker: Optional[SyncWorker] = None
-        self.watcher: Optional[FileWatcher] = None
+        self._last_out_dir: str | None = None
+        self.cfg: ProjectConfig | None = None
+        self.worker: SyncWorker | None = None
+        self.watcher: FileWatcher | None = None
         self.watching = False
         self.source_mtime = 0.0
         self._resizing = None
@@ -283,7 +294,7 @@ class MainWindow(QWidget):
         self._pulse_timer = QTimer(self)
         self._pulse_timer.timeout.connect(self._pulse_step)
         self._pulse_timer.start(450)
-        self._drag_pos: Optional[QPoint] = None
+        self._drag_pos: QPoint | None = None
 
         self._build_ui()
         self._load_templates()
@@ -768,6 +779,7 @@ class MainWindow(QWidget):
         no colors are found.
         """
         import re
+
         from md_sync.plugins.typora.paths import get_typora_themes_dir
         typora_dir = get_typora_themes_dir()
         css_path = (typora_dir / f"{css_stem}.css") if typora_dir else None
@@ -805,7 +817,7 @@ class MainWindow(QWidget):
         p.end()
         return QIcon(pix)
 
-    def _reload_style_combos(self, infos: Optional[list] = None):
+    def _reload_style_combos(self, infos: list | None = None):
         """填充风格下拉框。包含 Typora 主题的色点预览图标。"""
         for combo in (self.tpl_zh, self.tpl_en):
             combo.clear()
@@ -1033,7 +1045,7 @@ class MainWindow(QWidget):
         ready = bool(src) and Path(src).expanduser().exists() and bool(out)
         self.watch_btn.setEnabled(ready)
 
-    def _build_config(self) -> Optional[ProjectConfig]:
+    def _build_config(self) -> ProjectConfig | None:
         src = self.source_edit.text().strip()
         if not src:
             QMessageBox.warning(self, "缺少源文件", "请先选择 Markdown 源文件。")
@@ -1552,7 +1564,7 @@ class MainWindow(QWidget):
         self._resizing = None
         super().mouseReleaseEvent(e)
 
-    def _edge_at(self, pos: QPoint) -> Optional[str]:
+    def _edge_at(self, pos: QPoint) -> str | None:
         r = self.rect()
         x, y = pos.x(), pos.y()
         if x < EDGE_MARGIN:

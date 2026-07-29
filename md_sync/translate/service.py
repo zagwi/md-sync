@@ -14,12 +14,13 @@ It does NOT touch any output files.
 """
 from __future__ import annotations
 
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional
 
 from md_sync.core.document import Document
-from md_sync.translate.fallback import translate_via_api
-from md_sync.translate.fallback import _detect_provider
+
+logger = logging.getLogger(__name__)
+from md_sync.translate.fallback import _detect_provider, translate_via_api
 from md_sync.translate.manager import TranslationManager
 
 # How many concurrent translation API calls to allow.
@@ -42,9 +43,9 @@ def _distinct_contents(doc: Document) -> list[str]:
 def translate_document(
     doc: Document,
     target_lang: str,
-    provider: Optional[str] = None,
-    translator: Optional[TranslationManager] = None,
-    progress_callback: Optional[callable] = None,
+    provider: str | None = None,
+    translator: TranslationManager | None = None,
+    progress_callback: callable | None = None,
 ) -> dict:
     """Translate every content item of ``doc`` into ``target_lang``.
 
@@ -118,12 +119,12 @@ def translate_document(
                 )
                 fut_to_text[fut] = text
             done_count = cached + failed  # items already known before parallel run
-            total_to_translate = len(pending_texts)
             for fut in as_completed(fut_to_text):
                 text = fut_to_text[fut]
                 try:
                     result = fut.result()
                 except Exception:
+                    logger.debug("translate task failed", exc_info=True)
                     result = None
                 if result:
                     if translator:
@@ -152,7 +153,7 @@ def translate_document(
     }
 
 
-def translate_plan(doc: Document, translator: Optional[TranslationManager] = None) -> dict:
+def translate_plan(doc: Document, translator: TranslationManager | None = None) -> dict:
     """Return what *would* be translated, without doing any network calls.
 
     Useful for the UI to show "源语言：中文 → 待翻译：英文 5 条" before the

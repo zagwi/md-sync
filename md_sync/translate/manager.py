@@ -24,7 +24,6 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Optional
 
 
 def _hash(text: str) -> str:
@@ -63,7 +62,7 @@ class TranslationManager:
         return self._data
 
     # ── bidirectional API ──────────────────────────────────────────
-    def lookup(self, source: str, target_lang: str = "en") -> Optional[str]:
+    def lookup(self, source: str, target_lang: str = "en") -> str | None:
         """Return the cached translation of ``source`` into ``target_lang``."""
         key = _hash(source)
         entry = self._data.get(key)
@@ -71,7 +70,7 @@ class TranslationManager:
             return None
         return entry.get(target_lang) or None
 
-    def get_status(self, source: str) -> Optional[str]:
+    def get_status(self, source: str) -> str | None:
         key = _hash(source)
         entry = self._data.get(key)
         return entry.get("status") if entry else None
@@ -102,7 +101,7 @@ class TranslationManager:
                 yield key, entry, target_lang
 
     # ── legacy (single-target) helpers ─────────────────────────────
-    def lookup_legacy(self, source: str) -> Optional[str]:
+    def lookup_legacy(self, source: str) -> str | None:
         return self.lookup(source, "en")
 
     def store_legacy(self, source: str, translation: str) -> None:

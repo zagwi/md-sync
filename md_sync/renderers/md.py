@@ -5,9 +5,6 @@ or generates an MD file in the target language (using the translation cache).
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
-
 from md_sync.core.document import Document
 from md_sync.translate.manager import TranslationManager
 
@@ -15,7 +12,7 @@ from md_sync.translate.manager import TranslationManager
 class MdRenderer:
     """Render a Document back to Markdown format."""
 
-    def __init__(self, translator: Optional[TranslationManager] = None):
+    def __init__(self, translator: TranslationManager | None = None):
         self._translator = translator
 
     def render(self, doc: Document, lang: str = "zh") -> str:
@@ -59,7 +56,7 @@ class MdRenderer:
 
         return "\n".join(lines).strip() + "\n"
 
-    def _render_item(self, item, lang: str, source_lang: str = "zh") -> Optional[str]:
+    def _render_item(self, item, lang: str, source_lang: str = "zh") -> str | None:
         """Render a single Item as a Markdown line/block."""
         if item.type == "bullet":
             content = self._maybe_translate(item.content, lang, source_lang)

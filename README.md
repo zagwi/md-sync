@@ -230,6 +230,148 @@ md-sync plugin list                 # 列出已安装插件
 
 ---
 
+## 制作插件
+
+md-sync 的插件分两类目录：**`md_sync/plugin/`** 是插件**引擎代码**（接口 / 注册表 / 加载器 / 钩子），**`plugins/`** 与 `~/.md-sync/plugins/`** 才是插件**实例**（具体模板、解析器）。你只需按约定放一个目录，无需改引擎代码即可扩展渲染风格、解析器或钩子。
+
+完整可运行示例见 **`docs/example-plugin/`**（`resume-pack`：源模板 + 解析器 + 渲染风格 + 过滤器四件套）。
+
+### 插件目录结构
+
+```text
+my-plugin/
+├── plugin.yaml          # 插件清单（必填）
+├── template.md          # 源模板（仅 pack 类型需要；用户按此格式写稿）
+├── parser.py            # 解析器（仅 pack/parser 类型需要）
+├── templates/           # 渲染风格（Jinja2 + CSS）
+│   └── <style-name>/    #   一个子目录 = 一种风格，目录名即风格名
+│       ├── document.html.j2
+│       └── style.css
+└── filters.py           # 可选：自定义 Jinja2 过滤器
+```
+
+### plugin.yaml 清单字段
+
+```yaml
+name: resume-pack            # 唯一标识，用于 md-sync plugin remove <name>
+version: "1.0"
+description: 一句话描述
+author: Your Name
+type: pack                  # render | parser | pack | translate | export | hook
+# type=pack 时：解析器 + 源模板 + 渲染风格打包在一起
+
+parser:                     # 仅 pack/parser 需要
+  class: parser.MyResumeParser   # parser.py 里的类名
+  schema: my-resume              # 配置里 schema: my-resume 引用此插件
+
+template: template.md       # 源模板相对路径（pack 类型）
+
+templates:                  # 本插件提供的渲染风格名（须与 templates/<name>/ 目录一致）
+  - example-style
+
+hooks:                      # 监听的流水线钩子
+  - after_parse
+  - after_render
+
+dependencies: []
+```
+
+> ⚠️ **`templates:` 里写的风格名必须真实存在于 `templates/<name>/` 目录**，否则该风格不会出现在 `md-sync template list` 中（也不会报错，只是不生效）。
+
+### 三种常见插件类型
+
+| 类型 | `type` | 用途 | 关键文件 |
+|------|--------|------|----------|
+| 渲染风格 | `render` | 只提供新 HTML/CSS 样式 | `templates/<style>/` |
+| 自定义解析器 | `parser` | 让 md-sync 读懂特殊格式源稿 | `parser.py` |
+| 完整插件包 | `pack` | 源模板 + 解析器 + 风格一体 | 上述全部 |
+
+### 写解析器（pack/parser 类型）
+
+继承 `md_sync.plugin.interface.ParserPlugin`，实现 `_parse` 把源文本转成 `Document` 模型：
+
+```python
+from md_sync.plugin.interface import ParserPlugin, PluginManifest, PLUGIN_TYPE_PACK
+from md_sync.core.document import Document, Item, Section
+
+class MyResumeParser(ParserPlugin):
+    def __init__(self):
+        self._manifest = PluginManifest(
+            name="resume-pack",
+            plugin_type=PLUGIN_TYPE_PACK,
+            parser_schema="my-resume",   # 配置 schema 引用
+        )
+
+    @property
+    def manifest(self) -> PluginManifest:
+        return self._manifest
+
+    def detect(self, text: str) -> bool:
+        """自动识别该源是否属于本插件格式（返回 True 时被自动选用）。"""
+        return "## 工作经历" in text and "---" in text
+
+    def parse(self, text: str) -> Document:
+        doc = Document()
+        # ... 按自己的语法把 text 解析成 doc.sections / doc.items ...
+        return doc
+```
+
+解析出的 `Document` 会交给模板渲染；`detect()` 命中后，配置里写 `schema: my-resume` 即可指定使用它。
+
+### 写渲染风格（render/pack 类型）
+
+在 `templates/<style-name>/` 下放 Jinja2 模板与 CSS。`Document` 模型的字段（`doc.name`、`doc.sections`、`doc.items` 等）即为模板可用变量。需要自定义过滤器时，在 `filters.py` 暴露一个 `filters` 字典：
+
+```python
+def highlight_metric(text: str) -> str:
+    return text  # 实际实现略
+
+filters = {            # DirectoryPlugin 自动发现并注册
+    "highlight_metric": highlight_metric,
+}
+```
+
+模板里即可使用 `{{ value | highlight_metric }}`。
+
+### 安装与调试
+
+```bash
+# 从本地目录安装（复制到 ~/.md-sync/plugins/<name>/）
+md-sync plugin install ./docs/example-plugin/resume-pack/
+
+# 查看已安装插件与声明的风格
+md-sync plugin list
+
+# 查看某个插件的清单详情
+md-sync plugin show resume-pack
+
+# 从插件生成源模板，照着写稿
+md-sync plugin template resume-pack -o my-resume.md
+
+# 卸载
+md-sync plugin remove resume-pack
+```
+
+也支持直接从 git 仓库或 PyPI 安装：
+
+```bash
+md-sync plugin install https://github.com/user/md-sync-plugin-xxx
+md-sync plugin install some-pypi-package
+```
+
+安装后，配置 `md-sync.yaml` 指定该插件的 schema 与风格即可使用：
+
+```yaml
+source: my-resume.md
+schema: my-resume          # 对应 parser.schema
+outputs:
+  - format: html
+    lang: zh
+    style: example-style   # 对应 templates 里的风格名
+```
+
+---
+
 ## 配置文件（md-sync.yaml）
 
 ```yaml

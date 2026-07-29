@@ -10,20 +10,18 @@ Reuses shared regex patterns and helpers from md_sync.core.parser.
 from __future__ import annotations
 
 import re
-from pathlib import Path
-from typing import Optional
 
 from md_sync.core.document import Document, Item, Metric, Section
 from md_sync.core.parser import (
-    _SECTION_TITLE_RE,
-    _BULLET_RE,
     _BOLD_ITEM_RE,
+    _BULLET_RE,
     _DATE_PERIOD_RE,
     _METRIC_RE,
+    _SECTION_TITLE_RE,
     SECTION_IDS,
     _slugify,
 )
-from md_sync.plugin.interface import ParserPlugin, PluginManifest, PLUGIN_TYPE_PACK
+from md_sync.plugin.interface import PLUGIN_TYPE_PACK, ParserPlugin, PluginManifest
 
 
 class ResumeParser(ParserPlugin):
@@ -114,7 +112,7 @@ class ResumeParser(ParserPlugin):
                 i += 1
 
         # ── Sections ────────────────────────────────────────────────
-        current_section: Optional[Section] = None
+        current_section: Section | None = None
         body_section = Section(id="body", title="", level=1)
 
         while i < n:

@@ -6,9 +6,9 @@ the sync pipeline with debouncing.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from pathlib import Path
 from threading import Event, Thread
-from typing import Callable, Optional
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -27,7 +27,7 @@ class _ChangeHandler(FileSystemEventHandler):
         source_path: Path,
         callback: Callable[[Path], None],
         debounce: float = 1.5,
-        output_root: Optional[Path] = None,
+        output_root: Path | None = None,
     ):
         self._source = source_path.resolve()
         self._callback = callback
@@ -80,14 +80,14 @@ class FileWatcher:
         source_path: Path | str,
         on_change: Callable[[Path], None],
         debounce: float = 1.5,
-        output_root: Optional[Path | str] = None,
+        output_root: Path | str | None = None,
     ):
         self._source = Path(source_path).resolve()
         self._on_change = on_change
         self._debounce = debounce
         self._output_root = Path(output_root).resolve() if output_root else None
-        self._observer: Optional[Observer] = None
-        self._thread: Optional[Thread] = None
+        self._observer: Observer | None = None
+        self._thread: Thread | None = None
         self._stop_event = Event()
 
     def start(self) -> None:

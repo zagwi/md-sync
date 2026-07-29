@@ -11,16 +11,18 @@ Flow:
 """
 from __future__ import annotations
 
+import logging
 import re
 import shutil
 from pathlib import Path
-from typing import Optional
 
-from md_sync.config import ProjectConfig, OutputConfig
+from md_sync.config import OutputConfig, ProjectConfig
 from md_sync.core.document import Document
+
+logger = logging.getLogger(__name__)
 from md_sync.core.parser import MdParser
-from md_sync.exporters.pdf import export_pdf as _export_pdf
 from md_sync.exporters.pandoc import export_via_pandoc
+from md_sync.exporters.pdf import export_pdf as _export_pdf
 from md_sync.plugin.registry import PluginRegistry
 from md_sync.renderers.html import HtmlRenderer
 from md_sync.renderers.md import MdRenderer
@@ -33,7 +35,7 @@ from md_sync.translate.service import translate_document
 class SyncPipeline:
     """Orchestrate the sync pipeline for one project."""
 
-    def __init__(self, config: ProjectConfig, log_callback: Optional[callable] = None):
+    def __init__(self, config: ProjectConfig, log_callback: callable | None = None):
         self._config = config
         self._log = log_callback or (lambda msg: None)
         self._plugin_registry = PluginRegistry(config.project_dir)
@@ -45,7 +47,7 @@ class SyncPipeline:
 
     # ── Public API ──────────────────────────────────────────────────────
 
-    def run(self, source_path: Optional[Path] = None) -> dict:
+    def run(self, source_path: Path | None = None) -> dict:
         """Run a full sync cycle. Returns stats dict."""
         source = source_path or self._config.source_path
 
@@ -53,11 +55,12 @@ class SyncPipeline:
         try:
             doc = self._parser.parse_file(source, schema=self._config.schema)
         except Exception as e:
+            logger.warning("Parse failed: %s", e)
             self._stats["errors"].append(f"Parse failed: {e}")
             return self._stats
 
         self._stats["source"] = str(source)
-        print(f"[sync] ✓ Parsed: {source.name} ({len(doc.sections)} sections)")
+        logger.info("[sync] ✓ Parsed: %s (%d sections)", source.name, len(doc.sections))
 
         # 2. Process each output
         for out_cfg in self._config.outputs:
@@ -70,10 +73,10 @@ class SyncPipeline:
         # Summary
         ok = len([r for r in self._stats["outputs"] if r.get("ok")])
         err = len([r for r in self._stats["outputs"] if not r.get("ok")])
-        print(f"[sync] ✓ {ok} outputs synced" + (f", {err} errors" if err else ""))
+        logger.info("[sync] ✓ %d outputs synced%s", ok, f", {err} errors" if err else "")
         return self._stats
 
-    def run_dry(self, source_path: Optional[Path] = None) -> dict:
+    def run_dry(self, source_path: Path | None = None) -> dict:
         """Dry run — parse and show what would be synced.
 
         Reports, for each non-source language, how many content items are
@@ -121,7 +124,7 @@ class SyncPipeline:
                 result["skipped"] = "unconfigured"
                 result["ok"] = True
                 result["reason"] = "输出路径未配置"
-                print(f"  – {out_cfg.format}/{out_cfg.lang}: 输出路径未配置，跳过")
+                logger.info("  – %s/%s: 输出路径未配置，跳过", out_cfg.format, out_cfg.lang)
                 return result
             src = Path(self._config.source_path)
             out_path = Path(out_cfg.path)
@@ -129,16 +132,17 @@ class SyncPipeline:
                 # Output path IS the source file — nothing to copy.
                 result["skipped"] = "source"
                 result["ok"] = True
-                print(f"  – {out_cfg.format}/{out_cfg.lang}: 输出即源文件，无需复制")
+                logger.info("  – %s/%s: 输出即源文件，无需复制", out_cfg.format, out_cfg.lang)
                 return result
             try:
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, out_path)
                 result["ok"] = True
                 result["copied"] = True
-                print(f"  ✓ {out_path.name} (源文件副本, {out_path.stat().st_size // 1024} KB)")
+                logger.info("  ✓ %s (源文件副本, %d KB)", out_path.name, out_path.stat().st_size // 1024)
             except Exception as e:
                 result["error"] = f"复制源文件失败: {e}"
+                logger.warning("复制源文件失败: %s", e)
                 self._stats["errors"].append(result["error"])
             return result
 
@@ -149,7 +153,9 @@ class SyncPipeline:
             result["skipped"] = "unconfigured"
             result["ok"] = True
             result["reason"] = "输出路径未配置"
-            print(f"  – {out_cfg.format}/{out_cfg.lang}: 输出路径未配置，跳过（请在界面「📦 输出文件」卡片填写路径）")
+            logger.info(
+                "  – %s/%s: 输出路径未配置，跳过（请在界面「📦 输出文件」卡片填写路径）",
+                out_cfg.format, out_cfg.lang)
             return result
 
         # Translate if this output is a non-source language. Translation is
@@ -189,7 +195,7 @@ class SyncPipeline:
                 if pandoc_ok:
                     result["ok"] = True
                     size_kb = out_path.stat().st_size // 1024 if out_path.exists() else 0
-                    print(f"  ✓ {out_path.name} ({size_kb} KB, via pandoc)")
+                    logger.info("  ✓ %s (%d KB, via pandoc)", out_path.name, size_kb)
                     # ② 插件机制：转换产物写出后触发 after_render hook
                     self._plugin_registry.emit_after_render(
                         out_path,
@@ -211,7 +217,7 @@ class SyncPipeline:
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(content, encoding="utf-8")
                 result["ok"] = True
-                print(f"  ✓ {out_path.name} ({len(content)} chars)")
+                logger.info("  ✓ %s (%d chars)", out_path.name, len(content))
                 # ② 插件机制：HTML 写出后触发 after_render hook
                 self._plugin_registry.emit_after_render(
                     out_path,
@@ -238,15 +244,16 @@ class SyncPipeline:
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(content, encoding="utf-8")
                 result["ok"] = True
-                print(f"  ✓ {out_path.name} ({len(content)} chars)")
+                logger.info("  ✓ %s (%d chars)", out_path.name, len(content))
             else:
                 result["error"] = f"Unknown format: {out_cfg.format}"
                 self._stats["errors"].append(result["error"])
                 return result
         except Exception as e:
             result["error"] = f"Render failed: {e}"
+            logger.warning("Render failed: %s", e)
             self._stats["errors"].append(result["error"])
-            return result
+        return result
 
         return result
 
@@ -297,7 +304,7 @@ class SyncPipeline:
         try:
             catalog = self._template_mgr.resolve(template_name)
         except FileNotFoundError:
-            print(f"  ⚠ Template '{template_name}' not found, falling back to 'bwx'")
+            logger.warning("Template '%s' not found, falling back to 'bwx'", template_name)
             catalog = self._template_mgr.resolve("bwx")
 
         theme_dir = catalog.info.directory
@@ -404,7 +411,7 @@ class SyncPipeline:
             self._translated_langs.add(target)
             self.ensure_translations_for(doc, target)
 
-    def translate_only(self, target_lang: Optional[str] = None) -> dict:
+    def translate_only(self, target_lang: str | None = None) -> dict:
         """Run ONLY the translation step (no output generation).
 
         Detects the source language from the configured source file and

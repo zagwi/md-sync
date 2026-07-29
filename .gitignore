@@ -36,3 +36,14 @@ env/
 
 # 运行期历史缓存（保留 .translations.json 译文缓存）
 .md-sync/
+
+# 工具链缓存 / 覆盖率
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.log
+.python-version
+

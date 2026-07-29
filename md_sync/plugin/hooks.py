@@ -13,10 +13,10 @@ Hooks are emitted at key points in the sync pipeline:
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Optional
-
+from typing import Any
 
 HookHandler = Callable[..., None]
 
@@ -25,10 +25,10 @@ HookHandler = Callable[..., None]
 class HookEvent:
     """Data passed to hook handlers."""
     name: str
-    doc: Optional[Any] = None
-    config: Optional[dict] = None
-    output_path: Optional[Path] = None
-    error: Optional[str] = None
+    doc: Any | None = None
+    config: dict | None = None
+    output_path: Path | None = None
+    error: str | None = None
     context: dict = field(default_factory=dict)
 
 
@@ -70,7 +70,7 @@ class HookManager:
 
 
 # Singleton instance (used by pipeline and plugins)
-_hook_manager: Optional[HookManager] = None
+_hook_manager: HookManager | None = None
 
 
 def get_hook_manager() -> HookManager:

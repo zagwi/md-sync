@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 import json
-import os
+import logging
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -15,8 +14,10 @@ from md_sync.config import OutputConfig, ProjectConfig, derive_output_path
 from md_sync.core.pipeline import SyncPipeline
 from md_sync.plugin.registry import PluginRegistry
 from md_sync.template.manager import TemplateManager
-from md_sync.translate.langdetect import detect_lang, lang_label
 from md_sync.translate.fallback import _detect_provider
+from md_sync.translate.langdetect import detect_lang, lang_label
+
+logger = logging.getLogger(__name__)
 
 
 # ── Project history persistence ────────────────────────────────────────────
@@ -87,9 +88,9 @@ def _build_history_entry(config: ProjectConfig) -> dict:
 
 
 try:
-    from fastapi import FastAPI, Request
-    from fastapi.responses import HTMLResponse, JSONResponse
     import uvicorn
+    from fastapi import FastAPI, Request
+    from fastapi.responses import HTMLResponse
 except ImportError:
     FastAPI = None  # type: ignore
 
@@ -203,9 +204,9 @@ def _build_formats_data(outputs: list[dict], source_mtime: float, source_path: s
 def _render_setup_page(
     project: str,
     templates: list[dict],
-    history_projects: Optional[list[dict]] = None,
-    plugins: Optional[list[dict]] = None,
-    schemas: Optional[list[dict]] = None,
+    history_projects: list[dict] | None = None,
+    plugins: list[dict] | None = None,
+    schemas: list[dict] | None = None,
 ) -> str:
     """Render the project setup page (shown when no config exists)."""
     # History card
@@ -693,12 +694,12 @@ def _render_dashboard(
     outputs: list[dict],
     history: list[dict],
     source_mtime: float,
-    templates: Optional[list[dict]] = None,
-    formats_data: Optional[list[dict]] = None,
+    templates: list[dict] | None = None,
+    formats_data: list[dict] | None = None,
     source_missing: bool = False,
     source_path: str = "",
     output_root: str = "",
-    project_history: Optional[list[dict]] = None,
+    project_history: list[dict] | None = None,
 ) -> str:
     info = info or {}
     src_path = info.get("source", "") or source_path
@@ -786,6 +787,13 @@ def _render_dashboard(
                     mtime_str = _dt.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
                 else:
                     mtime_str = "-"
+                if le["exists"]:
+                    link_html = (
+                        f'<a href="/api/file?path={le["path"]}" target="_blank" '
+                        f'style="color:#2563eb;text-decoration:none;font-size:12px;">打开</a>'
+                    )
+                else:
+                    link_html = '<span style="color:#ccc;">-</span>'
                 fmt_rows += (
                     f"<tr>"
                     f"{fmt_cell}"
@@ -800,7 +808,7 @@ def _render_dashboard(
                     f"<td style=\"font-size:12px;white-space:nowrap;color:#666;\">{mtime_str}</td>"
                     f"<td style=\"font-size:12px;text-align:center;color:#999;\">{'是' if le.get('is_source') else '否'}</td>"
                     f"<td style=\"font-size:12px;text-align:center;\">"
-                    f"{'<a href=\"/api/file?path=' + le['path'] + '\" target=\"_blank\" style=\"color:#2563eb;text-decoration:none;font-size:12px;\">打开</a>' if le['exists'] else '<span style=\"color:#ccc;\">-</span>'}"
+                    f"{link_html}"
                     f"</td></tr>"
                 )
     if not fmt_rows:
@@ -1286,9 +1294,9 @@ async function browseOutputRoot() {{
 
 
 def create_app(
-    config: Optional[ProjectConfig] = None,
-    pipeline: Optional[SyncPipeline] = None,
-) -> Optional[object]:
+    config: ProjectConfig | None = None,
+    pipeline: SyncPipeline | None = None,
+) -> object | None:
     if FastAPI is None:
         return None
 
@@ -1319,8 +1327,7 @@ def create_app(
         try:
             stats = pipeline.run()
         except Exception as e:  # keep the watcher alive on transient errors
-            import traceback as _tb
-            _tb.print_exc()
+            logger.exception("[sync] watcher sync failed: %s", e)
             print(f"[sync] ✗ 同步失败: {e}")
             stats = {"outputs": [], "errors": [str(e)]}
         elapsed = time.time() - start
@@ -1442,6 +1449,7 @@ def create_app(
                     src_mtime = s.stat().st_mtime
             except Exception:
                 # Source present but unparseable — still render the UI.
+                logger.debug("source unparseable, rendering UI anyway", exc_info=True)
                 info = {}
 
         fmt_data = _build_formats_data(outputs_data, src_mtime, str(src))
@@ -1477,6 +1485,7 @@ def create_app(
                 else:
                     schema = "resume"
             except Exception:
+                logger.debug("schema detection failed, defaulting to resume", exc_info=True)
                 schema = "resume"
         style_zh = body.get("style_zh", "bwx")
         style_en = body.get("style_en", "modern")
@@ -1566,7 +1575,7 @@ def create_app(
                         entry["pdf_path"] = o.pdf_path
                 raw["outputs"].append(entry)
 
-            with open(cfg.config_path, "w", encoding="utf-8") as f:
+            with cfg.config_path.open("w", encoding="utf-8") as f:
                 yaml.dump(raw, f, allow_unicode=True, default_flow_style=False)
 
             # Initialize pipeline
@@ -1687,7 +1696,7 @@ def create_app(
 
         out_path = Path.cwd() / "template.md"
         if out_path.exists() and not force:
-            return {"status": "confirm", "error": f"template.md 已存在，确定覆盖？", "path": str(out_path)}
+            return {"status": "confirm", "error": "template.md 已存在，确定覆盖？", "path": str(out_path)}
 
         try:
             out_path.write_text(content, encoding="utf-8")
@@ -1762,7 +1771,7 @@ def create_app(
             # Determine the translation target (the other supported language).
             target = "en" if lang == "zh" else "zh"
             # Count missing translations for that target.
-            doc = pipeline._parser.parse_file(src, schema=pipeline._config.schema)
+            pipeline._parser.parse_file(src, schema=pipeline._config.schema)
             info = pipeline.run_dry()
             missing = info.get("missing_translations", {}).get(target, 0)
             return {
@@ -1790,6 +1799,7 @@ def create_app(
                 body = await request.json()
                 target = body.get("target_lang")
             except Exception:
+                logger.debug("target_lang parse failed", exc_info=True)
                 target = None
         try:
             summary = pipeline.translate_only(target_lang=target)
@@ -2050,7 +2060,7 @@ def create_app(
     return app
 
 
-def run_web_ui(config: Optional[object] = None, pipeline: Optional[object] = None) -> None:
+def run_web_ui(config: object | None = None, pipeline: object | None = None) -> None:
     if FastAPI is None:
         print("[web] Install fastapi + uvicorn for Web UI")
         return

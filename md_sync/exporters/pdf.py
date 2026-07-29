@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import Optional
-
 
 # Path to Chromium — auto-detect common locations
 _CHROMIUM_CANDIDATES = [
@@ -16,7 +14,7 @@ _CHROMIUM_CANDIDATES = [
 ]
 
 
-def _find_chromium() -> Optional[str]:
+def _find_chromium() -> str | None:
     """Return the first available Chromium/Chrome binary."""
     for candidate in _CHROMIUM_CANDIDATES:
         if Path(candidate).exists():
@@ -27,9 +25,9 @@ def _find_chromium() -> Optional[str]:
 def export_pdf(
     html_path: Path | str,
     pdf_path: Path | str,
-    chromium_path: Optional[str] = None,
+    chromium_path: str | None = None,
     page_margin: str = "15mm",
-    extra_args: Optional[list[str]] = None,
+    extra_args: list[str] | None = None,
 ) -> bool:
     """Convert an HTML file to PDF using headless Chromium.
 

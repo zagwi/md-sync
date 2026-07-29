@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from typing import Optional
-
 
 # ── Item (leaf node) ────────────────────────────────────────────────────────
 
@@ -34,27 +32,27 @@ class Item:
     content: str = ""               # main description text (markdown allowed)
 
     # Common structured fields
-    period: Optional[str] = None
-    title: Optional[str] = None     # company / school / project name
-    subtitle: Optional[str] = None  # role / department
-    people: Optional[str] = None    # team size
+    period: str | None = None
+    title: str | None = None     # company / school / project name
+    subtitle: str | None = None  # role / department
+    people: str | None = None    # team size
 
     # Project-specific
-    role: Optional[str] = None
+    role: str | None = None
     metrics: list[Metric] = field(default_factory=list)
 
     # Open-source specific
     features: list[str] = field(default_factory=list)
-    url: Optional[str] = None
+    url: str | None = None
 
     # Tech tags
     tags: list[str] = field(default_factory=list)
 
     # Code block support
-    language: Optional[str] = None  # programming language for code blocks
+    language: str | None = None  # programming language for code blocks
 
     # Internal
-    _hash: Optional[str] = None
+    _hash: str | None = None
 
     def content_hash(self) -> str:
         """Stable hash of this item's meaningful content for change detection."""
@@ -75,7 +73,7 @@ class Section:
     title: str               # display title: "综合素质及能力"
     level: int               # heading depth (1 = top)
     items: list[Item] = field(default_factory=list)
-    badge: Optional[str] = None  # optional badge text: "20年"
+    badge: str | None = None  # optional badge text: "20年"
 
 
 # ── Document ────────────────────────────────────────────────────────────────
@@ -94,11 +92,11 @@ class Document:
     sections: list[Section] = field(default_factory=list)
 
     # Source tracking
-    source_path: Optional[str] = None
+    source_path: str | None = None
     source_lang: str = "zh"
     source_raw: str = ""  # original verbatim text of the source file
 
-    def find_section(self, section_id: str) -> Optional[Section]:
+    def find_section(self, section_id: str) -> Section | None:
         """Look up a section by its machine-readable id."""
         for s in self.sections:
             if s.id == section_id:

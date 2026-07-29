@@ -12,24 +12,25 @@ Parser resolution:
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
-from typing import Optional
 
 from md_sync.plugin.interface import (
+    PLUGIN_TYPE_PACK,
+    PLUGIN_TYPE_PARSER,
     DirectoryPlugin,
     ParserPlugin,
     PluginManifest,
     RenderPlugin,
-    PLUGIN_TYPE_PACK,
-    PLUGIN_TYPE_PARSER,
-    PLUGIN_TYPE_RENDER,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PluginRegistry:
     """Discover, load, and manage plugins."""
 
-    def __init__(self, project_dir: Optional[Path] = None):
+    def __init__(self, project_dir: Path | None = None):
         self._project_dir = Path(project_dir).resolve() if project_dir else None
         self._plugins: dict[str, RenderPlugin] = {}
         self._parsers: dict[str, ParserPlugin] = {}  # schema_name -> ParserPlugin
@@ -41,7 +42,7 @@ class PluginRegistry:
     def plugins(self) -> dict[str, RenderPlugin]:
         return dict(self._plugins)
 
-    def list_plugins(self, plugin_type: Optional[str] = None) -> list[PluginManifest]:
+    def list_plugins(self, plugin_type: str | None = None) -> list[PluginManifest]:
         """List loaded plugins, optionally filtered by type."""
         results = []
         for p in self._plugins.values():
@@ -50,7 +51,7 @@ class PluginRegistry:
                 results.append(m)
         return results
 
-    def get(self, name: str) -> Optional[RenderPlugin]:
+    def get(self, name: str) -> RenderPlugin | None:
         return self._plugins.get(name)
 
     def has_templates(self, name: str) -> bool:
@@ -80,11 +81,11 @@ class PluginRegistry:
 
     # ── Parser resolution ───────────────────────────────────────────────
 
-    def get_parser(self, schema: str) -> Optional[ParserPlugin]:
+    def get_parser(self, schema: str) -> ParserPlugin | None:
         """Get a parser by schema name (e.g. "my-resume")."""
         return self._parsers.get(schema)
 
-    def find_parser(self, text: str) -> Optional[ParserPlugin]:
+    def find_parser(self, text: str) -> ParserPlugin | None:
         """Find a parser that can handle the given text, via ``detect()``.
 
         Iterates all registered parsers and returns the first one whose
@@ -95,6 +96,7 @@ class PluginRegistry:
                 if parser.detect(text):
                     return parser
             except Exception:
+                logger.debug("detect() raised for parser %r", parser, exc_info=True)
                 continue
         return None
 
@@ -102,7 +104,7 @@ class PluginRegistry:
         """List all registered parsers: [(schema_name, ParserPlugin), ...]."""
         return list(self._parsers.items())
 
-    def detect_schema(self, text: str) -> Optional[dict]:
+    def detect_schema(self, text: str) -> dict | None:
         """Auto-detect the best-matching schema for a given text content.
 
         Reuses ``find_parser()`` to find a matching parser, then looks up
@@ -126,7 +128,7 @@ class PluginRegistry:
                 }
         return None
 
-    def get_template_source(self, name: str) -> Optional[str]:
+    def get_template_source(self, name: str) -> str | None:
         """Get the content of a plugin's source ``template.md`` file.
 
         Args:
@@ -140,7 +142,7 @@ class PluginRegistry:
             return None
         return plugin.get_template_source()
 
-    def get_template_source_by_schema(self, schema: str) -> Optional[str]:
+    def get_template_source_by_schema(self, schema: str) -> str | None:
         """Get the source template.md for the plugin that registered a schema."""
         # Find the plugin that registered this schema
         for p in self._plugins.values():
@@ -149,7 +151,7 @@ class PluginRegistry:
                 return p.get_template_source()
         return None
 
-    def get_pack_info(self, name: str) -> Optional[PluginManifest]:
+    def get_pack_info(self, name: str) -> PluginManifest | None:
         """Get full manifest for a pack-type plugin."""
         plugin = self._plugins.get(name)
         if plugin and plugin.manifest.plugin_type == PLUGIN_TYPE_PACK:
@@ -226,7 +228,7 @@ class PluginRegistry:
                             # If this is a pack-type plugin, load its parser
                             self._register_parser_if_pack(plugin)
                         except Exception as e:
-                            print(f"[plugin] Failed to load {d.name}: {e}")
+                            logger.warning("[plugin] Failed to load %s: %s", d.name, e)
 
         # Try pip-installed plugins
         self._load_entry_point_plugins()
@@ -244,9 +246,12 @@ class PluginRegistry:
             parser = plugin.load_parser()
             if parser:
                 self._parsers[manifest.parser_schema] = parser
-                print(f"[plugin] ✓ Registered parser '{manifest.parser_schema}' from '{manifest.name}'")
+                logger.info(
+                    "[plugin] ✓ Registered parser '%s' from '%s'",
+                    manifest.parser_schema, manifest.name)
         except Exception as e:
-            print(f"[plugin] Failed to load parser for '{manifest.name}': {e}")
+            logger.warning(
+                "[plugin] Failed to load parser for '%s': %s", manifest.name, e)
 
     def _discovery_paths(self) -> list[Path]:
         """Discovery paths for plugins (later paths override earlier ones).
@@ -283,6 +288,6 @@ class PluginRegistry:
                         plugin.on_plugin_load()
                         # Register is handled by caller
                 except Exception:
-                    pass
+                    logger.debug("entry-point plugin load failed: %s", ep, exc_info=True)
         except Exception:
-            pass
+            logger.debug("entry-point discovery failed", exc_info=True)

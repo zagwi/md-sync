@@ -19,14 +19,13 @@ It handles:
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 from md_sync.core.document import Document, Item, Section
 from md_sync.core.parser import (
-    _SECTION_TITLE_RE,
     _BULLET_RE,
+    _SECTION_TITLE_RE,
 )
-from md_sync.plugin.interface import ParserPlugin, PluginManifest, PLUGIN_TYPE_PACK
+from md_sync.plugin.interface import PLUGIN_TYPE_PACK, ParserPlugin, PluginManifest
 
 
 class TyporaParser(ParserPlugin):
@@ -86,7 +85,7 @@ class TyporaParser(ParserPlugin):
                 doc.name = "Untitled"
 
         # ── Sections ────────────────────────────────────────────────
-        current_section: Optional[Section] = None
+        current_section: Section | None = None
 
         while i < n:
             line = lines[i]

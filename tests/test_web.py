@@ -1,51 +1,45 @@
-"""Test web dashboard template rendering.
+"""Test pipeline dry-run and output conversion.
 
-Run directly:  python test_web.py
+Skipped automatically when the bundled sample project (projects/resume) is
+absent.
 """
-
 from pathlib import Path
 
+import pytest
 from md_sync.config import ProjectConfig
 from md_sync.core.pipeline import SyncPipeline
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+RESUME_YAML = PROJECT_ROOT / "projects" / "resume" / "md-sync.yaml"
 
-def main() -> None:
-    cfg = ProjectConfig.load(Path("projects/resume/md-sync.yaml"))
+
+def test_dry_run_and_outputs() -> None:
+    if not RESUME_YAML.exists():
+        pytest.skip(f"sample project not found: {RESUME_YAML}")
+
+    cfg = ProjectConfig.load(RESUME_YAML)
     pipeline = SyncPipeline(cfg)
 
-    # Test dry run (used by API)
     info = pipeline.run_dry()
-    print(f"Source: {info['source']}")
-    print(f"Sections: {len(info['sections'])}")
-    for s in info['sections']:
-        print(f"  {s['title']}: {s['items']} items")
+    assert "source" in info
+    assert isinstance(info["sections"], list)
 
-    # Test outputs dict conversion (used by web UI)
     outputs_data = []
     for out in cfg.outputs:
-        outputs_data.append({
-            "format": out.format,
-            "lang": out.lang,
-            "path": out.path,
-            "pdf": out.pdf,
-            "pdf_path": out.pdf_path or "",
-            "style": out.style or out.theme or "default",
-        })
-    print(f"\nOutputs ({len(outputs_data)}):")
-    for o in outputs_data:
-        print(f"  {o['format']} ({o['lang']}) [{o['style']}] → {Path(o['path']).name}")
+        outputs_data.append(
+            {
+                "format": out.format,
+                "lang": out.lang,
+                "path": out.path,
+                "pdf": out.pdf,
+                "pdf_path": out.pdf_path or "",
+                "style": out.style or out.theme or "default",
+            }
+        )
+    assert len(outputs_data) >= 1
+    assert all(o["format"] for o in outputs_data)
 
-    # Test pipeline run
     stats = pipeline.run()
     ok = len([r for r in stats.get("outputs", []) if r.get("ok")])
-    err = len(stats.get("errors", []))
-    print(f"\nSync: {ok} OK, {err} errors")
-    if err:
-        for e in stats["errors"]:
-            print(f"  ERR: {e}")
-
-    print("\nALL TESTS PASSED")
-
-
-if __name__ == "__main__":
-    main()
+    assert ok >= 1, stats.get("errors")
+    assert stats.get("errors") == [], stats.get("errors")

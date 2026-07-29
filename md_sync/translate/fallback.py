@@ -19,24 +19,26 @@ Provider selection (``auto`` by default):
 """
 from __future__ import annotations
 
+import logging
 import os
 import re
-from typing import Optional
 
 import httpx
 
 from md_sync.translate.langdetect import detect_lang
 
+logger = logging.getLogger(__name__)
+
 
 def translate_via_api(
     text: str,
     provider: str = "auto",
-    model: Optional[str] = None,
-    api_key: Optional[str] = None,
-    base_url: Optional[str] = None,
+    model: str | None = None,
+    api_key: str | None = None,
+    base_url: str | None = None,
     source_lang: str = "zh",
     target_lang: str = "en",
-) -> Optional[str]:
+) -> str | None:
     """Translate ``text`` from ``source_lang`` to ``target_lang``.
 
     Supported providers (``provider``):
@@ -92,7 +94,7 @@ def _normalize_google_lang(code: str) -> str:
     return code
 
 
-def _get_proxy() -> Optional[str]:
+def _get_proxy() -> str | None:
     """Return the HTTP proxy URL to use for translation API calls.
 
     Priority:
@@ -114,7 +116,7 @@ def _call_google(
     text: str,
     source_lang: str = "zh",
     target_lang: str = "en",
-) -> Optional[str]:
+) -> str | None:
     """Free Google web translate endpoint (client=gtx, no key)."""
     sl = _normalize_google_lang(source_lang)
     tl = _normalize_google_lang(target_lang)
@@ -140,6 +142,7 @@ def _call_google(
         result = "".join(parts).strip()
         return result or None
     except Exception:
+        logger.debug("provider fallback failed", exc_info=True)
         return None
 
 
@@ -156,7 +159,7 @@ def _call_bing(
     text: str,
     source_lang: str = "zh",
     target_lang: str = "en",
-) -> Optional[str]:
+) -> str | None:
     """Free Bing web translate endpoint (ttranslatev3, no key).
 
     Bing's web widget requires a couple of anti-bot tokens (``IG`` /
@@ -193,17 +196,18 @@ def _call_bing(
             return translations[0].get("text") or None
         return None
     except Exception:
+        logger.debug("provider fallback failed", exc_info=True)
         return None
 
 
 def _call_openai(
     text: str,
-    model: Optional[str] = None,
-    api_key: Optional[str] = None,
-    base_url: Optional[str] = None,
+    model: str | None = None,
+    api_key: str | None = None,
+    base_url: str | None = None,
     source_lang: str = "zh",
     target_lang: str = "en",
-) -> Optional[str]:
+) -> str | None:
     api_key = api_key or os.environ.get("OPENAI_API_KEY")
     if not api_key:
         return None
@@ -237,4 +241,5 @@ def _call_openai(
         data = resp.json()
         return data["choices"][0]["message"]["content"].strip()
     except Exception:
+        logger.debug("provider fallback failed", exc_info=True)
         return None

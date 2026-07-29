@@ -12,10 +12,8 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Optional
 
-from .document import Document, Item, Metric, Section
-
+from .document import Document, Item, Section
 
 # ── Helpers (shared with plugin packs) ───────────────────────────────────────
 
@@ -156,7 +154,7 @@ class MdParser:
             doc.name = Path(doc.source_path).stem if doc.source_path else "Untitled"
 
         # ── Sections ────────────────────────────────────────────────
-        current_section: Optional[Section] = None
+        current_section: Section | None = None
 
         while i < n:
             line = lines[i]

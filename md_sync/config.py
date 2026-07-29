@@ -4,12 +4,10 @@ Reads ``md-sync.yaml`` from the project directory.
 """
 from __future__ import annotations
 
-import json
 import time as _time_module
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -32,7 +30,7 @@ def derive_output_path(
     output_root: Path,
     format: str,
     lang: str,
-    name_map: Optional[dict] = None,
+    name_map: dict | None = None,
     source_stem: str = "",
     *,
     pdf: bool = False,
@@ -72,10 +70,10 @@ class OutputConfig:
     format: str              # "md" | "html" | "docx" | "epub"
     lang: str                # "zh" | "en" | …
     path: str = ""           # output file path (derived from source name if empty)
-    theme: Optional[str] = None   # legacy theme name (backward compat)
-    style: Optional[str] = None   # template style name (e.g. "bwx", "modern")
+    theme: str | None = None   # legacy theme name (backward compat)
+    style: str | None = None   # template style name (e.g. "bwx", "modern")
     pdf: bool = False
-    pdf_path: Optional[str] = None
+    pdf_path: str | None = None
     page_margin: str = "15mm"  # PDF @page margin, e.g. "15mm", "20mm", "25mm"
 
 
@@ -88,7 +86,7 @@ class WatchConfig:
 @dataclass
 class AiTranslationConfig:
     provider: str = "auto"
-    model: Optional[str] = None
+    model: str | None = None
 
 
 @dataclass
@@ -134,7 +132,7 @@ class ProjectConfig:
     source_path: Path = field(default_factory=Path)
 
     @classmethod
-    def load(cls, path: Path | str) -> "ProjectConfig":
+    def load(cls, path: Path | str) -> ProjectConfig:
         """Load and validate a project YAML file."""
         path = Path(path).resolve()
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -214,7 +212,7 @@ class ProjectConfig:
     # ── Output path derivation ───────────────────────────────────────────
 
     @property
-    def output_root_path(self) -> Optional[Path]:
+    def output_root_path(self) -> Path | None:
         """Resolved output root, or None when the user hasn't configured one.
 
         When unconfigured it returns None (NOT a guessed directory) so the UI

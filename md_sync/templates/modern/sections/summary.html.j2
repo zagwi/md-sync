@@ -2,7 +2,13 @@
   <div class="section-title">{{ section.title }}{% if section.badge %} <span class="badge">{{ section.badge }}</span>{% endif %}</div>
   <ul class="summary-list">
     {% for item in section.items %}
+    {% if item.type == "table" %}
+    {% include '_table.html.j2' %}
+    {% elif item.type == "code" %}
+    {% include '_code.html.j2' %}
+    {% else %}
     <li>{{ t(item.content) | linkify | replace_metrics | safe }}</li>
+    {% endif %}
     {% endfor %}
   </ul>
 </div>

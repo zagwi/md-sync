@@ -18,6 +18,7 @@ from pathlib import Path
 
 from md_sync.config import ProjectConfig
 from md_sync.core.pipeline import SyncPipeline
+from md_sync.plugin.interface import DirectoryPlugin
 from md_sync.plugin.loader import install_plugin, remove_plugin
 from md_sync.plugin.registry import PluginRegistry
 from md_sync.template.generator import interactive_create
@@ -74,6 +75,10 @@ def main(argv: list[str] | None = None) -> int:
     plg_remove.add_argument("name")
     plg_show = plg_sub.add_parser("show")
     plg_show.add_argument("name")
+    plg_template = plg_sub.add_parser("template", help="Generate source template.md from a plugin pack")
+    plg_template.add_argument("plugin_name", help="Name of the installed plugin pack")
+    plg_template.add_argument("-o", "--output", default="template.md",
+                              help="Output path for template.md (default: template.md)")
 
     args = parser.parse_args(argv)
     cfg_path = _extract_config(args)
@@ -289,11 +294,12 @@ def _cmd_plugin(args: argparse.Namespace) -> int:
             print("No plugins installed.")
             print("  Install one: md-sync plugin install <path|git-url|package>")
         else:
-            print(f"{'Name':20s} {'Type':12s} {'Templates':20s} {'Author'}")
+            print(f"{'Name':20s} {'Type':12s} {'Schema':16s} {'Templates':20s} {'Author'}")
             print("-" * 80)
             for p in plugins:
                 tpls = ", ".join(p.templates) if p.templates else "—"
-                print(f"{p.name:20s} {p.plugin_type:12s} {tpls:20s} {p.author}")
+                schema = p.parser_schema or "—"
+                print(f"{p.name:20s} {p.plugin_type:12s} {schema:16s} {tpls:20s} {p.author}")
 
     elif args.plugin_action == "install":
         from md_sync.plugin.loader import install_plugin as ip
@@ -307,19 +313,51 @@ def _cmd_plugin(args: argparse.Namespace) -> int:
         ok = remove_plugin(args.name)
         return 0 if ok else 1
 
+    elif args.plugin_action == "template":
+        """Generate source template.md from a plugin pack."""
+        registry = PluginRegistry()
+        source = registry.get_template_source(args.plugin_name)
+        if source is None:
+            pack_info = registry.get_pack_info(args.plugin_name)
+            if pack_info is None:
+                print(f"✗ Plugin '{args.plugin_name}' not found or is not a pack.")
+                print("  Installed plugins:")
+                for p in registry.list_plugins():
+                    print(f"    - {p.name} ({p.plugin_type})")
+                return 1
+            print(f"✗ Plugin '{args.plugin_name}' has no source template (template.md).")
+            return 1
+        out_path = Path(args.output)
+        out_path.write_text(source, encoding="utf-8")
+        print(f"✓ Generated template.md from '{args.plugin_name}' → {out_path}")
+        print(f"  Edit this file to write your document, then run 'md-sync sync'.")
+        return 0
+
     elif args.plugin_action == "show":
         registry = PluginRegistry()
         plugin = registry.get(args.name)
         if plugin:
             m = plugin.manifest
             print(f"Name:        {m.name}")
-            print(f"Version:     {m.version}")
+            print(f"Version:     {m.version}"
+                  if m.version else "Version:     1.0")
             print(f"Type:        {m.plugin_type}")
             print(f"Description: {m.description}")
             print(f"Author:      {m.author}")
             print(f"Directory:   {m.directory}")
             if m.templates:
                 print(f"Templates:   {', '.join(m.templates)}")
+            if m.plugin_type in ("pack", "parser"):
+                print(f"Schema:      {m.parser_schema or '—'}")
+                print(f"Parser:      {m.parser_class or '—'}")
+                print(f"Template:    {m.template or '—'}")
+                # Show source template preview
+                if isinstance(plugin, DirectoryPlugin):
+                    src = plugin.get_template_source()
+                    if src:
+                        preview = src[:300].replace("\n", "\n              ")
+                        print(f"\n  Template.md preview (first 300 chars):\n")
+                        print(f"  {preview}...")
             if m.hooks:
                 print(f"Hooks:       {', '.join(m.hooks)}")
             if m.dependencies:

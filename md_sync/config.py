@@ -5,11 +5,27 @@ Reads ``md-sync.yaml`` from the project directory.
 from __future__ import annotations
 
 import json
+import time as _time_module
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 import yaml
+
+
+def _timestamp() -> str:
+    """Return a compact millisecond timestamp string, e.g. ``20260728_143052_205``.
+
+    Millisecond precision (3 digits) is sufficient to distinguish
+    output files created in a single sync batch.
+    """
+    t = _time_module.time()
+    ms = int((t - int(t)) * 1000)
+    return (
+        datetime.fromtimestamp(t).strftime("%Y%m%d_%H%M%S")
+        + f"_{ms:03d}"
+    )
 
 
 def derive_output_path(
@@ -23,21 +39,28 @@ def derive_output_path(
 ) -> str:
     """Build an output file path under the user-specified *output root*.
 
-    Rules:
-      - zh output: <name_map["zh"] or source_stem>.<ext>
-      - en output: <name_map["en"]>.<ext>
-      - directories follow the format (html/ pdf/ md/).
-    The user only sets ONE directory (the root); the tool creates the format
-    sub-directories and names files by language automatically.
+    Each output filename includes a millisecond timestamp to avoid
+    name conflicts (e.g. ``README-zh-20260728_143052_123.html``).
     """
     base = (name_map or {}).get(lang) or source_stem
     # Guarantee a non-empty filename: fall back to the language code so we
     # never produce an extension-only path like "pdf/.pdf".
     if not base:
         base = lang or format
-    if pdf:
+    # Append millisecond timestamp to avoid filename collisions
+    ts = _timestamp()
+    base = f"{base}-{ts}"
+    ext_map = {
+        "html": "html",
+        "md": "md",
+        "docx": "docx",
+        "epub": "epub",
+        "pdf": "pdf",
+    }
+    ext = ext_map.get(format, format)
+    if pdf or format == "pdf":
         return str(output_root / "pdf" / f"{base}.pdf")
-    return str(output_root / format / f"{base}.{format}")
+    return str(output_root / format / f"{base}.{ext}")
 
 
 # ── Config data classes ─────────────────────────────────────────────────────
@@ -46,13 +69,14 @@ def derive_output_path(
 @dataclass
 class OutputConfig:
     """A single output target."""
-    format: str              # "md" | "html"
+    format: str              # "md" | "html" | "docx" | "epub"
     lang: str                # "zh" | "en" | …
     path: str = ""           # output file path (derived from source name if empty)
     theme: Optional[str] = None   # legacy theme name (backward compat)
     style: Optional[str] = None   # template style name (e.g. "bwx", "modern")
     pdf: bool = False
     pdf_path: Optional[str] = None
+    page_margin: str = "15mm"  # PDF @page margin, e.g. "15mm", "20mm", "25mm"
 
 
 @dataclass

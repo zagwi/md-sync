@@ -72,6 +72,10 @@ class TemplateManager:
         Legacy themes (e.g. resume-zh/resume-en) are duplicates of the
         bundled styles and hidden from the UI by default; pass
         ``include_legacy=True`` (CLI) to list them too.
+
+        Typora themes from ``~/.config/Typora/themes/`` are auto-discovered
+        and registered under the ``typora-<name>`` prefix. They support any
+        schema (``schema="*"``) so they appear for all document types.
         """
         results: list[TemplateInfo] = []
         seen: set[str] = set()
@@ -83,7 +87,7 @@ class TemplateManager:
                 if d.is_dir() and (d / "template.yaml").exists():
                     cat = self._load_from_dir(d)
                     if cat and cat.info.name not in seen:
-                        if schema is None or cat.info.schema == schema:
+                        if schema is None or cat.info.schema == schema or cat.info.schema == "*":
                             results.append(cat.info)
                             seen.add(cat.info.name)
 
@@ -94,7 +98,7 @@ class TemplateManager:
                 if d.is_dir() and (d / "template.yaml").exists():
                     cat = self._load_from_dir(d)
                     if cat and cat.info.name not in seen:
-                        if schema is None or cat.info.schema == schema:
+                        if schema is None or cat.info.schema == schema or cat.info.schema == "*":
                             results.append(cat.info)
                             seen.add(cat.info.name)
 
@@ -104,19 +108,17 @@ class TemplateManager:
                 if d.is_dir() and (d / "template.yaml").exists():
                     cat = self._load_from_dir(d)
                     if cat and cat.info.name not in seen:
-                        if schema is None or cat.info.schema == schema:
+                        if schema is None or cat.info.schema == schema or cat.info.schema == "*":
                             cat.info.author = f"plugin:{plugin_tpl_dir.parent.name}"
                             results.append(cat.info)
                             seen.add(cat.info.name)
 
         # 4. Legacy themes (backward compat) — hidden from the UI by default
-        #    because they duplicate the bundled styles (resume-zh/en == bwx).
         if include_legacy:
             themes_dir = self._install_dir / "themes"
             if themes_dir.exists():
                 for d in sorted(themes_dir.iterdir()):
                     if d.is_dir() and (d / "theme.yaml").exists():
-                        # Check if there's a template.yaml in templates dir with same name
                         if d.name in seen:
                             continue
                         legacy = self._load_legacy_theme(d)
@@ -124,6 +126,31 @@ class TemplateManager:
                             if schema is None or legacy.info.schema == schema:
                                 results.append(legacy.info)
                                 seen.add(legacy.info.name)
+
+        # 5. Typora themes from ~/.config/Typora/themes/
+        typora_dir = Path.home() / ".config" / "Typora" / "themes"
+        if typora_dir.exists():
+            for css_file in sorted(typora_dir.glob("*.css")):
+                name = f"typora-{css_file.stem}"
+                if name in seen:
+                    continue
+                # Skip Typora user override files
+                if css_file.stem.endswith(".user") or css_file.stem == "base":
+                    continue
+                # Typora themes are universal (render any doc.sections), so they
+                # appear for ALL schemas — do not gate on `schema` here, otherwise
+                # selecting the resume plugin hides every typora theme.
+                results.append(TemplateInfo(
+                    name=name,
+                    label=f"Typora {css_file.stem.title()}",
+                    description=f"Typora 主题: {css_file.stem}",
+                    version="1.0",
+                    author="Typora Community",
+                    schema="*",
+                    engine="jinja2",
+                    directory=self._install_dir / "templates" / "typora",
+                ))
+                seen.add(name)
 
         return results
 

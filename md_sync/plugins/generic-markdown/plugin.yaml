@@ -1,0 +1,27 @@
+# Generic Markdown plugin pack for md-sync
+#
+# Provides:
+#   - template.md       → 通用 Markdown 模板指南
+#   - parser.py         → 标准 Markdown 解析器（标题、列表、段落）
+#   - [bwx, modern]     → HTML 渲染模板（复用系统内置风格）
+#
+# Schema: markdown  (任意标准 Markdown 文档均可使用)
+
+name: generic-markdown
+version: "1.0"
+description: 通用 Markdown 插件包 — 支持任意标准 Markdown 文档的解析与渲染，无需特定模板格式
+author: md-sync
+type: pack
+
+parser:
+  class: parser.GenericMarkdownParser
+  schema: markdown
+
+template: template.md
+
+templates:
+  - bwx
+  - modern
+
+hooks: []
+dependencies: []

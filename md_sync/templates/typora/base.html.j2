@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="{{ doc.source_lang or 'en' }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ doc.name }} - {{ doc.title }}</title>
+<style>
+{{ style_css }}
+{% if print_css %}
+@media print {
+{{ print_css }}
+}
+{% endif %}
+</style>
+</head>
+<body>
+
+<div id="write">
+<h1>{{ doc.name }}</h1>
+
+{% for section in doc.sections %}
+  {% if section.title %}<h{{ section.level + 1 if section.level else 2 }}>{{ section.title }}</h{{ section.level + 1 if section.level else 2 }}>{% endif %}
+  {% for item in section.items %}
+    {% if item.type == "bullet" %}
+    <ul>
+      <li>{{ t(item.content) | linkify | md_inline | safe }}</li>
+    </ul>
+    {% elif item.type == "text" %}
+    <p>{{ t(item.content) | linkify | md_inline | safe }}</p>
+    {% elif item.type == "code" %}
+    <pre{% if item.language %} class="language-{{ item.language }}"{% endif %}><code>{{ item.content }}</code></pre>
+    {% elif item.type == "table" %}
+    <table>
+    {% set rows = item.content.split(chr(10)) %}
+    {% set _sep = namespace(found=false) %}
+    {% for row in rows %}
+      {%- if row.startswith("|---") or row.startswith("|:--") %}
+        {% set _sep.found = true %}
+      {%- else %}
+        {%- set cells = row.strip("|").split("|") %}
+        {%- if not _sep.found %}
+        <thead><tr>
+        {%- for cell in cells %}
+        <th>{{ t(cell.strip()) | md_inline | linkify | safe }}</th>
+        {%- endfor %}
+        </tr></thead><tbody>
+        {%- else %}
+        <tr>
+        {%- for cell in cells %}
+        <td>{{ t(cell.strip()) | md_inline | linkify | safe }}</td>
+        {%- endfor %}
+        </tr>
+        {%- endif %}
+      {%- endif %}
+    {%- endfor %}
+    </tbody></table>
+    {% elif item.type == "hr" %}
+    <hr>
+    {% elif item.type == "entry" %}
+    <p><strong>{{ item.title }}</strong>{% if item.subtitle %} — {{ item.subtitle }}{% endif %}{% if item.period %} ({{ item.period }}){% endif %}</p>
+    {% if item.content %}<p>{{ t(item.content) | linkify | md_inline | safe }}</p>{% endif %}
+    {% elif item.type == "project" %}
+    <p><strong>{{ item.title }}</strong>{% if item.role %} — {{ item.role }}{% endif %}</p>
+    {% if item.content %}<p>{{ t(item.content) | linkify | md_inline | safe }}</p>{% endif %}
+    {% else %}
+    <p>{{ t(item.content) | linkify | md_inline | safe }}</p>
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+</div>
+
+</body>
+</html>

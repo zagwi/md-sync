@@ -1,10 +1,16 @@
 <div class="section">
   <div class="section-title">{{ section.title }}</div>
   {% for item in section.items %}
+  {% if item.type == "table" %}
+  {% include '_table.html.j2' %}
+  {% elif item.type == "code" %}
+  {% include '_code.html.j2' %}
+  {% else %}
   <div class="edu-item">
     <span class="school">{{ item.title }}{% if item.subtitle and '.' in item.subtitle %} <span class="tag">{{ item.subtitle.split('.')[0].strip() }}</span>{% endif %}</span>
     <span>{{ item.subtitle if item.subtitle else '' }}</span>
     <span class="period">{{ item.period }}</span>
   </div>
+  {% endif %}
   {% endfor %}
 </div>

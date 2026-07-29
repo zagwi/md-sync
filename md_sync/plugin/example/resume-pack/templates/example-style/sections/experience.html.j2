@@ -1,0 +1,20 @@
+<div class="section">
+  <h2 class="section-title">{{ section.title }}</h2>
+  {% for item in section.items %}
+  <div class="entry">
+    <div class="entry-header">
+      <span class="entry-title">{{ item.title }}</span>
+      {% if item.period %}<span class="entry-period">{{ item.period }}</span>{% endif %}
+      {% if item.subtitle %}<span class="entry-subtitle"> · {{ item.subtitle }}</span>{% endif %}
+    </div>
+    {% if item.content %}
+    <div class="entry-content">{{ t(item.content) | linkify | replace_metrics | safe }}</div>
+    {% endif %}
+    {% if item.tags %}
+    <div class="tech-tags">
+      {% for tag in item.tags %}<span class="tech-tag">{{ tag }}</span>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

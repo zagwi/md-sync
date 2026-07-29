@@ -1,0 +1,24 @@
+name: example-style
+label: 示例风格
+description: Example resume HTML style (from resume-pack plugin)
+version: "1.0"
+author: plugin:resume-pack
+schema: my-resume
+engine: jinja2
+tags: [resume, example, plugin-pack]
+pdf:
+  page_size: A4
+  margin: 5mm 8mm
+sections:
+  professional_summary:
+    template: sections/summary.html.j2
+  education:
+    template: sections/education.html.j2
+  work_experience:
+    template: sections/experience.html.j2
+  project_experience:
+    template: sections/project.html.j2
+  open_source:
+    template: sections/open_source.html.j2
+  body:
+    template: sections/body.html.j2

@@ -14,12 +14,17 @@ It does NOT touch any output files.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
 from md_sync.core.document import Document
 from md_sync.translate.fallback import translate_via_api
 from md_sync.translate.fallback import _detect_provider
 from md_sync.translate.manager import TranslationManager
+
+# How many concurrent translation API calls to allow.
+# Google Translate web endpoint handles 10+ parallel requests fine.
+_TRANSLATE_WORKERS = 10
 
 
 def _distinct_contents(doc: Document) -> list[str]:
@@ -39,6 +44,7 @@ def translate_document(
     target_lang: str,
     provider: Optional[str] = None,
     translator: Optional[TranslationManager] = None,
+    progress_callback: Optional[callable] = None,
 ) -> dict:
     """Translate every content item of ``doc`` into ``target_lang``.
 
@@ -50,6 +56,8 @@ def translate_document(
             Defaults to the config's ``translation.ai.provider``.
         translator: Optional pre-built TranslationManager. If omitted, one
             is created from the document's config.
+        progress_callback: Optional callable ``fn(done, total, text)`` called
+            each time a text item is translated or resolved from cache.
 
     Returns a summary dict::
 
@@ -82,30 +90,53 @@ def translate_document(
             local_tm = TranslationManager(cfg.translation_path())
             translator = local_tm
 
+    # First pass: identify uncached texts and count everything
+    pending_texts: list[str] = []
     for text in _distinct_contents(doc):
         total += 1
         if translator and translator.has_translation(text, target_lang):
             cached += 1
+            if progress_callback:
+                progress_callback(total, total, text, "cached")
             continue
         if translator and translator.get_status(text) == "pending":
             failed += 1
             continue
+        pending_texts.append(text)
 
-        # Circuit-breaker: after one hard failure, stop hammering the API.
-        result = translate_via_api(
-            text,
-            provider=provider,
-            source_lang=doc.source_lang,
-            target_lang=target_lang,
-        )
-        if result:
-            if translator:
-                translator.store(text, result, target_lang, status="auto")
-            translated += 1
-        else:
-            if translator:
-                translator.mark_pending(text, target_lang)
-            failed += 1
+    # Second pass: translate uncached texts in parallel
+    if pending_texts:
+        with ThreadPoolExecutor(max_workers=_TRANSLATE_WORKERS) as pool:
+            fut_to_text = {}
+            for text in pending_texts:
+                fut = pool.submit(
+                    translate_via_api,
+                    text,
+                    provider=provider,
+                    source_lang=doc.source_lang,
+                    target_lang=target_lang,
+                )
+                fut_to_text[fut] = text
+            done_count = cached + failed  # items already known before parallel run
+            total_to_translate = len(pending_texts)
+            for fut in as_completed(fut_to_text):
+                text = fut_to_text[fut]
+                try:
+                    result = fut.result()
+                except Exception:
+                    result = None
+                if result:
+                    if translator:
+                        translator.store(text, result, target_lang, status="auto")
+                    translated += 1
+                else:
+                    if translator:
+                        translator.mark_pending(text, target_lang)
+                    failed += 1
+                done_count += 1
+                if progress_callback:
+                    progress_callback(done_count, total, text,
+                                      "translated" if result else "failed")
 
     if local_tm is not None:
         local_tm.save()

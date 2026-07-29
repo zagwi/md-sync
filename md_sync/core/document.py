@@ -50,6 +50,9 @@ class Item:
     # Tech tags
     tags: list[str] = field(default_factory=list)
 
+    # Code block support
+    language: Optional[str] = None  # programming language for code blocks
+
     # Internal
     _hash: Optional[str] = None
 

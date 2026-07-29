@@ -92,6 +92,24 @@ def _normalize_google_lang(code: str) -> str:
     return code
 
 
+def _get_proxy() -> Optional[str]:
+    """Return the HTTP proxy URL to use for translation API calls.
+
+    Priority:
+      1. ``HTTPS_PROXY`` / ``HTTP_PROXY`` env var (standard convention)
+      2. ``TRANSLATE_PROXY`` env var (explicit translation proxy)
+      3. Default ``http://127.0.0.1:1080`` (common local proxy port)
+
+    Returns ``None`` if none is set.
+    """
+    for var in ("HTTPS_PROXY", "HTTP_PROXY", "TRANSLATE_PROXY"):
+        val = os.environ.get(var) or os.environ.get(var.lower(), "").strip()
+        if val and val != "":
+            return val
+    # Default: common local proxy (Clash, V2Ray, etc.)
+    return "http://127.0.0.1:1080"
+
+
 def _call_google(
     text: str,
     source_lang: str = "zh",
@@ -101,10 +119,16 @@ def _call_google(
     sl = _normalize_google_lang(source_lang)
     tl = _normalize_google_lang(target_lang)
     try:
-        resp = httpx.get(
+        proxy = _get_proxy()
+        client = httpx.Client(
+            proxies=proxy,
+            timeout=8,
+            headers={"User-Agent": "Mozilla/5.0"},
+            follow_redirects=True,
+        )
+        resp = client.get(
             "https://translate.googleapis.com/translate_a/single",
             params={"client": "gtx", "sl": sl, "tl": tl, "dt": "t", "q": text},
-            timeout=8,
         )
         resp.raise_for_status()
         data = resp.json()

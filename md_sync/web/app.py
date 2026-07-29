@@ -13,6 +13,7 @@ import yaml
 
 from md_sync.config import OutputConfig, ProjectConfig, derive_output_path
 from md_sync.core.pipeline import SyncPipeline
+from md_sync.plugin.registry import PluginRegistry
 from md_sync.template.manager import TemplateManager
 from md_sync.translate.langdetect import detect_lang, lang_label
 from md_sync.translate.fallback import _detect_provider
@@ -197,7 +198,13 @@ def _build_formats_data(outputs: list[dict], source_mtime: float, source_path: s
 # ── Setup page renderer ────────────────────────────────────────────────────
 
 
-def _render_setup_page(project: str, templates: list[dict], history_projects: Optional[list[dict]] = None) -> str:
+def _render_setup_page(
+    project: str,
+    templates: list[dict],
+    history_projects: Optional[list[dict]] = None,
+    plugins: Optional[list[dict]] = None,
+    schemas: Optional[list[dict]] = None,
+) -> str:
     """Render the project setup page (shown when no config exists)."""
     # History card
     hist_cards = ""
@@ -223,6 +230,39 @@ def _render_setup_page(project: str, templates: list[dict], history_projects: Op
     tpl_options = ""
     for t in templates:
         tpl_options += f"<option value=\"{t['name']}\">{t['label']}</option>"
+
+    # Schema options
+    schema_options = ""
+    if schemas:
+        for s in schemas:
+            schema_options += f"<option value=\"{s['name']}\" {'selected' if s.get('default') else ''}>{s['label']}</option>"
+    else:
+        schema_options = "<option value=\"resume\">简历 (resume)</option>"
+
+    # Plugin pack cards
+    plugin_cards = ""
+    if plugins:
+        for p in plugins:
+            has_template = bool(p.get("has_template"))
+            tpl_btn = (
+                f"<button class=\"btn btn-sm\" onclick=\"generateTemplate('{p['name']}')\" "
+                f"style=\"background:#1a56db;\">生成 template.md</button>"
+            ) if has_template else ""
+            schema_tag = f"<code style=\"font-size:11px;color:#1a56db;background:#e8f0fe;padding:1px 6px;border-radius:3px;\">{p.get('parser_schema','-')}</code>"
+            plugin_cards += (
+                f"<div style=\"display:flex;align-items:center;gap:10px;padding:10px 0;"
+                f"border-bottom:1px solid #f0f0f0;\">"
+                f"<div style=\"flex:1;min-width:0;\">"
+                f"<div style=\"font-size:13px;font-weight:500;color:#222;\">{p.get('name','?')}"
+                f" <span style=\"font-size:11px;color:#999;font-weight:400;\">v{p.get('version','?')}</span></div>"
+                f"<div style=\"font-size:12px;color:#666;word-break:break-all;\">{p.get('description','')}</div>"
+                f"<div style=\"font-size:12px;color:#999;margin-top:2px;\">"
+                f"类型: {p.get('plugin_type','?')} · schema: {schema_tag}</div>"
+                f"</div>"
+                f"{tpl_btn}</div>"
+            )
+    if not plugin_cards:
+        plugin_cards = "<p style='color:#999;font-size:13px;'>无插件包</p>"
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -259,6 +299,7 @@ def _render_setup_page(project: str, templates: list[dict], history_projects: Op
   .hist-name{{font-size:14px;font-weight:600;color:#222;}}
   .hist-src{{font-size:12px;color:#666;margin-top:2px;}}
   .hist-fmt{{font-size:11px;color:#999;margin-top:2px;}}
+  .btn-sm{{padding:6px 14px;font-size:12px;}}
 </style>
 </head>
 <body>
@@ -295,6 +336,16 @@ def _render_setup_page(project: str, templates: list[dict], history_projects: Op
 </div>
 
 <div class="card">
+  <h2>🧩 文档格式 (Schema)</h2>
+  <div class="field">
+    <label for="schemaSelect">选择文档格式</label>
+    <select id="schemaSelect" onchange="onSchemaChange()">{schema_options}</select>
+    <div id="schemaHint" class="hint" style="margin-top:6px;font-weight:500;"></div>
+    <div class="hint">选择解析器：内置简历 (resume) 或插件包的格式。不同 schema 对应不同的源 MD 模板格式。选择源文件后会自动检测推荐 schema。</div>
+  </div>
+</div>
+
+<div class="card">
   <h2>🎨 模板风格</h2>
   <div class="field">
     <label for="tplZh">中文 HTML 模板</label>
@@ -304,6 +355,15 @@ def _render_setup_page(project: str, templates: list[dict], history_projects: Op
     <label for="tplEn">English HTML Template</label>
     <select id="tplEn">{tpl_options}</select>
   </div>
+</div>
+
+<div class="card">
+  <h2>📦 已安装插件包</h2>
+  {plugin_cards}
+  <p style="margin-top:8px;font-size:12px;color:#999;">
+    插件包提供自定义文档格式 (schema) + 解析器 + HTML 模板。<br>
+    从 CLI 安装: <code>md-sync plugin install /path/to/plugin-pack/</code>
+  </p>
 </div>
 
 <div class="card">
@@ -387,6 +447,8 @@ function confirmSource() {{
   document.getElementById('sourceDisplayArea').style.display = 'block';
   input.value = '';
   document.getElementById('result').textContent = '';
+  // Plug and Play: auto-detect schema from source content
+  autoDetectSchema(path);
 }}
 
 async function browseSource() {{
@@ -460,6 +522,7 @@ async function createProject() {{
         source: source,
         formats: formats,
         output_root: document.getElementById('outputDir').value.trim(),
+        schema: document.getElementById('schemaSelect').value,
         style_zh: document.getElementById('tplZh').value,
         style_en: document.getElementById('tplEn').value,
       }})
@@ -505,6 +568,82 @@ async function loadHistory(configPath) {{
     }}
   }} catch(e) {{
     r.textContent = '✗ 加载失败'; r.style.color = '#ef4444';
+  }}
+}}
+
+function onSchemaChange() {{
+  var sel = document.getElementById('schemaSelect');
+  var val = sel ? sel.value : 'resume';
+  var r = document.getElementById('schemaHint');
+  if (val !== 'resume') {{
+    r.innerHTML = '💡 非内置 schema，确保你的源文件符合该插件包的 <code>template.md</code> 格式。';
+    r.style.color = '#1a56db';
+  }} else {{
+    r.textContent = '';
+  }}
+}}
+
+async function autoDetectSchema(sourcePath) {{
+  var hint = document.getElementById('schemaHint');
+  hint.textContent = '🔍 正在检测文档格式…';
+  hint.style.color = '#666';
+  try {{
+    var resp = await fetch('/api/detect-schema', {{
+      method:'POST',
+      headers:{{'Content-Type':'application/json'}},
+      body:JSON.stringify({{path: sourcePath}})
+    }});
+    var data = await resp.json();
+    if (data.status === 'ok' && data.detected) {{
+      var schemaName = data.detected.schema;
+      var pluginName = data.detected.name;
+      var confidence = data.detected.confidence || 'high';
+      hint.innerHTML = '🎯 已自动检测: <code>' + schemaName + '</code> (由 ' + pluginName + ' 提供, 置信度: ' + confidence + ')';
+      hint.style.color = '#1a56db';
+      // Auto-select the detected schema in the dropdown
+      var sel = document.getElementById('schemaSelect');
+      if (sel) {{
+        for (var i = 0; i < sel.options.length; i++) {{
+          if (sel.options[i].value === schemaName) {{
+            sel.selectedIndex = i;
+            break;
+          }}
+        }}
+      }}
+    }} else if (data.status === 'ok') {{
+      hint.textContent = '📄 未检测到特定插件 schema，将使用通用 Markdown 解析';
+      hint.style.color = '#999';
+    }} else {{
+      hint.textContent = '✗ 检测失败: ' + (data.error || '未知错误');
+      hint.style.color = '#ef4444';
+    }}
+  }} catch(e) {{
+    hint.textContent = '✗ 检测出错: ' + e;
+    hint.style.color = '#ef4444';
+  }}
+}}
+
+async function generateTemplate(pluginName) {{
+  var r = document.getElementById('result');
+  r.textContent = '正在生成 template.md …';
+  r.style.color = '#666';
+  try {{
+    var resp = await fetch('/api/plugins/template', {{
+      method:'POST',
+      headers:{{'Content-Type':'application/json'}},
+      body:JSON.stringify({{name: pluginName}})
+    }});
+    var data = await resp.json();
+    if (data.status === 'ok') {{
+      r.innerHTML = '✓ 已生成: <code>' + data.path + '</code>';
+      r.style.color = '#22c55e';
+    }} else {{
+      r.textContent = '✗ ' + (data.error || '生成失败');
+      r.style.color = '#ef4444';
+    }}
+  }} catch(e) {{
+    r.textContent = '✗ 请求失败: ' + e;
+    r.style.color = '#ef4444';
   }}
 }}
 </script>
@@ -1147,6 +1286,7 @@ def create_app(
     app = FastAPI(title="md-sync")
     sync_history: list[dict] = []
     _tpl_manager = TemplateManager()
+    _plugin_registry = PluginRegistry()
 
     # ── Continuous watch state ────────────────────────────────────────────
     _watch = {"active": False}
@@ -1241,7 +1381,32 @@ def create_app(
         if config is None or pipeline is None:
             tpl_list = [{"name": t.name, "label": t.label} for t in _tpl_manager.list_templates()]
             history = _load_history()[:10]  # show last 10
-            html = _render_setup_page("新项目", tpl_list, history_projects=history)
+            # Gather plugin and schema info
+            plugin_list = []
+            for p in _plugin_registry.plugins.values():
+                m = p.manifest
+                plugin_list.append({
+                    "name": m.name, "version": m.version,
+                    "description": m.description, "author": m.author,
+                    "plugin_type": m.plugin_type,
+                    "parser_schema": m.parser_schema or "",
+                    "has_template": bool(m.template),
+                    "templates": m.templates,
+                })
+            plugin_schemas = {s for s, _ in _plugin_registry.list_parsers()}
+            schema_list = []
+            if "resume" not in plugin_schemas:
+                schema_list.append({"name": "resume", "label": "简历 (resume) — 内置", "default": True})
+            for schema_name, parser in _plugin_registry.list_parsers():
+                schema_list.append({
+                    "name": schema_name,
+                    "label": f"{parser.manifest.name} ({schema_name})",
+                    "default": False,
+                })
+            html = _render_setup_page(
+                "新项目", tpl_list, history_projects=history,
+                plugins=plugin_list, schemas=schema_list,
+            )
             return HTMLResponse(html)
 
         # Have config → update history and show dashboard
@@ -1288,6 +1453,22 @@ def create_app(
         body = await request.json()
         source = body.get("source", "").strip()
         formats = body.get("formats", [])  # [{format: "html", langs: ["zh","en"]}, ...]
+        schema = body.get("schema", "")
+        if not schema:
+            # Plug and Play: auto-detect schema from source content
+            try:
+                src_path_check = Path(source).expanduser().resolve()
+                if src_path_check.exists():
+                    text = src_path_check.read_text(encoding="utf-8")
+                    detected = _plugin_registry.detect_schema(text)
+                    if detected:
+                        schema = detected["schema"]
+                    else:
+                        schema = "resume"
+                else:
+                    schema = "resume"
+            except Exception:
+                schema = "resume"
         style_zh = body.get("style_zh", "bwx")
         style_en = body.get("style_en", "modern")
         output_root = (body.get("output_root") or "").strip()
@@ -1347,7 +1528,7 @@ def create_app(
             cfg = ProjectConfig(
                 project=src_path.stem,
                 source=str(src_path),
-                schema="resume",
+                schema=schema,
                 outputs=outputs,
             )
             cfg.source_path = src_path.resolve()
@@ -1358,7 +1539,7 @@ def create_app(
             raw = {
                 "project": cfg.project,
                 "source": str(src_path),
-                "schema": "resume",
+                "schema": schema,
                 "output_root": str(root),
                 "outputs": [],
                 "watch": {"enabled": True, "debounce": 1.5},
@@ -1460,6 +1641,94 @@ def create_app(
     async def api_templates():
         tpl_list = [{"name": t.name, "label": t.label, "schema": t.schema} for t in _tpl_manager.list_templates()]
         return {"templates": tpl_list}
+
+    # ── Plugin API ─────────────────────────────────────────────────────
+
+    @app.get("/api/plugins")
+    async def api_plugins():
+        """List all installed plugin packs and parsers with full info."""
+        plugins = []
+        for p in _plugin_registry.plugins.values():
+            m = p.manifest
+            plugins.append({
+                "name": m.name,
+                "version": m.version,
+                "description": m.description,
+                "author": m.author,
+                "plugin_type": m.plugin_type,
+                "parser_schema": m.parser_schema or "",
+                "templates": m.templates,
+                "has_template": bool(m.template),
+                "template": m.template or "",
+            })
+        return {"plugins": plugins}
+
+    @app.post("/api/plugins/template")
+    async def api_plugins_template(request: Request):
+        """Generate a template.md file from a plugin pack."""
+        body = await request.json()
+        name = body.get("name", "")
+        force = body.get("force", False)
+        if not name:
+            return {"status": "error", "error": "plugin name required"}
+
+        content = _plugin_registry.get_template_source(name)
+        if not content:
+            return {"status": "error", "error": f"Plugin '{name}' has no template.md"}
+
+        out_path = Path.cwd() / "template.md"
+        if out_path.exists() and not force:
+            return {"status": "confirm", "error": f"template.md 已存在，确定覆盖？", "path": str(out_path)}
+
+        try:
+            out_path.write_text(content, encoding="utf-8")
+            return {"status": "ok", "path": str(out_path), "plugin": name}
+        except OSError as e:
+            return {"status": "error", "error": str(e)}
+
+    @app.get("/api/schemas")
+    async def api_schemas():
+        """List all available schemas (built-in + plugin parsers)."""
+        plugin_schemas = {s for s, _ in _plugin_registry.list_parsers()}
+        schemas = []
+        # Only add built-in resume if no plugin overrides it
+        if "resume" not in plugin_schemas:
+            schemas.append({"name": "resume", "label": "简历 (resume) — 内置", "default": True})
+        for schema_name, parser in _plugin_registry.list_parsers():
+            m = parser.manifest
+            schemas.append({
+                "name": schema_name,
+                "label": f"{m.name} ({schema_name})",
+                "default": False,
+            })
+        return {"schemas": schemas}
+
+    # ── Plug and Play: auto-detect schema from source content ─────────
+
+    @app.post("/api/detect-schema")
+    async def api_detect_schema(request: Request):
+        """Auto-detect the best schema for a given source file.
+
+        Reads the file, runs ``detect()`` on all registered plugin parsers,
+        and returns the best match (or None if no parser matches).
+        """
+        body = await request.json()
+        path_str = body.get("path", "")
+        if not path_str:
+            return {"status": "error", "error": "path required"}
+
+        src = Path(path_str)
+        if not src.exists():
+            return {"status": "error", "error": f"file not found: {src}"}
+
+        try:
+            text = src.read_text(encoding="utf-8")
+            result = _plugin_registry.detect_schema(text)
+            if result:
+                return {"status": "ok", "detected": result}
+            return {"status": "ok", "detected": None, "hint": "未检测到匹配的插件 schema，将使用通用 Markdown 解析"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
 
     @app.post("/api/sync")
     async def api_sync():

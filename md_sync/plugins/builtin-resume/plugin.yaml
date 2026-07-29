@@ -1,0 +1,30 @@
+# Built-in resume plugin pack for md-sync
+#
+# This is the built-in plugin pack that provides:
+#   - template.md       → 用户写简历时遵循的源模板格式
+#   - parser.py         → 解析 template.md 格式的简历文档
+#   - [bwx, modern]     → HTML 渲染模板（位于 md_sync/templates/）
+#
+# Schema:  resume  (默认值，兼容现有配置 schema: resume)
+
+name: builtin-resume
+version: "1.0"
+description: 内置简历插件包 — 提供源模板、解析器、bwx/modern 渲染风格
+author: md-sync
+type: pack
+
+parser:
+  class: parser.ResumeParser
+  schema: resume
+
+template: template.md
+
+templates:
+  - bwx
+  - modern
+
+hooks:
+  - after_parse
+  - after_render
+
+dependencies: []

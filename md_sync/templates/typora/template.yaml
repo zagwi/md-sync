@@ -1,0 +1,12 @@
+name: typora
+label: Typora 主题
+description: 标准 Markdown HTML 输出，搭配 Typora CSS 主题渲染，支持任意文档类型
+version: "1.0"
+author: md-sync
+schema: "typora"
+engine: jinja2
+tags: [typora, generic, markdown]
+pdf:
+  page_size: A4
+  margin: 5mm 8mm
+sections: {}

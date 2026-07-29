@@ -28,16 +28,19 @@ def export_pdf(
     html_path: Path | str,
     pdf_path: Path | str,
     chromium_path: Optional[str] = None,
-    margin: str = "5mm,8mm",
+    page_margin: str = "15mm",
     extra_args: Optional[list[str]] = None,
 ) -> bool:
     """Convert an HTML file to PDF using headless Chromium.
+
+    Strips Chromium's default header/footer (URL, page number) and
+    applies a configurable @page margin for proper print layout.
 
     Args:
         html_path: Path to source HTML file.
         pdf_path: Destination PDF path.
         chromium_path: Chromium binary path (auto-detect if None).
-        margin: @page margin values (CSS format).
+        page_margin: CSS @page margin value, e.g. "15mm", "20mm", "25mm".
         extra_args: Additional arguments to chromium.
 
     Returns:
@@ -57,11 +60,32 @@ def export_pdf(
 
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Inject CSS: @page margin for print layout. Chromium's default
+    # header/footer (URL, page number) is suppressed via CSS @page margin
+    # boxes (more reliable than CLI flags alone), combined with
+    # --no-print-header-footer and --disable-print-preview.
+    html_text = html_path.read_text(encoding="utf-8")
+    pdf_css = (
+        f"\n@page {{ margin: {page_margin}; "
+        "@top-left { content: none; } "
+        "@top-center { content: none; } "
+        "@top-right { content: none; } "
+        "@bottom-left { content: none; } "
+        "@bottom-center { content: none; } "
+        "@bottom-right { content: none; } }\n"
+    )
+    if "</style>" in html_text:
+        html_text = html_text.replace("</style>", pdf_css + "</style>")
+    elif "<head>" in html_text:
+        html_text = html_text.replace("<head>", "<head><style>" + pdf_css + "</style>")
+    html_path.write_text(html_text, encoding="utf-8")
+
     cmd = [
         chromium,
         "--headless",
         "--no-sandbox",
         "--disable-gpu",
+        "--disable-print-preview",
         "--no-print-header-footer",
         f"--print-to-pdf={pdf_path}",
         f"file://{html_path}",

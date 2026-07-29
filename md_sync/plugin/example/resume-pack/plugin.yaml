@@ -1,0 +1,35 @@
+# Example md-sync Plugin Pack
+#   Install:  md-sync plugin install ./path/to/resume-pack/
+#   Then:     md-sync plugin template resume-pack  → generates template.md
+#   Config:   schema: my-resume
+#
+# This pack provides:
+#   - template.md    → users write their document in this format
+#   - parser.py      → parses documents written in template.md format
+#   - templates/     → renders the parsed Document into beautiful HTML
+#   - filters.py     → custom Jinja2 filters for the HTML templates
+
+name: resume-pack
+version: "1.0"
+description: 完整简历插件包 — 提供源模板、解析器、HTML 渲染风格
+author: md-sync
+type: pack
+
+# Parser configuration
+parser:
+  class: parser.MyResumeParser     # Python class in parser.py
+  schema: my-resume                 # schema name used in config: schema: my-resume
+
+# Source template: users copy this file and fill in their content
+template: template.md
+
+# HTML rendering template styles this pack provides
+templates:
+  - example-style
+
+# Pipeline hooks
+hooks:
+  - after_parse
+  - after_render
+
+dependencies: []

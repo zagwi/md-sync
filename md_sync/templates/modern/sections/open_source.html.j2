@@ -1,6 +1,11 @@
 <div class="section">
   <div class="section-title">{{ section.title }}</div>
   {% for item in section.items %}
+  {% if item.type == "table" %}
+  {% include '_table.html.j2' %}
+  {% elif item.type == "code" %}
+  {% include '_code.html.j2' %}
+  {% else %}
   <div class="proj-item">
     <div class="proj-header">{{ item.title }}</div>
     <div class="proj-desc">
@@ -11,5 +16,6 @@
     <div class="proj-tech">{% if doc.source_lang == 'zh' %}技术栈：{% else %}Tech Stack: {% endif %}{{ item.tags | join(', ') }}</div>
     {% endif %}
   </div>
+  {% endif %}
   {% endfor %}
 </div>

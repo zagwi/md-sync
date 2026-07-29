@@ -4,6 +4,11 @@ Discovery paths (in order):
   1. ~/.md-sync/plugins/<name>/         (user-wide)
   2. <project>/.md-sync/plugins/<name>/ (project-local)
   3. pip-installed packages with md-sync entry point
+
+Parser resolution:
+  Pack-type plugins (type: pack) can register a custom parser under a
+  schema name. The MdParser dispatcher tries plugin parsers first, then
+  built-in parsers, and finally falls back to generic markdown parsing.
 """
 from __future__ import annotations
 
@@ -12,8 +17,11 @@ from typing import Optional
 
 from md_sync.plugin.interface import (
     DirectoryPlugin,
+    ParserPlugin,
     PluginManifest,
     RenderPlugin,
+    PLUGIN_TYPE_PACK,
+    PLUGIN_TYPE_PARSER,
     PLUGIN_TYPE_RENDER,
 )
 
@@ -24,9 +32,10 @@ class PluginRegistry:
     def __init__(self, project_dir: Optional[Path] = None):
         self._project_dir = Path(project_dir).resolve() if project_dir else None
         self._plugins: dict[str, RenderPlugin] = {}
+        self._parsers: dict[str, ParserPlugin] = {}  # schema_name -> ParserPlugin
         self._load_all()
 
-    # ── Public API ──────────────────────────────────────────────────────
+    # ── Public API (General) ────────────────────────────────────────────
 
     @property
     def plugins(self) -> dict[str, RenderPlugin]:
@@ -69,6 +78,84 @@ class PluginRegistry:
             filters.update(p.register_filters())
         return filters
 
+    # ── Parser resolution ───────────────────────────────────────────────
+
+    def get_parser(self, schema: str) -> Optional[ParserPlugin]:
+        """Get a parser by schema name (e.g. "my-resume")."""
+        return self._parsers.get(schema)
+
+    def find_parser(self, text: str) -> Optional[ParserPlugin]:
+        """Find a parser that can handle the given text, via ``detect()``.
+
+        Iterates all registered parsers and returns the first one whose
+        ``detect(text)`` returns True.
+        """
+        for parser in self._parsers.values():
+            try:
+                if parser.detect(text):
+                    return parser
+            except Exception:
+                continue
+        return None
+
+    def list_parsers(self) -> list[tuple[str, ParserPlugin]]:
+        """List all registered parsers: [(schema_name, ParserPlugin), ...]."""
+        return list(self._parsers.items())
+
+    def detect_schema(self, text: str) -> Optional[dict]:
+        """Auto-detect the best-matching schema for a given text content.
+
+        Reuses ``find_parser()`` to find a matching parser, then looks up
+        its schema name from the registry.
+
+        Returns::
+            {"schema": "resume", "name": "builtin-resume", "method": "detect", "confidence": "high"}
+            or None if no parser matches.
+        """
+        parser = self.find_parser(text)
+        if not parser:
+            return None
+        # Find the schema name for this parser instance
+        for schema_name, p in self._parsers.items():
+            if p is parser:
+                return {
+                    "schema": schema_name,
+                    "name": parser.manifest.name,
+                    "method": "detect",
+                    "confidence": "high",
+                }
+        return None
+
+    def get_template_source(self, name: str) -> Optional[str]:
+        """Get the content of a plugin's source ``template.md`` file.
+
+        Args:
+            name: Plugin name.
+
+        Returns:
+            The full text of the plugin's template.md, or None if not found.
+        """
+        plugin = self._plugins.get(name)
+        if not plugin or not isinstance(plugin, DirectoryPlugin):
+            return None
+        return plugin.get_template_source()
+
+    def get_template_source_by_schema(self, schema: str) -> Optional[str]:
+        """Get the source template.md for the plugin that registered a schema."""
+        # Find the plugin that registered this schema
+        for p in self._plugins.values():
+            m = p.manifest
+            if m.parser_schema == schema and isinstance(p, DirectoryPlugin):
+                return p.get_template_source()
+        return None
+
+    def get_pack_info(self, name: str) -> Optional[PluginManifest]:
+        """Get full manifest for a pack-type plugin."""
+        plugin = self._plugins.get(name)
+        if plugin and plugin.manifest.plugin_type == PLUGIN_TYPE_PACK:
+            return plugin.manifest
+        return None
+
     # ── Hooks ───────────────────────────────────────────────────────────
 
     def emit_before_render(self, doc, config: dict) -> None:
@@ -103,6 +190,10 @@ class PluginRegistry:
     def remove(self, name: str) -> bool:
         """Remove a plugin and unregister it."""
         if name in self._plugins:
+            # Also unregister parsers from this plugin
+            manifest = self._plugins[name].manifest
+            if manifest.parser_schema and manifest.parser_schema in self._parsers:
+                del self._parsers[manifest.parser_schema]
             del self._plugins[name]
         # Remove from disk
         paths = [
@@ -132,19 +223,51 @@ class PluginRegistry:
                             plugin = DirectoryPlugin(d)
                             plugin.on_plugin_load()
                             self._plugins[d.name] = plugin
+                            # If this is a pack-type plugin, load its parser
+                            self._register_parser_if_pack(plugin)
                         except Exception as e:
                             print(f"[plugin] Failed to load {d.name}: {e}")
 
         # Try pip-installed plugins
         self._load_entry_point_plugins()
 
+    def _register_parser_if_pack(self, plugin: DirectoryPlugin) -> None:
+        """If the plugin is a pack type, load its parser and register it."""
+        manifest = plugin.manifest
+        if manifest.plugin_type not in (PLUGIN_TYPE_PACK, PLUGIN_TYPE_PARSER):
+            return
+        if not manifest.parser_schema:
+            return
+        if manifest.parser_schema in self._parsers:
+            return  # already registered
+        try:
+            parser = plugin.load_parser()
+            if parser:
+                self._parsers[manifest.parser_schema] = parser
+                print(f"[plugin] ✓ Registered parser '{manifest.parser_schema}' from '{manifest.name}'")
+        except Exception as e:
+            print(f"[plugin] Failed to load parser for '{manifest.name}': {e}")
+
     def _discovery_paths(self) -> list[Path]:
-        paths = [
-            Path.home() / ".md-sync" / "plugins",
-        ]
+        """Discovery paths for plugins (later paths override earlier ones).
+
+        Order:
+          1. Project-local:    <project>/.md-sync/plugins/<name>/
+          2. User-wide:        ~/.md-sync/plugins/<name>/
+          3. Built-in plugins: <install_dir>/plugins/<name>/
+        """
+        paths = []
         if self._project_dir:
             paths.append(self._project_dir / ".md-sync" / "plugins")
+        paths.append(Path.home() / ".md-sync" / "plugins")
+        paths.append(self._builtin_plugins_dir())
         return paths
+
+    @staticmethod
+    def _builtin_plugins_dir() -> Path:
+        """Return the path to built-in plugin packs shipped with md-sync."""
+        import md_sync
+        return Path(md_sync.__file__).resolve().parent / "plugins"
 
     @staticmethod
     def _load_entry_point_plugins() -> None:

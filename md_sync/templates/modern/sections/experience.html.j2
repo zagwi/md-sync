@@ -1,6 +1,11 @@
 <div class="section">
   <div class="section-title">{{ section.title }}</div>
   {% for item in section.items %}
+  {% if item.type == "table" %}
+  {% include '_table.html.j2' %}
+  {% elif item.type == "code" %}
+  {% include '_code.html.j2' %}
+  {% else %}
   <div class="exp-item">
     <div class="exp-header">
       <span class="company">{{ item.title }}{% if item.subtitle %} <span class="role-tag">{{ item.subtitle }}</span>{% endif %}</span>
@@ -11,5 +16,6 @@
     {% endif %}
     <div class="exp-desc">{{ t(item.content) | replace_metrics | safe }}</div>
   </div>
+  {% endif %}
   {% endfor %}
 </div>

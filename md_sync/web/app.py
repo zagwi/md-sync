@@ -155,6 +155,7 @@ def _build_formats_data(outputs: list[dict], source_mtime: float, source_path: s
             "exists": st["exists"],
             "color": color,
             "size": size,
+            "mtime": st["mtime"],
             "pdf_ok": pdf_ok,
             "filename": filename,
         })
@@ -187,6 +188,7 @@ def _build_formats_data(outputs: list[dict], source_mtime: float, source_path: s
                 "exists": st["exists"],
                 "color": pcolor,
                 "size": psize,
+                "mtime": st["mtime"],
                 "pdf_ok": False,
                 "filename": pp.name,
             })
@@ -778,24 +780,31 @@ def _render_dashboard(
                 if i == 0 and rowspan > 1:
                     fmt_cell = f"<td style=\"font-weight:600;font-size:13px;vertical-align:middle;\" rowspan=\"{rowspan}\">{fmt_label}</td>"
 
+                mtime = le.get("mtime")
+                if isinstance(mtime, (int, float)) and mtime > 0:
+                    import datetime as _dt
+                    mtime_str = _dt.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
+                else:
+                    mtime_str = "-"
                 fmt_rows += (
                     f"<tr>"
                     f"{fmt_cell}"
                     f"<td style=\"font-size:13px;\">{ll}</td>"
-                    f"<td style=\"font-size:12px;color:#555;word-break:break-all;max-width:350px;\">"
+                    f"<td style=\"font-size:12px;color:#555;word-break:break-all;min-width:380px;\">"
                 f"<code style=\"font-size:12px;color:#475569;\" title=\"{le['path'] or ''}\">{le['filename'] or '未配置'}</code></td>"
                     f"<td style=\"font-size:12px;color:#999;white-space:nowrap;\">{le['size']}</td>"
                     f"<td style=\"font-size:12px;white-space:nowrap;\">"
                     f"<span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;background:{c};margin-right:4px;vertical-align:middle;\"></span>"
                     f"<span style=\"color:{c};vertical-align:middle;\">{st}</span>"
                     f"</td>"
+                    f"<td style=\"font-size:12px;white-space:nowrap;color:#666;\">{mtime_str}</td>"
                     f"<td style=\"font-size:12px;text-align:center;color:#999;\">{'是' if le.get('is_source') else '否'}</td>"
                     f"<td style=\"font-size:12px;text-align:center;\">"
                     f"{'<a href=\"/api/file?path=' + le['path'] + '\" target=\"_blank\" style=\"color:#2563eb;text-decoration:none;font-size:12px;\">打开</a>' if le['exists'] else '<span style=\"color:#ccc;\">-</span>'}"
                     f"</td></tr>"
                 )
     if not fmt_rows:
-        fmt_rows = "<tr><td colspan='7' style='color:#999;font-size:13px;padding:12px;text-align:center;'>未选择输出格式</td></tr>"
+        fmt_rows = "<tr><td colspan='8' style='color:#999;font-size:13px;padding:12px;text-align:center;'>未选择输出格式</td></tr>"
 
     # Legend
     legend = (
@@ -944,7 +953,7 @@ def _render_dashboard(
   </div>
   <div style="margin-top:8px;">
     <table>
-      <tr><th style="width:60px;">格式</th><th style="width:70px;">语言</th><th>文件名</th><th style="width:60px;">大小</th><th style="width:130px;">状态</th><th style="width:70px;">是否源文件</th><th style="width:50px;">操作</th></tr>
+      <tr><th style="width:70px;">格式</th><th style="width:80px;">语言</th><th style="width:380px;">文件名</th><th style="width:80px;">大小</th><th style="width:150px;">状态</th><th style="width:140px;">最新时间</th><th style="width:80px;">是否源文件</th><th style="width:60px;">操作</th></tr>
       {fmt_rows}
     </table>
   </div>

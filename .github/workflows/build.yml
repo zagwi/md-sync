@@ -28,7 +28,7 @@ jobs:
           pip install -e ".[build]"
 
       - name: Build executable
-        run: python build_app.py
+        run: python scripts/build_app.py
 
       - name: Upload artifact (Linux / macOS)
         if: matrix.os != 'windows-latest'

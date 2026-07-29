@@ -31,13 +31,38 @@ AI 工具确实能翻译文档、也能转换格式——但那解决的是"一�
 
 | 能力 | 说明 |
 |------|------|
-| **多格式输出** | `html` `PDF` `md` （支持插件扩展docx等格式）|
+| **多格式输出** | `html` `PDF` `md` （支持插件扩展 docx 等格式）；PDF 由 Chromium 生成，整页背景、无页眉页脚、四周边距一致 |
 | **多语言输出** | `zh` / `en`，翻译基于 `.translations.json` 缓存，缺失回退 AI（provider `auto`） |
 | **文件监听** | 基于 `watchdog` 监听源文件，`debounce` 默认 1.5s，改动即同步 |
-| **模板 / 主题** | `bwx`、`modern` 等样式，支持插件扩展（`md-sync template` / `md-sync plugin`） |
+| **模板 / 主题** | `bwx`、`modern` 等内置样式；并可直接选用 Typora 主题目录（`~/.config/Typora/themes/`）下的主题（`typora-bloom-mist`、`typora-night`、`typora-claude-like` 等），自动兼容背景、dark/light 与代码块（`md-sync template` / `md-sync plugin`） |
 | **翻译缓存** | `strategy: mapping` + `mapping_file`，译文只更新缓存字典、不直接出文件，渲染时再取用 |
 | **Web 仪表盘** | 浏览器里配置源文件、查看解析信息、启动/停止监听、手动同步、查看同步事件与历史项目 |
 | **桌面 GUI（Qt 原生）** | PySide6 原生界面，直接调用核心 pipeline，持续监听同步，零 HTTP 服务器 |
+
+### Typora 主题兼容与 PDF 导出
+
+md-sync 会自动发现 Typora 主题目录（`~/.config/Typora/themes/`）下的主题，并以
+`typora-<主题名>` 形式选用（如 `typora-bloom-mist` / `typora-bloom-mist-dark` /
+`typora-night` / `typora-claude-like` 等）。渲染层针对「Typora 编辑器主题」与
+「单文件 HTML / PDF」的差异做了兼容，保证这些主题在 md-sync 下也能正确呈现：
+
+- **背景与卡片观感**：Typora 主题通常依赖「深色外壳 + 白色卡片 (`#write`)」双层结构；
+  而 md-sync 仅生成 `<body><div id="write">` 单层，故依据主题的 `--bg` 变量派生底色与
+  卡片实色底，light / dark 通用。
+- **标题 / 正文颜色**：使用变量回退链（`--text` / `--text-color`），传统主题
+  （如 night）不会被误洗成浅色、也不会把 dark 主题输出成 light。
+- **代码块**：Typora 主题的 `pre` 规则多限定 `.md-fences` 类，而 md-sync 输出的是
+  `<pre class="language-*">`，故补齐通用代码块样式，并兼容 bloom（`--code-bg`）、
+  night（`--bg-color`）、claude（`--code-bg-color`）等多套变量命名。
+
+PDF 导出（Chromium 引擎）已优化为「专业外观」：
+
+- 强制 `print-color-adjust: exact`，整页保留主题背景色（不再整页发白）；
+- 抑制页眉页脚（日期 / URL / 页码），同时兼容 `--no-pdf-header-footer` 与
+  `--no-print-header-footer` 两种参数写法（不同 Chromium 版本/发行版各取其一）；
+- `@page { margin: 0 }` 配合 `#write` 的 `padding`
+  （`box-sizing: border-box` + `box-decoration-break: clone`），使每一页
+  （含末页）的四周边距保持一致，且无刺眼白色边框。
 
 ### 两个独立维度（重要）
 
@@ -54,33 +79,53 @@ AI 工具确实能翻译文档、也能转换格式——但那解决的是"一�
 ## 目录结构
 
 ```
-md_sync/
-├── md_sync/
+md-sync/
+├── md_sync/                # 核心包
 │   ├── cli.py              # 命令行入口（md-sync start / sync / gui / status …）
 │   ├── config.py           # ProjectConfig 解析（md-sync.yaml）
+│   ├── qt_app.py           # 原生 PySide6 桌面 GUI（python -m md_sync.qt_app / md-sync gui）
 │   ├── watcher.py          # 文件监听（watchdog + debounce）
 │   ├── core/pipeline.py    # 同步主流程编排
 │   ├── renderers/          # md / html 渲染器
 │   ├── translate/          # 翻译管理 + AI 回退
-│   ├── exporters/          # PDF 导出（Chromium）
+│   ├── exporters/          # PDF 导出（Chromium）/ pandoc 导出（docx/epub）
 │   ├── template/           # 模板管理
 │   ├── plugin/             # 插件系统
-│   ├── web/app.py          # FastAPI 后端 + 仪表盘
-│   └── qt_app.py           # 原生 PySide6 桌面 GUI（md-sync gui 启动）
-├── projects/              # 示例 / 项目配置（md-sync.yaml）
-├── templates/ themes/     # 内置模板与主题
-├── start_server.py         # 直接以 Web 模式启动（加载 projects/resume 配置）
+│   └── web/app.py          # FastAPI 后端 + 仪表盘
+├── plugins/                # 内置插件（typora / builtin-resume / generic-markdown）
+├── templates/              # 内置模板与主题（bwx / modern / typora …）
+├── projects/               # 示例 / 项目配置（md-sync.yaml）
+├── scripts/                # 构建与启动脚本
+│   ├── build_app.py        # PyInstaller 单文件打包
+│   └── start_server.py     # Web 模式启动（加载 projects/resume 配置）
+├── tests/                  # 测试脚本
 └── pyproject.toml
 ```
 
 ---
 
-## 安装
+## 快速开始（推荐：原生桌面 GUI）
 
-要求 **Python ≥ 3.10**，并装有 `pip`。
+最常用、最省心的方式就是打开原生桌面 GUI —— 不需要浏览器、不启动任何 HTTP 服务器：
 
 ```bash
-cd md_sync
+pip install -e .
+pip install PySide6
+python -m md_sync.qt_app      # 或：md-sync gui
+```
+
+启动后：选择源 `.md` 文件 → 选择输出目录 → 勾选需要的格式 / 语言 → 点〔开始监听〕。
+源文件一保存（防抖 1.5s）即自动同步，产物出现在「输出文件」列表，可双击直接打开。
+
+> 也支持 Web 仪表盘与命令行，见下方「使用方式」。
+
+---
+
+## 安装
+
+要求 **Python ≥ 3.10**，并装有 `pip`。在仓库根目录（含 `pyproject.toml`）执行：
+
+```bash
 pip install -e .
 ```
 
@@ -96,11 +141,13 @@ pip install PySide6
 
 ## 使用方式
 
-### 方式 A：桌面 GUI（Qt 原生）
+> 推荐从**桌面 GUI（方式 A）** 开始；Web 仪表盘与命令行作为补充。
+
+### 方式 A：桌面 GUI（Qt 原生，推荐）
 
 原生 PySide6 界面，**直接调用核心 pipeline，不启动任何 HTTP 服务器**。
 选好源文件、输出目录并勾选需要的格式/语言后点「开始监听」（两者都填好按钮才可点），源文件一改动（防抖 1.5s）即自动重新生成，
-并在「输出文件」列表（中文模板 / 英文模板两列）里显示每个产物的状态（已同步 / 待同步 / 不存在），可双击直接打开。
+并在「输出文件」列表（单表，含格式列与语言列 badge）里显示每个产物的状态（已同步 / 待同步 / 不存在），可双击直接打开。
 
 ```bash
 python -m md_sync.qt_app      # 或：md-sync gui
@@ -111,7 +158,7 @@ GUI 功能对照 Web 仪表盘：
 - **📄 源文件**：选择 `.md` 源文件，自动检测源语言、章节数与待译条数（同时作为「开始监听」的必填项）
 - **🎯 输出设置**：按格式分组（HTML / Markdown / PDF），每组内可勾选中文、英文；三种格式 × 两种语言**默认全部选中**
 - **〔开始监听 / 停止监听〕**：选定源文件且填好输出目录后按钮才可点击；开启监听后源改动自动同步，首次启动立即同步一次
-- **输出文件列表**：拆成「中文模板」「英文模板」两列，每个产物带状态点、大小，双击〔打开文件〕或右键〔复制路径〕
+- **输出文件列表**：以单表呈现，每行含格式列、语言列（带 badge）与状态点、大小，双击〔打开文件〕或右键〔复制路径〕
 - **〔打开输出目录〕**：一键打开生成文件所在目录
 - **同步日志**：本次会话的同步日志（时间、生成文件、耗时、错误）
 
@@ -119,7 +166,7 @@ GUI 功能对照 Web 仪表盘：
 
 ```bash
 # 1) 直接以示例项目启动（加载 projects/resume/md-sync.yaml）
-python start_server.py
+python scripts/start_server.py
 # 浏览器打开 http://127.0.0.1:8580
 
 # 2) 或用 CLI（不读配置也能开，进浏览器再配置）
@@ -135,6 +182,7 @@ md-sync start
 - **〔开始监听 / 停止监听〕**：开启/关闭文件监听（源改动自动同步）
 - **🔔 同步事件**：本次会话的同步日志（时间、生成文件、耗时、错误）
 - **⏱ 同步历史**：历史项目列表，点「打开」可切换已配置过的项目
+- **📤 输出文件**：表格列出每个产物（格式 / 语言 / 文件名 / 大小 / 状态 / **最新时间** / 是否源文件 / 操作），可双击〔打开文件〕或右键〔复制路径〕
 
 ### 方式 C：命令行（无界面 / CI / 脚本）
 
@@ -209,12 +257,12 @@ CLI 入口：`md-sync`（见 `pyproject.toml` 的 `[project.scripts]`）。
 
 ### 2. 单文件可执行程序（PyInstaller，推荐）
 
-仓库自带跨平台构建脚本 `build_app.py`，在当前系统上产出免 Python 环境的可执行文件：
+仓库自带跨平台构建脚本 `scripts/build_app.py`，在当前系统上产出免 Python 环境的可执行文件：
 
 ```bash
 pip install pyinstaller            # 或 pip install -e ".[build]"
-python build_app.py                # 产出 dist/md-sync (Linux/macOS) 或 dist/md-sync.exe (Windows)
-python build_app.py --clean        # 清缓存后重新构建
+python scripts/build_app.py                # 产出 dist/md-sync (Linux/macOS) 或 dist/md-sync.exe (Windows)
+python scripts/build_app.py --clean        # 清缓存后重新构建
 ```
 
 **产物位置（均在本项目 `dist/` 目录下）：**
@@ -237,7 +285,7 @@ python build_app.py --clean        # 清缓存后重新构建
 ### 3. 跨平台自动构建（GitHub Actions）
 
 `.github/workflows/build.yml` 在 `ubuntu-latest` / `windows-latest` / `macos-latest`
-三个 runner 上分别运行 `build_app.py`，将三个平台的可执行文件作为 Release artifact 上传。
+三个 runner 上分别运行 `python scripts/build_app.py`，将三个平台的可执行文件作为 Release artifact 上传。
 
 ```bash
 # 打 tag 触发自动构建并发布 Release

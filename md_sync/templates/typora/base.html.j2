@@ -11,6 +11,70 @@
 {{ print_css }}
 }
 {% endif %}
+
+{% if typora_css %}
+/* === md-sync × Typora 主题兼容修正 ===
+   兼容两套命名:现代主题(bloom 系)用 --bg / --text / --code-bg,
+   传统主题(night 等)用 --bg-color / --text-color。md-sync 生成的
+   <pre> 不带 Typora 的 .md-fences 类,代码块样式需在此补齐;标题/正文
+   颜色用变量回退链,确保 dark 主题(无 --bg)不会被 fallback 成深色字或浅色底。 */
+/* 标题与正文颜色:回退到传统 --text-color,避免 dark 主题 fallback 成深灰字 */
+#write {
+  color: var(--text, var(--text-color, #1a1a1a));
+}
+#write h1, #write h2, #write h3, #write h4, #write h5, #write h6 {
+  color: var(--text, var(--text-color, #1a1a1a));
+}
+/* 代码块:md-sync 的 <pre> 不带 Typora 的 .md-fences 类,主题 pre 规则失效,补通用样式。
+   变量回退链兼容三套命名:bloom 系(--code-bg/--accent-rgb)、
+   传统 dark 主题(night: --bg-color/--text-color)、claude 系(--code-bg-color/
+   --code-text-color/--code-border-color/--accent-color),确保各主题代码块配色协调。 */
+#write pre {
+  background: var(--code-bg, var(--code-bg-color, var(--bg-color, #f5f5f5)));
+  color: var(--code-text, var(--code-text-color, var(--text-color, #333)));
+  border: 1px solid var(--code-border-color, var(--accent-color, rgba(120, 120, 120, 0.18)));
+  border-radius: 14px;
+  padding: 1.2em 1.4em;
+  overflow: auto;
+  line-height: 1.6;
+  font-family: var(--font-mono, monospace);
+  font-size: 14.5px;
+}
+#write pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border: 0;
+  font-weight: 400;
+}
+/* 仅现代主题(含 "--bg:" 变量,如 bloom 系)需要派生"底色 + 卡片"结构:
+   主题里 #write 用 `background: 渐变`(shorthand 把 background-color 重置为
+   transparent),故用 color-mix 基于 --bg 派生实色底并保留原有渐变 image。
+   传统主题(night 用 --bg-color 而非 --bg)直接沿用原生深色 body/#write,
+   不强行覆盖,否则会把 dark 主题洗成 light。 */
+{% if '--bg:' in typora_css %}
+html, body {
+  background: color-mix(in srgb, var(--bg, #ffffff), black 10%) !important;
+}
+#write {
+  background-color: color-mix(in srgb, var(--bg, #ffffff), white 12%);
+}
+{% endif %}
+/* 打印(PDF)时让 #write 铺满整页、去掉卡片圆角/阴影,并由 pdf.py 注入的
+   print-color-adjust: exact 保证 html/body/#write 底色延伸到 @page 边缘,
+   避免"白色边框 / 页边发白"的不专业观感。 */
+@media print {
+  html, body { margin: 0 !important; }
+  #write {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+}
+{% endif %}
 </style>
 </head>
 <body>

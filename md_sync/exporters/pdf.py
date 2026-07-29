@@ -60,19 +60,32 @@ def export_pdf(
 
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Inject CSS: @page margin for print layout. Chromium's default
-    # header/footer (URL, page number) is suppressed via CSS @page margin
-    # boxes (more reliable than CLI flags alone), combined with
-    # --no-print-header-footer and --disable-print-preview.
+    # Inject print CSS:
+    #  - @page { margin: 0 } removes the default white page-edge margin band
+    #    that Chromium prints regardless of background colors, so the theme
+    #    background fills the whole page (no white border).
+    #  - The original page_margin is converted to #write padding. Because a
+    #    plain padding only applies at the element's first/last edge (so inner
+    #    pages lose top/bottom margin), box-decoration-break: clone makes every
+    #    page fragment repeat the padding — giving a consistent margin on all
+    #    four sides of every page, including the bottom.
+    #  - print-color-adjust: exact forces Chromium to KEEP background colors
+    #    when printing (otherwise html/body/#write backgrounds are dropped).
+    #  - Header/footer (date, URL, page number) are suppressed via the CLI
+    #    flags --no-pdf-header-footer / --no-print-header-footer (spellings
+    #    differ across Chromium builds; both are passed harmlessly).
     html_text = html_path.read_text(encoding="utf-8")
     pdf_css = (
-        f"\n@page {{ margin: {page_margin}; "
-        "@top-left { content: none; } "
-        "@top-center { content: none; } "
-        "@top-right { content: none; } "
-        "@bottom-left { content: none; } "
-        "@bottom-center { content: none; } "
-        "@bottom-right { content: none; } }\n"
+        "\n@page { margin: 0; }\n"
+        "@media print {\n"
+        f"  #write {{ padding: {page_margin}; "
+        "-webkit-box-sizing: border-box; box-sizing: border-box; "
+        "-webkit-box-decoration-break: clone; box-decoration-break: clone; }}\n"
+        "}\n"
+        "html, body, #write, #write * {\n"
+        "  -webkit-print-color-adjust: exact !important;\n"
+        "  print-color-adjust: exact !important;\n"
+        "}\n"
     )
     if "</style>" in html_text:
         html_text = html_text.replace("</style>", pdf_css + "</style>")
@@ -86,6 +99,13 @@ def export_pdf(
         "--no-sandbox",
         "--disable-gpu",
         "--disable-print-preview",
+        # Suppress the default header/footer (date, URL, page number).
+        # Two flag spellings are tried because support differs across
+        # Chromium builds / distros:
+        #  - --no-pdf-header-footer   : works on Arch Chromium 150 (and newer).
+        #  - --no-print-header-footer : older builds / other distros.
+        # Passing both is harmless — an unsupported flag is simply ignored.
+        "--no-pdf-header-footer",
         "--no-print-header-footer",
         f"--print-to-pdf={pdf_path}",
         f"file://{html_path}",

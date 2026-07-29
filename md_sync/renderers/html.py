@@ -176,6 +176,7 @@ class HtmlRenderer:
             sections_meta=sections_meta or {},
             style_css=typora_css or self.css,
             print_css=self.print_css,
+            typora_css=typora_css,
             translator=translator,
             source_lang=doc.source_lang,
             target_lang=lang,

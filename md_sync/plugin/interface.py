@@ -32,6 +32,7 @@ class PluginManifest:
     name: str
     version: str = "1.0"
     description: str = ""
+    label: str = ""                   # 中文显示名（用户语言）；为空时回退到 name
     author: str = ""
     plugin_type: str = PLUGIN_TYPE_RENDER
     entry_point: str = ""           # Python module path, e.g. "my_plugin.main"
@@ -44,6 +45,7 @@ class PluginManifest:
     template: Optional[str] = None   # relative path to source template.md
     parser_schema: Optional[str] = None  # schema identifier, e.g. "my-resume"
     parser_class: Optional[str] = None   # Python class path, e.g. "parser.MyParser"
+    requires_template: bool = False      # 是否要求用户必须使用生成的源模板（如简历格式）
 
 
 # ── Plugin base class ───────────────────────────────────────────────────────
@@ -240,6 +242,7 @@ class DirectoryPlugin(RenderPlugin):
                     name=raw.get("name", self._directory.name),
                     version=raw.get("version", "1.0"),
                     description=raw.get("description", ""),
+                    label=raw.get("label", ""),
                     author=raw.get("author", ""),
                     plugin_type=raw.get("type", PLUGIN_TYPE_RENDER),
                     entry_point=raw.get("entry_point", ""),
@@ -250,6 +253,7 @@ class DirectoryPlugin(RenderPlugin):
                     template=raw.get("template"),
                     parser_schema=parser_schema,
                     parser_class=parser_class,
+                    requires_template=bool(raw.get("requires_template", False)),
                 )
         return PluginManifest(
             name=self._directory.name,

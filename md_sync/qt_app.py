@@ -374,6 +374,13 @@ class MainWindow(QWidget):
         desc_row.addWidget(self._detail_desc, 1)
         da.addLayout(desc_row)
 
+        # 模板使用提示（需要特定源模板时红色警示；否则隐藏）
+        self._template_warn = QLabel()
+        self._template_warn.setStyleSheet("font-size:11px;color:#dc2626;font-weight:600;")
+        self._template_warn.setWordWrap(True)
+        self._template_warn.setMaximumHeight(30)
+        da.addWidget(self._template_warn)
+
         # 一行：生成模板按钮 + 源文件已指定
         row2 = QHBoxLayout()
         row2.setSpacing(6)
@@ -508,7 +515,7 @@ class MainWindow(QWidget):
         style_h.addWidget(self.tpl_en, 1)
         cv.addWidget(self._style_row_w)
 
-        # ── 输出格式（紧凑 3+2 行） ──
+        # ── 输出格式（每个格式一个组，组内堆叠「格式卡片」+「专属控制项」） ──
         fmt_label = QLabel("输出格式")
         fmt_label.setStyleSheet("font-size:11px;color:#555;font-weight:600;margin-top:2px;")
         cv.addWidget(fmt_label)
@@ -521,6 +528,15 @@ class MainWindow(QWidget):
         fmt_row.setSpacing(6)
 
         for i, (fmt, label_txt) in enumerate(formats):
+            # 格式组容器：纵向堆叠「格式卡片」与其专属控制项（如 PDF 页边距），
+            # 让每种格式的控制项各自成组、互不影响。
+            group = QWidget()
+            group.setObjectName("fmt_group")
+            group_lay = QVBoxLayout(group)
+            group_lay.setContentsMargins(0, 0, 0, 0)
+            group_lay.setSpacing(4)
+            group_lay.setAlignment(Qt.AlignTop)
+
             fc = QWidget()
             fc.setObjectName("fmt_card")
             fc.setFixedHeight(48)
@@ -543,24 +559,27 @@ class MainWindow(QWidget):
             cb_row.addStretch(1)
             fc_lay.addLayout(cb_row)
 
-            fmt_row.addWidget(fc, 1)
+            group_lay.addWidget(fc)
+
+            # 专属控制项：仅 PDF 有页边距，直接挂在 PDF 组下方，与 PDF 卡片成组
+            if fmt == "pdf":
+                margin_w = QWidget()
+                margin_w.setFixedHeight(28)
+                mh = QHBoxLayout(margin_w)
+                mh.setContentsMargins(2, 0, 2, 0)
+                mh.setSpacing(4)
+                mh.addWidget(QLabel("页边距"))
+                self.margin_combo = QComboBox()
+                self.margin_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                for val, label in [("15mm", "15mm（标准）"), ("20mm", "20mm（宽松）"), ("25mm", "25mm（宽边距）")]:
+                    self.margin_combo.addItem(label, val)
+                self.margin_combo.setCurrentIndex(0)
+                mh.addWidget(self.margin_combo)
+                group_lay.addWidget(margin_w)
+
+            fmt_row.addWidget(group, 1)
 
         cv.addLayout(fmt_row)
-
-        # ── PDF 页边距（固定高度行） ──
-        margin_row = QWidget()
-        margin_row.setFixedHeight(32)
-        mh = QHBoxLayout(margin_row)
-        mh.setContentsMargins(0, 0, 0, 0)
-        mh.setSpacing(8)
-        mh.addWidget(QLabel("PDF 页边距"))
-        self.margin_combo = QComboBox()
-        for val, label in [("15mm", "15mm（标准）"), ("20mm", "20mm（宽松）"), ("25mm", "25mm（宽边距）")]:
-            self.margin_combo.addItem(label, val)
-        self.margin_combo.setCurrentIndex(0)
-        mh.addWidget(self.margin_combo)
-        mh.addStretch(1)
-        cv.addWidget(margin_row)
 
         # 表单变动校验
         self.source_edit.textChanged.connect(self._validate_form)
@@ -669,9 +688,8 @@ class MainWindow(QWidget):
         self._plugins = self._plugin_registry.list_plugins(plugin_type="pack")
         self.plugin_combo.clear()
         for p in self._plugins:
-            schema = p.parser_schema or "—"
-            label = f"{p.name} (schema: {schema})"
-            self.plugin_combo.addItem(label, p.name)
+            # 选项名用中文显示名（用户语言），回退到机器名；保留 Typora 等专名
+            self.plugin_combo.addItem(p.label or p.name, p.name)
         # 默认选中第一个（应是 builtin-resume）
         if self._plugins:
             self._on_plugin_changed(0)
@@ -692,13 +710,35 @@ class MainWindow(QWidget):
 
         # ── 更新插件详情 ──
         tpl_list = ", ".join(plugin.templates) if plugin.templates else "系统内置"
-        self._detail_name.setText(f"{plugin.name}")
+        self._detail_name.setText(plugin.label or plugin.name)
+        self._detail_name.setToolTip(f"插件标识：{plugin.name}")
         self._detail_version.setText(f"v{plugin.version}" if plugin.version else "")
         self._detail_schema.setText(f"schema: {schema}")
         self._detail_desc.setText(plugin.description or "")
         self._detail_desc.setToolTip(plugin.description or "")
+        # Typora 插件：若本机未安装 Typora（主题目录不存在），提示用户
+        if plugin.name == "typora":
+            from md_sync.plugins.typora.paths import is_typora_installed
+            if not is_typora_installed():
+                self._detail_desc.setText(
+                    (plugin.description or "")
+                    + "\n\n⚠ 未检测到本机已安装 Typora，暂无可用主题。"
+                      "请先安装 Typora，其主题会自动出现在「渲染风格」下拉框中。"
+                )
         self._detail_templates.setText(tpl_list)
         self._detail_area.setVisible(True)
+
+        # ── 模板生成与警示 ──
+        if plugin.requires_template:
+            self._template_btn.setVisible(True)
+            self._template_warn.setVisible(True)
+            self._template_warn.setText(
+                "⚠ 必须使用生成的模板：请点击「生成模板」获取规定的源文件格式，"
+                "否则无法正确解析。"
+            )
+        else:
+            self._template_btn.setVisible(False)
+            self._template_warn.setVisible(False)
 
         # ── 隐藏之前生成的源文件路径 ──
         self._source_row.setVisible(False)
@@ -728,11 +768,13 @@ class MainWindow(QWidget):
         no colors are found.
         """
         import re
-        css_path = Path.home() / ".config" / "Typora" / "themes" / f"{css_stem}.css"
+        from md_sync.plugins.typora.paths import get_typora_themes_dir
+        typora_dir = get_typora_themes_dir()
+        css_path = (typora_dir / f"{css_stem}.css") if typora_dir else None
         bg = "#cccccc"  # fallback grey
         fg = "#333333"
 
-        if css_path.exists():
+        if css_path is not None and css_path.exists():
             try:
                 text = css_path.read_text(encoding="utf-8")
                 # Extract from :root CSS variables
@@ -1303,6 +1345,8 @@ class MainWindow(QWidget):
             open_btn.setObjectName("cell_btn")
             open_btn.clicked.connect(self._on_open_clicked)
             open_btn._file_path = path
+            # 非同步完成（待同步 / 文件不存在）时禁用「打开」：无可打开的文件
+            open_btn.setEnabled(color == C_SYNCED)
             ops_lo.addWidget(open_btn)
 
             del_btn = QPushButton("删除")
@@ -1313,7 +1357,9 @@ class MainWindow(QWidget):
 
             self.file_tbl.setCellWidget(row, 5, ops_cell)
         self.clear_all_btn.setEnabled(any_row)
-        if not any_row:
+        if not self.cfg or not any_row:
+            # 未配置输出，或（删除全部后）已无任何产物时，显示空态提示；
+            # 否则保留剩余产物行不追加占位行，避免「文件 + 占位」并存。
             self.file_tbl.insertRow(0)
             self.file_tbl.setItem(0, 0, QTableWidgetItem("（未配置输出）"))
         if not self._syncing:
@@ -1343,10 +1389,16 @@ class MainWindow(QWidget):
 
     # ── Open / copy ────────────────────────────────────────────────────
     def _delete_output_file(self, path: str):
-        """删除单个输出文件并刷新列表。"""
-        if not path or not Path(path).exists():
+        """删除单个输出文件，并同步从配置产物中移除对应条目，使该行清空。"""
+        if not path:
             return
-        name = Path(path).name
+        p = Path(path)
+        name = p.name
+        if not p.exists():
+            # 文件已不存在，但配置里仍有该行：直接移除条目并刷新
+            self._remove_output_entry(path)
+            self._refresh_file_list()
+            return
         ret = QMessageBox.question(
             self, "删除文件",
             f"确定要删除「{name}」吗？\n{path}",
@@ -1354,11 +1406,29 @@ class MainWindow(QWidget):
         if ret != QMessageBox.Yes:
             return
         try:
-            Path(path).unlink(missing_ok=True)
+            p.unlink(missing_ok=True)
+            # 同步从 cfg.outputs 移除该产物（含其 PDF 项），否则刷新后此行仍会显示
+            self._remove_output_entry(path)
             self._append_log(f"🗑 已删除：{name}")
             self._refresh_file_list()
         except Exception as e:
             QMessageBox.critical(self, "删除失败", f"无法删除文件：\n{e}")
+
+    def _remove_output_entry(self, path: str):
+        """从 self.cfg.outputs 中移除指向 path（或以其为 pdf_path）的产物条目。"""
+        if self.cfg is None:
+            return
+        norm = Path(path).resolve()
+        kept = []
+        for o in self.cfg.outputs:
+            if o.path and Path(o.path).resolve() == norm:
+                continue
+            if o.pdf_path and Path(o.pdf_path).resolve() == norm:
+                # 仅 PDF 文件被删：清空 pdf_path，保留主产物行
+                o.pdf_path = None
+                o.pdf = False
+            kept.append(o)
+        self.cfg.outputs = kept
 
     def _delete_all_output(self):
         """删除所有输出文件并刷新列表。"""
@@ -1413,8 +1483,10 @@ class MainWindow(QWidget):
         self._delete_output_file(path)
 
     def _open_file(self, path):
-        if path and Path(path).exists():
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).resolve())))
+        if not path or not Path(path).exists():
+            QMessageBox.information(self, "文件未生成", "该文件尚未生成或已删除，无法打开。")
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).resolve())))
 
     def _on_file_activated(self, item: QTableWidgetItem):
         if item is None or self.file_tbl is None:

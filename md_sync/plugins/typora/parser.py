@@ -34,8 +34,8 @@ class TyporaParser(ParserPlugin):
 
     This parser is identical in behavior to GenericMarkdownParser but is
     registered under the ``typora`` schema. When selected, the style
-    dropdown shows only Typora CSS themes (discovered from the user's
-    ``~/.config/Typora/themes/`` directory).
+    dropdown shows only Typora CSS themes (auto-discovered from the user's
+    OS-specific Typora themes directory — see ``md_sync.plugins.typora.paths``).
     """
 
     def __init__(self):

@@ -49,8 +49,7 @@ include = ["md_sync*"]
 
 [tool.setuptools.package-data]
 md_sync = [
-    "templates/**/*",
-    "themes/**/*",
+    "plugins/**/*",
     "web/templates/**/*",
     "web/static/**/*",
 ]

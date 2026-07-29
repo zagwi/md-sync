@@ -1,8 +1,0 @@
-<div class="section">
-  <div class="section-title">{{ section.title }}{% if section.badge %} <span class="badge">{{ section.badge }}</span>{% endif %}</div>
-  <ul class="summary-list">
-    {% for item in section.items %}
-    <li>{{ item.content | replace_metrics | safe }}</li>
-    {% endfor %}
-  </ul>
-</div>

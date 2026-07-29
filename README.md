@@ -1,7 +1,7 @@
 # md-sync
 
-把一份 Markdown 源文件，**自动同步**成多种格式（HTML / PDF 等等）和多种语言（中文 / 英文）的输出，
-并通过文件监听（watcher）在源文件变动时自动重新生成。适合文档工作者的效率提升神器。
+你用**中文或英文**写一份 Markdown 源文件，md-sync 会**自动把它翻译成另一种语言**，并同时生成
+多种格式（HTML / PDF / Markdown 等等）的输出；源文件一改动，所有产物自动重新生成。适合文档工作者的效率提升神器。
 
 - 一份源 → 多份产物：`html/zh`、`html/en`、`pdf/zh`、`pdf/en`、`md/zh`、`md/en`、 …
 - 源文件改了 → 自动重新同步（带防抖 / debounce）
@@ -12,7 +12,7 @@
 
 ## 为什么需要 md-sync？
 
-AI 工具确实能翻译文档、也能转换格式——但那解决的是"一次性"需求。
+把"重复、繁琐、易错的体力活"交给 md-sync，你专注内容本身。AI 工具确实能翻译文档、也能转换格式——但那解决的是"一次性"需求。
 真正繁琐的是**频繁修改源文件**的场景：你每改一个词，就要手动走完
 **修改 → 翻译 → 转换格式** 这一整条链路，而且往往要同时维护多个语言、多种格式的产物。
 人工反复操作，不仅费时，更容易漏翻、漏转、版本对不齐。
@@ -23,7 +23,33 @@ AI 工具确实能翻译文档、也能转换格式——但那解决的是"一�
 - **一次配置，长期受益**：翻译缓存 + 多输出配置只需设定一次，后续每次修改零额外操作。
 - **不易出错**：译文与格式由工具统一处理，避免人工复制粘贴导致的漏翻、漏转、错版。
 
-把"重复的体力活"交给 md-sync，你专注内容本身。
+
+
+---
+
+## 使用流程
+
+md-sync 只负责「把稿子变成发布物」，**写稿仍用你最顺手的 Markdown 编辑器**：
+
+1. **用你喜欢的 MD 编辑器写稿**：例如 [Typora](https://typora.io/)、Obsidian、VS Code 等，按习惯写好 `.md` 源文件即可。
+2. **交给 md-sync 自动生成发布文档**：把源文件交给 md-sync，它会按配置自动同步出多种格式（HTML / PDF / Markdown / DOCX / EPUB）与多种语言（中文 / 英文）的产物，并在源文件改动时自动重新生成。
+3. **套用 Typora 主题产出美观文档**：md-sync 可直接选用你电脑上 Typora 主题目录下的丰富主题资源（如 bloom-mist、night、claude-like 等），用它渲染出风格统一、美观的 HTML / PDF 文档，无需自己从头调样式。**前提是你本机已安装 [Typora](https://typora.io/)** —— 主题 CSS 存放在 Typora 的配置目录里，未安装则不会出现在「渲染风格」下拉框中。
+
+> 一句话：**你只管在编辑器里写，md-sync 负责把它变成好看的发布稿。**
+
+---
+
+## 为什么用 Markdown 写稿（而不是 docx）
+
+文档工作流的核心价值在于「可比较、可追溯、可协作」，而文件格式直接决定了你能否用成熟的工具链做到这一点：
+
+- **Markdown 是纯文本**：基本不带二进制格式控制，本质就是 `.txt` 的增强版。因此它天然能接入程序员早已验证过的文本工作流：
+  - **差异比较**：用 `diff` 或任意代码对比工具直接看增删改，逐行比对一目了然；
+  - **版本管理**：用 `git` 等版本控制系统管理文档——提交历史、分支、回滚、多人协作 merge 全部可用；
+  - **自动化**：文本可被脚本解析、批量处理，也能接入 CI 做自动检查与发布。
+- **docx / pdf / epub 等是二进制格式**：内容被打包进专有容器，普通文本工具读不出可读的差异，无法做 `diff`，也很难在 git 中做有意义的版本对比（每次保存整文件变化，历史膨胀且不可读）。
+
+> 结论：**Markdown 只作为编辑与协作的「源格式」，docx / pdf / epub 等二进制格式只应作为「输出格式」**——由 md-sync 从同一份 Markdown 源自动生成，而不应该反过来拿它们当编辑格式去反复手改。这样你既享受二进制格式的发布兼容性，又保留纯文本带来的差异比较与版本管理能力。
 
 ---
 
@@ -31,7 +57,7 @@ AI 工具确实能翻译文档、也能转换格式——但那解决的是"一�
 
 | 能力 | 说明 |
 |------|------|
-| **多格式输出** | `html` `PDF` `md` （支持插件扩展 docx 等格式）；PDF 由 Chromium 生成，整页背景、无页眉页脚、四周边距一致 |
+| **多格式输出** | `html` `md` `pdf`，并可经插件扩展 `docx` / `epub`（PDF 由 Chromium 生成） |
 | **多语言输出** | `zh` / `en`，翻译基于 `.translations.json` 缓存，缺失回退 AI（provider `auto`） |
 | **文件监听** | 基于 `watchdog` 监听源文件，`debounce` 默认 1.5s，改动即同步 |
 | **模板 / 主题** | `bwx`、`modern` 等内置样式；并可直接选用 Typora 主题目录（`~/.config/Typora/themes/`）下的主题（`typora-bloom-mist`、`typora-night`、`typora-claude-like` 等），自动兼容背景、dark/light 与代码块（`md-sync template` / `md-sync plugin`） |
@@ -41,9 +67,17 @@ AI 工具确实能翻译文档、也能转换格式——但那解决的是"一�
 
 ### Typora 主题兼容与 PDF 导出
 
-md-sync 会自动发现 Typora 主题目录（`~/.config/Typora/themes/`）下的主题，并以
+md-sync 会自动发现本机 Typora 主题目录下的主题，并以
 `typora-<主题名>` 形式选用（如 `typora-bloom-mist` / `typora-bloom-mist-dark` /
-`typora-night` / `typora-claude-like` 等）。渲染层针对「Typora 编辑器主题」与
+`typora-night` / `typora-claude-like` 等）。**需本机已安装 Typora**；不同系统的主题目录为：
+
+- **Windows**：`%APPDATA%\Typora\themes`
+- **macOS**：`~/Library/Application Support/abnerworks.Typora/themes`
+- **Linux**：`~/.config/Typora/themes`
+
+未检测到上述目录时，Typora 主题不会出现在「渲染风格」下拉框，GUI 会提示「未检测到本机已安装 Typora」。
+
+渲染层针对「Typora 编辑器主题」与
 「单文件 HTML / PDF」的差异做了兼容，保证这些主题在 md-sync 下也能正确呈现：
 
 - **背景与卡片观感**：Typora 主题通常依赖「深色外壳 + 白色卡片 (`#write`)」双层结构；
@@ -64,18 +98,6 @@ PDF 导出（Chromium 引擎）已优化为「专业外观」：
   （`box-sizing: border-box` + `box-decoration-break: clone`），使每一页
   （含末页）的四周边距保持一致，且无刺眼白色边框。
 
-### 两个独立维度（重要）
-
-同步行为由两个**互不相干**的维度组合：
-
-- **语言 `lang`**：`zh` ↔ `en` —— 由翻译模块处理（只换文字）
-- **格式 `format`**：`md` ↔ `html` —— 由渲染器处理（只换呈现形式，套用模板/主题）
-
-例：一份简历源文件，可同时输出 `html/zh`（同语言 + 转 HTML 带模板）、
-`md/en`（翻译 + 不转换）、`html/en`（翻译 + 转 HTML + PDF）等组合。
-
----
-
 ## 目录结构
 
 ```
@@ -90,10 +112,10 @@ md-sync/
 │   ├── translate/          # 翻译管理 + AI 回退
 │   ├── exporters/          # PDF 导出（Chromium）/ pandoc 导出（docx/epub）
 │   ├── template/           # 模板管理
-│   ├── plugin/             # 插件系统
+│   ├── plugin/             # 插件引擎（接口 / 注册表 / 加载器 / 钩子），不含插件实例
 │   └── web/app.py          # FastAPI 后端 + 仪表盘
-├── plugins/                # 内置插件（typora / builtin-resume / generic-markdown）
-├── templates/              # 内置模板与主题（bwx / modern / typora …）
+├── plugins/                # 内置插件（typora / builtin-resume / generic-markdown），各自携带模板
+├── docs/example-plugin/    # 插件开发示例（resume-pack：源模板 + 解析器 + 渲染风格）
 ├── projects/               # 示例 / 项目配置（md-sync.yaml）
 ├── scripts/                # 构建与启动脚本
 │   ├── build_app.py        # PyInstaller 单文件打包
@@ -137,6 +159,17 @@ pip install -e .
 pip install PySide6
 ```
 
+### 系统级前置依赖：Chromium（仅 PDF 导出需要）
+
+PDF 由本机 **Chromium / Chrome** 以 headless 方式打印生成，**它是系统级前置依赖，`pip install` 不会自动下载**。导出 PDF 前请确保本机已安装，且 `md-sync` 能找到其二进制：
+
+- **Arch / Manjaro**：`sudo pacman -S chromium`
+- **Debian / Ubuntu 等**：`sudo apt install chromium`（或安装 Google Chrome）
+- **macOS**：`brew install --cask chromium`（或安装 Google Chrome）
+- **Windows**：从 [chromium.org](https://www.chromium.org/) 或 Google Chrome 官网安装
+
+安装后 `md-sync` 会自动探测 `/usr/bin/chromium`、`google-chrome*`、`/snap/bin/chromium` 等常见路径；若装在非常规位置，可在配置中通过 `chromium_path` 显式指定二进制路径。未安装或探测不到时会直接报错中止，不会静默降级。
+
 ---
 
 ## 使用方式
@@ -156,9 +189,9 @@ python -m md_sync.qt_app      # 或：md-sync gui
 GUI 功能对照 Web 仪表盘：
 
 - **📄 源文件**：选择 `.md` 源文件，自动检测源语言、章节数与待译条数（同时作为「开始监听」的必填项）
-- **🎯 输出设置**：按格式分组（HTML / Markdown / PDF），每组内可勾选中文、英文；三种格式 × 两种语言**默认全部选中**
+- **🎯 输出设置**：每种格式一个组（HTML / Markdown / PDF / DOCX / EPUB，后两者需插件），组内勾选中文、英文；**默认均不勾选**，须至少为一种格式勾选一种语言才可开始；PDF 组下方附带「页边距」下拉（15 / 20 / 25mm）控制 PDF 留白
 - **〔开始监听 / 停止监听〕**：选定源文件且填好输出目录后按钮才可点击；开启监听后源改动自动同步，首次启动立即同步一次
-- **输出文件列表**：以单表呈现，每行含格式列、语言列（带 badge）与状态点、大小，双击〔打开文件〕或右键〔复制路径〕
+- **输出文件列表**：以单表呈现，每行含状态、格式、语言（带 badge）、文件、修改时间，双击〔打开文件〕或右键〔复制路径〕
 - **〔打开输出目录〕**：一键打开生成文件所在目录
 - **同步日志**：本次会话的同步日志（时间、生成文件、耗时、错误）
 
@@ -301,7 +334,7 @@ artifact 命名为 `md-sync-ubuntu-latest` / `md-sync-windows-latest` / `md-sync
 ## 常见问题
 
 - **「打开」选完文件后输入框清空**：这是预期行为——选文件即加载，无需手填路径。
-- **翻译后为什么还有 HTML？** 翻译只换文字，HTML 由渲染器（转换）生成；两者独立，详见「两个独立维度」。
+- **翻译后为什么还有 HTML？** 翻译只换文字（语言），HTML 由渲染器（转换）生成（格式），两者是各自独立的产物，可分别勾选。
 - **Qt GUI 的同步日志在哪？** 直接显示在 GUI 的「同步日志」面板中。
 - **端口被占用？** Web 模式默认使用 8580；若该端口被占用，改 `web_ui.port` 即可。
 

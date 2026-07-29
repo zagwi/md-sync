@@ -21,7 +21,6 @@ from md_sync.core.pipeline import SyncPipeline
 from md_sync.plugin.interface import DirectoryPlugin
 from md_sync.plugin.loader import install_plugin, remove_plugin
 from md_sync.plugin.registry import PluginRegistry
-from md_sync.template.generator import interactive_create
 from md_sync.template.manager import TemplateManager
 from md_sync.watcher import FileWatcher
 
@@ -60,7 +59,6 @@ def main(argv: list[str] | None = None) -> int:
     _add_common_args(tpl_parser)
     tpl_sub = tpl_parser.add_subparsers(dest="template_action", required=True)
     tpl_sub.add_parser("list")
-    tpl_sub.add_parser("create")
     tpl_show = tpl_sub.add_parser("show")
     tpl_show.add_argument("name")
 
@@ -258,9 +256,6 @@ def _cmd_template(args: argparse.Namespace) -> int:
             tag = f" [{t.author}]" if "plugin" in t.author else ""
             print(f"{t.name:20s} {t.schema:12s} {t.label}{tag}")
         print("\nTip: 'md-sync template show <name>' for details")
-
-    elif args.template_action == "create":
-        return interactive_create()
 
     elif args.template_action == "show":
         try:

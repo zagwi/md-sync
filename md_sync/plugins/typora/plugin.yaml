@@ -5,13 +5,14 @@
 #
 # Schema: typora  (专用 schema，仅此插件使用)
 #
-# 模板: typora (位于 md_sync/templates/typora/)
-#    → 输出标准 #write 容器 HTML，搭配 ~/.config/Typora/themes/ 下的 CSS 主题
+# 模板: typora (位于本插件 templates/typora/)
+#    → 输出标准 #write 容器 HTML，搭配本机 Typora 主题目录下的 CSS 主题（跨平台自动发现）
 #
 # 工作流:
 #   选择 typora 插件 → 选择 Typora 主题 → 编写/选择源 .md 文件 → 同步输出
 
 name: typora
+label: Typora 主题插件包
 version: "1.0"
 description: Typora 主题插件包 — 将 Typora 的 40+ CSS 主题库接入 md-sync 渲染管线，支持标准 Markdown 文档与多格式同步输出
 author: md-sync
@@ -22,6 +23,8 @@ parser:
   schema: typora
 
 template: template.md
+
+requires_template: false
 
 templates:
   - typora

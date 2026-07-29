@@ -12,7 +12,15 @@ md-sync.spec
 # 本地同步产物输出目录
 简历/
 output/
+test_output/
+md/
+html/
+pdf/
+docx/
+epub/
 *.pdf
+*.docx
+*.epub
 
 # 虚拟环境
 .venv/

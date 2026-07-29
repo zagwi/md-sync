@@ -39,8 +39,12 @@
 
 ## 可用的 Typora 主题
 
-安装新主题只需将 `.css` 文件放入 `~/.config/Typora/themes/` 目录，md-sync 会自动发现并加入风格下拉框。
+md-sync 会自动发现**本机已安装 Typora** 的主题目录下的 `.css` 文件并加入「渲染风格」下拉框。不同系统的主题目录：
 
-所有在 `~/.config/Typora/themes/` 目录下的 `.css` 文件都会自动出现在渲染风格下拉框中。
+- **Windows**：`%APPDATA%\Typora\themes`
+- **macOS**：`~/Library/Application Support/abnerworks.Typora/themes`
+- **Linux**：`~/.config/Typora/themes`
 
-安装新主题：将主题 `.css` 文件放入 `~/.config/Typora/themes/` 目录，重启即可使用。
+> 未检测到上述目录（即本机未安装 Typora）时，不会有任何 Typora 主题出现在下拉框中。
+
+安装新主题：将主题 `.css` 文件放入对应系统的 Typora 主题目录，重启 md-sync 即可使用。

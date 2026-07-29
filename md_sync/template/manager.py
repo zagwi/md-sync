@@ -1,10 +1,9 @@
 """Template registry and resolution.
 
 TemplateManager discovers templates from multiple sources:
-  1. Bundled styles:  <install_dir>/templates/<name>/
-  2. User custom:     <install_dir>/templates/user/<name>/
-  3. Plugins:         via PluginRegistry.get_template_dirs()
-  4. Legacy themes:   <install_dir>/themes/<name>/  (backward compat)
+  1. Plugins:         via PluginRegistry.get_template_dirs()  (template styles
+                     live inside each plugin's own templates/ directory)
+  2. Typora OS themes: auto-discovered from the user's Typora themes dir
 """
 from __future__ import annotations
 
@@ -64,14 +63,12 @@ class TemplateManager:
 
     # ── Listing ─────────────────────────────────────────────────────────
 
-    def list_templates(
-        self, schema: Optional[str] = None, include_legacy: bool = False
-    ) -> list[TemplateInfo]:
+    def list_templates(self, schema: Optional[str] = None) -> list[TemplateInfo]:
         """List all available templates, optionally filtered by schema.
 
-        Legacy themes (e.g. resume-zh/resume-en) are duplicates of the
-        bundled styles and hidden from the UI by default; pass
-        ``include_legacy=True`` (CLI) to list them too.
+        Template styles are no longer shipped in a central ``templates/`` dir:
+        each plugin carries its own styles under ``<plugin>/templates/<name>/``
+        (see ``PluginRegistry.get_template_dirs``).
 
         Typora themes from ``~/.config/Typora/themes/`` are auto-discovered
         and registered under the ``typora-<name>`` prefix. They support any
@@ -80,29 +77,7 @@ class TemplateManager:
         results: list[TemplateInfo] = []
         seen: set[str] = set()
 
-        # 1. Bundled styles
-        styles_dir = self._install_dir / "templates"
-        if styles_dir.exists():
-            for d in sorted(styles_dir.iterdir()):
-                if d.is_dir() and (d / "template.yaml").exists():
-                    cat = self._load_from_dir(d)
-                    if cat and cat.info.name not in seen:
-                        if schema is None or cat.info.schema == schema or cat.info.schema == "*":
-                            results.append(cat.info)
-                            seen.add(cat.info.name)
-
-        # 2. User custom
-        user_dir = styles_dir / "user" if styles_dir.exists() else None
-        if user_dir and user_dir.exists():
-            for d in sorted(user_dir.iterdir()):
-                if d.is_dir() and (d / "template.yaml").exists():
-                    cat = self._load_from_dir(d)
-                    if cat and cat.info.name not in seen:
-                        if schema is None or cat.info.schema == schema or cat.info.schema == "*":
-                            results.append(cat.info)
-                            seen.add(cat.info.name)
-
-        # 3. Plugin-provided templates
+        # 1. Plugin-provided templates
         for plugin_tpl_dir in self._plugin_registry.get_template_dirs():
             for d in sorted(plugin_tpl_dir.iterdir()):
                 if d.is_dir() and (d / "template.yaml").exists():
@@ -113,23 +88,15 @@ class TemplateManager:
                             results.append(cat.info)
                             seen.add(cat.info.name)
 
-        # 4. Legacy themes (backward compat) — hidden from the UI by default
-        if include_legacy:
-            themes_dir = self._install_dir / "themes"
-            if themes_dir.exists():
-                for d in sorted(themes_dir.iterdir()):
-                    if d.is_dir() and (d / "theme.yaml").exists():
-                        if d.name in seen:
-                            continue
-                        legacy = self._load_legacy_theme(d)
-                        if legacy:
-                            if schema is None or legacy.info.schema == schema:
-                                results.append(legacy.info)
-                                seen.add(legacy.info.name)
-
-        # 5. Typora themes from ~/.config/Typora/themes/
-        typora_dir = Path.home() / ".config" / "Typora" / "themes"
-        if typora_dir.exists():
+        # 2. Typora themes — only if Typora is installed on this machine
+        #    (themes live in an OS-specific dir; see md_sync.plugins.typora.paths).
+        from md_sync.plugins.typora.paths import get_typora_themes_dir
+        typora_dir = get_typora_themes_dir()
+        if typora_dir is not None:
+            # The bundled "typora" base style now ships inside the typora plugin.
+            typora_base = (
+                self._install_dir / "plugins" / "typora" / "templates" / "typora"
+            )
             for css_file in sorted(typora_dir.glob("*.css")):
                 name = f"typora-{css_file.stem}"
                 if name in seen:
@@ -148,7 +115,7 @@ class TemplateManager:
                     author="Typora Community",
                     schema="*",
                     engine="jinja2",
-                    directory=self._install_dir / "templates" / "typora",
+                    directory=typora_base,
                 ))
                 seen.add(name)
 
@@ -161,13 +128,8 @@ class TemplateManager:
         if name in self._cache:
             return self._cache[name]
 
-        # Search order: user > bundled > plugins > legacy
-        cat = (
-            self._try_load("user", name)
-            or self._try_load("bundled", name)
-            or self._try_load_from_plugins(name)
-            or self._try_load_legacy(name)
-        )
+        # Search order: plugins
+        cat = self._try_load_from_plugins(name)
 
         if cat is None:
             raise FileNotFoundError(
@@ -182,91 +144,7 @@ class TemplateManager:
         """Shortcut: get directory path for a template."""
         return self.resolve(name).info.directory  # type: ignore
 
-    # ── Create / Install ────────────────────────────────────────────────
-
-    def create_scaffold(
-        self,
-        name: str,
-        label: str = "",
-        schema: str = "resume",
-        base: Optional[str] = None,
-    ) -> Path:
-        """Scaffold a new template directory under user custom."""
-        dest = self._install_dir / "templates" / "user" / name
-        if dest.exists():
-            raise FileExistsError(f"Template already exists: {name}")
-
-        dest.mkdir(parents=True, exist_ok=True)
-        (dest / "sections").mkdir(exist_ok=True)
-
-        # If base template specified, copy its structure
-        if base:
-            base_cat = self.resolve(base)
-            if base_cat and base_cat.info.directory:
-                self._copy_template(base_cat.info.directory, dest)
-                return dest
-
-        # Generate fresh scaffold
-        meta = {
-            "name": name,
-            "label": label or name,
-            "description": f"Custom {schema} template — {name}",
-            "version": "1.0",
-            "author": "user",
-            "schema": schema,
-            "engine": "jinja2",
-            "pdf": {"page_size": "A4", "margin": "5mm 8mm"},
-        }
-        with open(dest / "template.yaml", "w", encoding="utf-8") as f:
-            yaml.dump(meta, f, allow_unicode=True, sort_keys=False)
-
-        # Generate base HTML template
-        html = (
-            "<!DOCTYPE html>\n<html lang=\"{{ lang or 'en' }}\">\n"
-            "<head>\n<meta charset=\"UTF-8\">\n"
-            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-            f"<title>{{{{ doc.name }}}} - {label}</title>\n"
-            "<style>\n{{ style_css }}\n{% if print_css %}@media print {\n{{ print_css }}\n}{% endif %}\n</style>\n"
-            "</head>\n<body>\n"
-            "{% for section in doc.sections %}\n"
-            "  {% include 'sections/' + section.id + '.html.j2' %}\n"
-            "{% endfor %}\n"
-            "</body>\n</html>\n"
-        )
-        (dest / "base.html.j2").write_text(html, encoding="utf-8")
-
-        # Generate placeholder section templates
-        for sid in ["summary", "education", "experience", "project", "open_source"]:
-            (dest / "sections" / f"{sid}.html.j2").write_text(
-                "<div class=\"section\">\n"
-                f"  <h2>{{{{ section.title }}}}</h2>\n"
-                "  {{ section.content }}\n"
-                "</div>\n",
-                encoding="utf-8",
-            )
-
-        # Default CSS
-        (dest / "style.css").write_text(
-            "/* Auto-generated template scaffold */\n"
-            "body { font-family: system-ui, sans-serif; max-width: 210mm; margin: 0 auto; padding: 20px; }\n"
-            ".section { margin-bottom: 1.5em; }\n"
-            "h2 { border-bottom: 2px solid #333; padding-bottom: 4px; }\n",
-            encoding="utf-8",
-        )
-
-        return dest
-
     # ── Internal ────────────────────────────────────────────────────────
-
-    def _try_load(self, source: str, name: str) -> Optional[TemplateCatalog]:
-        if source in ("user", "bundled"):
-            base = self._install_dir / "templates"
-            if source == "user":
-                base = base / "user"
-            target = base / name
-            if target.exists() and (target / "template.yaml").exists():
-                return self._load_from_dir(target)
-        return None
 
     def _try_load_from_plugins(self, name: str) -> Optional[TemplateCatalog]:
         """Search plugin-provided template directories."""
@@ -276,13 +154,6 @@ class TemplateManager:
                 cat = self._load_from_dir(target)
                 if cat:
                     return cat
-        return None
-
-    def _try_load_legacy(self, name: str) -> Optional[TemplateCatalog]:
-        themes_dir = self._install_dir / "themes"
-        target = themes_dir / name
-        if target.exists() and (target / "theme.yaml").exists():
-            return self._load_legacy_theme(target)
         return None
 
     def _load_from_dir(self, directory: Path) -> Optional[TemplateCatalog]:
@@ -311,50 +182,15 @@ class TemplateManager:
             sections=raw.get("sections", {}),
         )
 
-    def _load_legacy_theme(self, directory: Path) -> Optional[TemplateCatalog]:
-        """Convert legacy theme.yaml to TemplateCatalog."""
-        yaml_path = directory / "theme.yaml"
-        if not yaml_path.exists():
-            return None
-        raw = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
-        if not raw:
-            return None
-
-        info = TemplateInfo(
-            name=raw.get("name", directory.name),
-            label=raw.get("label", raw.get("description", directory.name)),
-            description=raw.get("description", ""),
-            version="1.0",
-            author="md-sync (legacy)",
-            schema="resume",
-            engine="jinja2",
-            directory=directory,
-        )
-        return TemplateCatalog(
-            info=info,
-            pdf=raw.get("pdf", {}),
-            sections=raw.get("sections", {}),
-        )
-
     @staticmethod
     def _find_install_dir() -> Path:
         """Find the md-sync installation directory.
 
-        ``templates/`` and ``themes/`` live inside the ``md_sync`` package so
-        they are distributed with the wheel and resolvable at runtime.
+        Template styles now live inside each plugin (``md_sync/plugins/<name>/
+        templates/``). All are inside the ``md_sync`` package so they are
+        distributed with the wheel and resolvable at runtime.
         """
         import md_sync
         return Path(md_sync.__file__).resolve().parent
 
-    @staticmethod
-    def _copy_template(src: Path, dst: Path) -> None:
-        """Copy a template directory structure."""
-        import shutil
-        for item in src.iterdir():
-            if item.name == "__pycache__":
-                continue
-            s_dst = dst / item.name
-            if item.is_dir():
-                shutil.copytree(item, s_dst, dirs_exist_ok=True)
-            else:
-                shutil.copy2(item, s_dst)
+

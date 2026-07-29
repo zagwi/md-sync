@@ -37,7 +37,7 @@ def _collect_datas() -> list[tuple[str, str]]:
     """Return (source_dir, dest_dir_in_bundle) pairs for bundled assets."""
     bundles = [
         (ROOT / "md_sync" / "templates", "md_sync/templates"),
-        (ROOT / "md_sync" / "themes", "md_sync/themes"),
+        (ROOT / "md_sync" / "plugins", "md_sync/plugins"),
         (ROOT / "md_sync" / "web" / "static", "md_sync/web/static"),
         (ROOT / "md_sync" / "web" / "templates", "md_sync/web/templates"),
     ]
@@ -61,7 +61,6 @@ def build(clean: bool = False) -> None:
         *datas_args,
         "--hidden-import", "md_sync.web.app",
         "--hidden-import", "md_sync.watcher",
-        "--hidden-import", "md_sync.template.generator",
         "--hidden-import", "md_sync.plugin.loader",
         "--hidden-import", "md_sync.plugin.registry",
         "--hidden-import", "uvicorn.logging",

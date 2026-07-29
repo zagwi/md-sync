@@ -81,6 +81,18 @@ def export_pdf(
         f"  #write {{ padding: {page_margin}; "
         "-webkit-box-sizing: border-box; box-sizing: border-box; "
         "-webkit-box-decoration-break: clone; box-decoration-break: clone; }}\n"
+        # Code blocks: themes set `overflow: auto`, which renders an ugly
+        # horizontal scrollbar in print (looks like a raw HTML dump). In print
+        # we kill the scroll container and wrap long lines (including unbreakable
+        # tokens like long URLs) instead, so the block paginates cleanly with no
+        # scrollbar. Applies to every template/theme uniformly.
+        "  #write pre, #write pre code {\n"
+        "    overflow: visible !important;\n"
+        "    max-height: none !important;\n"
+        "    white-space: pre-wrap !important;\n"
+        "    word-break: break-word !important;\n"
+        "    overflow-wrap: anywhere !important;\n"
+        "  }\n"
         "}\n"
         "html, body, #write, #write * {\n"
         "  -webkit-print-color-adjust: exact !important;\n"

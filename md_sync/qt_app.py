@@ -324,6 +324,38 @@ def _status_text(color: str) -> str:
     }.get(color, "—")
 
 
+_WINDOW_ICON_SIZE = 24
+
+
+def _window_icon(kind: str) -> QIcon:
+    """Draw a window-control icon (min / max / restore / close) programmatically.
+
+    Replaces the Unicode glyphs (``▢``/``❐``) which render inconsistently or
+    as missing-glyph boxes depending on the system font.
+    """
+    pm = QPixmap(_WINDOW_ICON_SIZE, _WINDOW_ICON_SIZE)
+    pm.fill(Qt.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.Antialiasing)
+    pen = QPen(QColor("#52525b"), 1.7)
+    p.setPen(pen)
+    s = _WINDOW_ICON_SIZE
+    m = 5
+    if kind == "min":
+        y = s - m - 2
+        p.drawLine(m + 2, y, s - m - 2, y)
+    elif kind == "max":
+        p.drawRect(QRectF(m, m, s - 2 * m, s - 2 * m))
+    elif kind == "restore":
+        p.drawRect(QRectF(m, m + 3, s - 2 * m - 3, s - 2 * m - 3))
+        p.drawRect(QRectF(m + 3, m, s - 2 * m - 3, s - 2 * m - 3))
+    elif kind == "close":
+        p.drawLine(m + 2, m + 2, s - m - 2, s - m - 2)
+        p.drawLine(s - m - 2, m + 2, m + 2, s - m - 2)
+    p.end()
+    return QIcon(pm)
+
+
 class TitleBar(QWidget):
     """Custom draggable title bar with minimize / maximize / close."""
 
@@ -352,9 +384,12 @@ class TitleBar(QWidget):
         layout.addWidget(self.status_pill)
         layout.addStretch(1)
 
-        self.btn_min = self._make_btn("—", "title_min", self._parent.showMinimized)
-        self.btn_max = self._make_btn("▢", "title_max", self._toggle_max)
-        self.btn_close = self._make_btn("✕", "title_close", self._parent.close)
+        self.btn_min = self._make_btn("", "title_min", self._parent.showMinimized)
+        self.btn_max = self._make_btn("", "title_max", self._toggle_max)
+        self.btn_close = self._make_btn("", "title_close", self._parent.close)
+        self.btn_min.setIcon(_window_icon("min"))
+        self.btn_max.setIcon(_window_icon("max"))
+        self.btn_close.setIcon(_window_icon("close"))
         layout.addWidget(self.btn_min)
         layout.addWidget(self.btn_max)
         layout.addWidget(self.btn_close)
@@ -2004,7 +2039,7 @@ class MainWindow(QWidget):
     # ── Frameless drag + edge resize + maximize icon ───────────────────
     def changeEvent(self, e: QEvent):
         if e.type() == QEvent.Type.WindowStateChange:
-            self.title_bar.btn_max.setText("❐" if self.isMaximized() else "▢")
+            self.title_bar.btn_max.setIcon(_window_icon("restore" if self.isMaximized() else "max"))
         super().changeEvent(e)
 
     def mousePressEvent(self, e):

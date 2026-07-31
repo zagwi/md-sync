@@ -30,7 +30,7 @@ if __name__ == "__main__" and __package__ is None:
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QPoint, Qt, QThread, QTimer, QUrl, Signal
+from PySide6.QtCore import QEvent, QPoint, QRectF, Qt, QThread, QTimer, QUrl, Signal
 from PySide6.QtGui import QBrush, QColor, QDesktopServices, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -423,12 +423,22 @@ class FloatingPreview(QWidget):
         w, h = self.TOTAL_W, self.TOTAL_H
         sx, sy = self.MARGIN, self.MARGIN
         if self._pixmap:
+            # 等比缩放：按原截图比例适配预览框（不拉伸变形），居中留边。
+            # 否则固定 360×460 拉伸会把细长/偏方的版面压变形，观感怪异。
+            pw, ph = self._pixmap.width(), self._pixmap.height()
+            if pw > 0 and ph > 0:
+                scale = min(self.SS_W / pw, self.SS_H / ph)
+                dw, dh = pw * scale, ph * scale
+                dx = sx + (self.SS_W - dw) / 2
+                dy = sy + (self.SS_H - dh) / 2
+            else:
+                dw, dh, dx, dy = self.SS_W, self.SS_H, sx, sy
             p.setPen(Qt.NoPen)
             p.setBrush(QBrush(QColor(0, 0, 0, 28)))
             p.drawRoundedRect(sx + self.SHADOW, sy + self.SHADOW, self.SS_W, self.SS_H, 3, 3)
             p.setPen(QPen(QColor("#d0d0d0"), 0.5))
             p.drawRoundedRect(sx, sy, self.SS_W, self.SS_H, 2, 2)
-            p.drawPixmap(sx, sy, self.SS_W, self.SS_H, self._pixmap)
+            p.drawPixmap(QRectF(dx, dy, dw, dh), self._pixmap, QRectF(0, 0, pw, ph))
         else:
             p.setPen(QPen(QColor("#d0d0d0"), 1, Qt.DashLine))
             p.setBrush(QBrush(QColor("#f5f5f5")))

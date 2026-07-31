@@ -101,54 +101,35 @@ PDF 导出（Chromium 引擎）已优化为「专业外观」：
 
 ---
 
-## 公文插件（gongwen）：GB/T 9704-2012 标准公文导出
+## 公文插件（gongwen）：标准公文导出
 
-`gongwen` 是 md-sync 内置的**标准公文插件**：只需按给定模板写一份 Markdown，即可一键导出符合国家标准
-**GB/T 9704-2012《党政机关公文格式》** 的红头公文 `docx` 与 `pdf`，全流程自动排版，无需手工套版。
+`gongwen` 是 md-sync 内置的**标准公文插件**：只需按模板写一份 Markdown，即可一键导出**完全符合
+GB/T 9704-2012《党政机关公文格式》** 的公文 `docx` 与 `pdf`——红头、版式、落款、页码全部自动排版，无需手工套版。
 
 **一份源稿 → 标准公文**：
 
 ```yaml
 source: 通知.md
-schema: gongwen                    # 启用公文插件（解析器 + 渲染风格 + docx/pdf 导出器）
+schema: gongwen                     # 启用公文插件
 outputs:
-  - format: docx                   # python-docx 直出国标公文（不经 pandoc）
+  - format: docx                    # 标准公文 docx
     lang: zh
     path: out/通知.docx
   - format: html
     lang: zh
-    style: gongwen                 # 公文渲染风格（自带 CSS，不依赖 Typora）
+    style: gongwen                  # 公文渲染风格（不依赖 Typora）
     pdf: true
-    pdf_path: out/通知.pdf
+    pdf_path: out/通知.pdf          # 标准公文 pdf
 ```
 
-**自动完成的国标版式**（A4，版心 156×225mm）：
-
-- **红头**：机关标志（方正小标宋，红色，居中）+ 发文字号 + 红色分隔线；
-- **标题**：小标宋二号居中，红色分隔线下空二行；
-- **主送机关**：居左顶格，末尾全角冒号；
-- **正文**：三号仿宋_GB2312，首行缩进二字，两端对齐，固定行距 28.8pt；
-- **分级标题**：一级黑体 / 二级楷体 / 三级及以下仿宋；
-- **落款**：发文机关署名右空二字、成文日期右空四字；
-- **附注 / 版记**：附注居左空二字；版记 14pt、左右各空一字，首条粗分隔线、末条粗底线；
-- **页码**：4 号宋体 `— n —`，单页码居右空一字、双页码居左空一字，一字线上距版心下边缘 7mm。
-
-**docx 直出**：`GongwenDocxExporter` 用 python-docx 按国标参数直接生成 docx
-（含红头、奇偶页脚页码、版记分隔线），不再经过 HTML→pandoc，版式精确到毫米级。
-
-**PDF 叠加页码**：Chromium CDP 先按国标边距导出无页脚 PDF（Chromium 150 开启页脚会丢失边距），
-再用 PyMuPDF 按坐标逐页叠加 `— n —` 页码，奇偶位置、字距均按国标落位。
-
-**源稿格式**：`template.md` 中每个占位段（发文机关标志 / 发文字号 / 主送机关 / 标题 /
-正文 / 附件 / 署名 / 成文日期 / 附注 / 版记）对应一种公文版式，照抄填空即可：
+**源稿格式**：照模板填空即可，各占位段（发文机关标志 / 发文字号 / 主送机关 / 标题 /
+正文 / 附件 / 署名 / 成文日期 / 附注 / 版记）对应一种公文版式：
 
 ```bash
 md-sync plugin template gongwen -o 通知.md    # 生成公文源稿模板
 ```
 
-**字体**：国标要求 小标宋 / 黑体 / 楷体 / 仿宋 四种字体。Windows 一般自带
-（方正小标宋简体 / 黑体 / 楷体 / 仿宋_GB2312）；Linux 缺失时 GUI 会提示一键下载免费
-Fandol 字体集（安装到 `~/.local/share/fonts/md-sync-fandol`），PDF 页码叠加优先使用 FandolSong。
+**字体**：Windows 一般自带国标字体；Linux 缺失时 GUI 会提示一键下载免费 Fandol 字体集。
 
 ---
 

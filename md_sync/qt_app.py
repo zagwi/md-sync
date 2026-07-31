@@ -19,6 +19,7 @@ Run:
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import time
 import traceback
@@ -30,7 +31,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QPoint, Qt, QThread, QTimer, QUrl, Signal
-from PySide6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QBrush, QColor, QDesktopServices, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -55,6 +56,8 @@ from PySide6.QtWidgets import (
 
 from md_sync.config import OutputConfig, ProjectConfig, derive_output_path
 from md_sync.core.pipeline import SyncPipeline
+from md_sync.exporters.page import MARGIN_LABELS
+from md_sync.exporters.pdf import _find_chromium
 from md_sync.plugin.interface import DirectoryPlugin, PluginManifest
 from md_sync.plugin.registry import PluginRegistry
 from md_sync.template.manager import TemplateManager
@@ -62,7 +65,183 @@ from md_sync.watcher import FileWatcher
 
 LANG_LABELS = {"zh": "中文", "en": "英文"}
 
-# status colors (shadcn-ish)
+# ── Preview cache ───────────────────────────────────────────────
+_PREVIEW_CACHE: dict[str, QPixmap | None] = {}
+_PREVIEW_CACHE_DIR = (
+    Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+    / "md-sync" / "previews"
+)
+
+_SAMPLE_PREVIEW_HTML = """<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+{style_css}
+html {{ overflow: hidden; background: #fff; }}
+body {{ width: 380px; height: 480px; overflow: hidden; }}
+</style>
+</head>
+<body>
+<div id="write" class="body">
+<h1>示例文档 Sample</h1>
+<p>这是一段正文文字，展示当前主题的排版效果。</p>
+<h2>章节标题 Section</h2>
+<p>第二段文字，包含更多内容用于展示字体、行距、颜色等样式特征。</p>
+<h3>列表展示</h3>
+<ul>
+  <li>列表项目一 - 描述文字内容</li>
+  <li>列表项目二 - 更多描述</li>
+  <li>列表项目三 - 演示效果</li>
+</ul>
+<h3>表格示例</h3>
+<table>
+  <tr><th>名称</th><th>版本</th><th>状态</th></tr>
+  <tr><td>模块A</td><td>2.1</td><td>已完成</td></tr>
+  <tr><td>模块B</td><td>3.0</td><td>开发中</td></tr>
+</table>
+<pre><code>def hello():
+    print("Hello, World!")</code></pre>
+</div>
+</body>
+</html>"""
+
+
+def _crop_whitespace(pixmap: QPixmap) -> QPixmap:
+    """Remove trailing blank rows/columns (white with full opacity) from bottom and right edges.
+
+    Chromium screenshots are taken at --window-size=420,540 but body content
+    is only 380×480, producing ~40px right / ~60px bottom whitespace. Gallery
+    downloads may also have padding. This function trims them to actual content.
+    """
+    if pixmap.isNull():
+        return pixmap
+    img = pixmap.toImage()
+    w, h = img.width(), img.height()
+
+    def _is_blank_row(y: int) -> bool:
+        for x in range(w):
+            c = img.pixelColor(x, y)
+            if c.alpha() > 200 and not (c.red() > 248 and c.green() > 248 and c.blue() > 248):
+                return False
+        return True
+
+    def _is_blank_col(x: int, y_limit: int) -> bool:
+        for y in range(y_limit):
+            c = img.pixelColor(x, y)
+            if c.alpha() > 200 and not (c.red() > 248 and c.green() > 248 and c.blue() > 248):
+                return False
+        return True
+
+    # Trim from bottom
+    trim_bottom = 0
+    for y in range(h - 1, -1, -1):
+        if _is_blank_row(y):
+            trim_bottom += 1
+        else:
+            break
+
+    # Trim from right (only scan rows that remain)
+    content_h = h - trim_bottom
+    trim_right = 0
+    for x in range(w - 1, -1, -1):
+        if _is_blank_col(x, content_h):
+            trim_right += 1
+        else:
+            break
+
+    if trim_bottom > 0 or trim_right > 0:
+        new_w = w - trim_right
+        new_h = h - trim_bottom
+        if new_w > 10 and new_h > 10:  # sanity check
+            return pixmap.copy(0, 0, new_w, new_h)
+    return pixmap
+
+
+def _get_style_css(style_name: str, tmgr: TemplateManager) -> str:
+    if style_name.startswith("typora-"):
+        css_stem = style_name[7:]
+        try:
+            from md_sync.plugins.typora.paths import get_typora_themes_dir
+            td = get_typora_themes_dir()
+            if td:
+                css_path = td / f"{css_stem}.css"
+                if css_path.exists():
+                    import re
+                    return re.sub(r'@font-face\s*\{[^}]*\}', '',
+                                  css_path.read_text(encoding="utf-8"),
+                                  flags=re.DOTALL)
+        except Exception:
+            pass
+        return ""
+    try:
+        tpl_dir = tmgr.resolve_path(style_name)
+        css_path = tpl_dir / "style.css"
+        if css_path.exists():
+            import re
+            return re.sub(r'@font-face\s*\{[^}]*\}', '',
+                          css_path.read_text(encoding="utf-8"),
+                          flags=re.DOTALL)
+    except Exception:
+        pass
+    return ""
+
+
+def _get_or_create_preview(style_name: str, tmgr: TemplateManager) -> QPixmap | None:
+    """获取风格预览图。优先从缓存加载（内存→磁盘→画廊下载→Chromium渲染）。
+
+    全部在主线程运行（慢但稳定）。首次生成某风格可能阻塞 1-2s（Chromium
+    headless 启动），之后即时从缓存返回。
+    """
+    try:
+        if style_name in _PREVIEW_CACHE:
+            return _PREVIEW_CACHE[style_name]
+        cache_path = _PREVIEW_CACHE_DIR / f"{style_name}.png"
+        # 磁盘缓存命中 → 直接加载，裁剪空白
+        if cache_path.exists():
+            pix = QPixmap(str(cache_path))
+            if not pix.isNull():
+                pix = _crop_whitespace(pix)
+                _PREVIEW_CACHE[style_name] = pix
+                return pix
+        # 全部主题统一本地 Chromium 渲染（不下载任何外部图片）
+        css_text = _get_style_css(style_name, tmgr)
+        if not css_text:
+            _PREVIEW_CACHE[style_name] = None
+            return None
+        html_content = _SAMPLE_PREVIEW_HTML.format(style_css=css_text)
+        _PREVIEW_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        html_path = _PREVIEW_CACHE_DIR / f"{style_name}.html"
+        html_path.write_text(html_content, encoding="utf-8")
+        chromium = _find_chromium()
+        if not chromium:
+            _PREVIEW_CACHE[style_name] = None
+            return None
+        try:
+            subprocess.run([chromium, "--headless", "--no-sandbox", "--disable-gpu",
+                            f"--screenshot={cache_path}", "--window-size=420,540",
+                            f"file://{html_path}"],
+                           capture_output=True, text=True, timeout=15)
+        except Exception:
+            _PREVIEW_CACHE[style_name] = None
+            return None
+        # Chromium 渲染结果 → 加载并裁剪空白
+        if cache_path.exists():
+            pix = QPixmap(str(cache_path))
+            if not pix.isNull():
+                pix = _crop_whitespace(pix)
+                _PREVIEW_CACHE[style_name] = pix
+                return pix
+        _PREVIEW_CACHE[style_name] = None
+        return None
+    except Exception:
+        # 最外层保护：任何异常都不会崩溃整个 app
+        _PREVIEW_CACHE[style_name] = None
+        return None
+
+# ── status colors (shadcn-ish) ──
 C_SYNCED = "#22c55e"     # 已同步（绿）
 C_PENDING = "#f59e0b"    # 待同步（黄）
 C_MISSING = "#ef4444"    # 文件不存在（红）
@@ -215,6 +394,54 @@ class TitleBar(QWidget):
         super().mouseDoubleClickEvent(e)
 
 
+class FloatingPreview(QWidget):
+    """浮动预览窗口：下拉选项悬停/导航时在光标处弹出真实截图预览。"""
+    MARGIN = 8
+    SS_W, SS_H = 360, 460
+    NAME_H, GAP, SHADOW = 24, 10, 3
+    TOTAL_W = SS_W + MARGIN * 2 + SHADOW
+    TOTAL_H = MARGIN + SS_H + GAP + NAME_H + MARGIN + SHADOW
+
+    def __init__(self):
+        super().__init__(None)
+        self.setWindowFlags(Qt.ToolTip | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setFixedSize(self.TOTAL_W, self.TOTAL_H)
+        self._pixmap: QPixmap | None = None
+        self._name = ""
+
+    def set_preview(self, pixmap: QPixmap | None, name: str):
+        self._pixmap = pixmap
+        self._name = name
+        self.update()
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+        w, h = self.TOTAL_W, self.TOTAL_H
+        sx, sy = self.MARGIN, self.MARGIN
+        if self._pixmap:
+            p.setPen(Qt.NoPen)
+            p.setBrush(QBrush(QColor(0, 0, 0, 28)))
+            p.drawRoundedRect(sx + self.SHADOW, sy + self.SHADOW, self.SS_W, self.SS_H, 3, 3)
+            p.setPen(QPen(QColor("#d0d0d0"), 0.5))
+            p.drawRoundedRect(sx, sy, self.SS_W, self.SS_H, 2, 2)
+            p.drawPixmap(sx, sy, self.SS_W, self.SS_H, self._pixmap)
+        else:
+            p.setPen(QPen(QColor("#d0d0d0"), 1, Qt.DashLine))
+            p.setBrush(QBrush(QColor("#f5f5f5")))
+            p.drawRoundedRect(sx, sy, self.SS_W, self.SS_H, 4, 4)
+            p.setPen(QColor("#aaaaaa"))
+            nf = QFont(); nf.setPointSize(11); p.setFont(nf)
+            p.drawText(sx, sy, self.SS_W, self.SS_H, Qt.AlignCenter, "加载中…")
+        p.setPen(QColor("#444444"))
+        nf = QFont(); nf.setPointSize(11); nf.setBold(True); p.setFont(nf)
+        p.drawText(0, sy + self.SS_H + self.GAP, w, self.NAME_H, Qt.AlignCenter, self._name)
+        p.end()
+
+
 class SyncWorker(QThread):
     """Run the conversion in a background thread (pipeline is blocking)."""
     log = Signal(str)
@@ -272,6 +499,20 @@ class SyncWorker(QThread):
             tb = traceback.format_exc()
             self.log.emit("同步失败：\n" + tb)
             self.sync_finished.emit(False, str(e), [])
+
+
+class FontInstallWorker(QThread):
+    """后台下载并安装 Fandol 公文字体集（不阻塞主界面）。"""
+    done = Signal(bool, str)  # (ok, message)
+
+    def run(self):
+        try:
+            from md_sync.plugins.gongwen.fonts import install_fonts
+            installed = install_fonts()
+            self.done.emit(True, f"已安装 {len(installed)} 个字体文件")
+        except Exception as e:
+            self.done.emit(False, f"字体安装失败：{e}")
+
 
 
 class MainWindow(QWidget):
@@ -399,6 +640,19 @@ class MainWindow(QWidget):
         self._template_warn.setMaximumHeight(30)
         da.addWidget(self._template_warn)
 
+        # 公文字体缺失提示 + 一键安装（仅 gongwen 插件显示）
+        self._font_warn = QLabel()
+        self._font_warn.setStyleSheet("font-size:11px;color:#b45309;font-weight:600;")
+        self._font_warn.setWordWrap(True)
+        self._font_warn.setVisible(False)
+        da.addWidget(self._font_warn)
+
+        self._font_btn = QPushButton("⬇ 下载并安装公文字体（免费）")
+        self._font_btn.setFixedHeight(24)
+        self._font_btn.setVisible(False)
+        self._font_btn.clicked.connect(self._install_gongwen_fonts)
+        da.addWidget(self._font_btn)
+
         # 一行：生成模板按钮 + 源文件已指定
         row2 = QHBoxLayout()
         row2.setSpacing(6)
@@ -468,6 +722,40 @@ class MainWindow(QWidget):
         # 打开编辑器
         QDesktopServices.openUrl(QUrl.fromLocalFile(save_path))
 
+    def _install_gongwen_fonts(self):
+        """后台下载安装 Fandol 公文字体集，完成后刷新提示。"""
+        if getattr(self, "_font_worker", None) and self._font_worker.isRunning():
+            return
+        self._font_btn.setEnabled(False)
+        self._font_btn.setText("⏳ 正在下载安装字体…（约 27MB）")
+        self._font_warn.setText("正在下载 Fandol 免费字体集并安装，请稍候…")
+
+        self._font_worker = FontInstallWorker()
+        self._font_worker.done.connect(self._on_fonts_installed)
+        self._font_worker.start()
+
+    def _on_fonts_installed(self, ok: bool, message: str):
+        self._font_btn.setEnabled(True)
+        self._append_log(("✓ " if ok else "✗ ") + message)
+        if ok:
+            try:
+                from md_sync.plugins.gongwen.fonts import missing_fonts
+                missing = missing_fonts()
+            except Exception:
+                missing = []
+            if missing:
+                self._font_warn.setText(
+                    "⚠ 已安装字体，但仍有缺失：" + "、".join(missing) +
+                    "（可能需重启应用后生效）")
+                self._font_btn.setText("⬇ 重新下载并安装公文字体（免费）")
+            else:
+                self._font_warn.setText("✓ 公文标准字体已就绪（Fandol 仿宋/黑体/楷体/宋体）")
+                self._font_warn.setStyleSheet("font-size:11px;color:#16a34a;font-weight:600;")
+                self._font_btn.setVisible(False)
+        else:
+            self._font_warn.setText("⚠ " + message)
+            self._font_btn.setText("⬇ 重试下载并安装公文字体（免费）")
+
     def _build_output_card(self, parent: QVBoxLayout):
         """Card 2: 输出设置 — 源文件、输出目录、风格、格式"""
         card = QWidget()
@@ -515,23 +803,41 @@ class MainWindow(QWidget):
         out_h.addWidget(out_btn)
         cv.addWidget(out_row_w)
 
-        # ── 渲染风格（固定高度行，选插件后显示） ──
+        # ── 渲染风格（选插件后显示）—— 下拉时在选项光标处浮动预览 ──
         self._style_row_w = QWidget()
-        self._style_row_w.setFixedHeight(32)
         self._style_row_w.setVisible(False)
-        style_h = QHBoxLayout(self._style_row_w)
-        style_h.setContentsMargins(0, 0, 0, 0)
-        style_h.setSpacing(8)
+        sr_lay = QVBoxLayout(self._style_row_w)
+        sr_lay.setContentsMargins(0, 0, 0, 0)
+        sr_lay.setSpacing(4)
+        style_h = QHBoxLayout()
+        style_h.setSpacing(6)
         style_lbl = QLabel("渲染风格")
         style_lbl.setFixedWidth(60)
         style_h.addWidget(style_lbl)
         style_h.addWidget(QLabel("中文"))
         self.tpl_zh = QComboBox()
+        self.tpl_zh.activated.connect(self._on_style_selected)
         style_h.addWidget(self.tpl_zh, 1)
         style_h.addWidget(QLabel("英文"))
         self.tpl_en = QComboBox()
+        self.tpl_en.activated.connect(self._on_style_selected)
         style_h.addWidget(self.tpl_en, 1)
+        sr_lay.addLayout(style_h)
+        self._preview_info = QLabel("")
+        self._preview_info.setStyleSheet("font-size:11px;color:#bbb;padding-left:68px;")
+        sr_lay.addWidget(self._preview_info)
         cv.addWidget(self._style_row_w)
+        # ── 浮动预览窗口
+        self._floating_preview = FloatingPreview()
+        zv = self.tpl_zh.view(); zv.setMouseTracking(True)
+        ev = self.tpl_en.view(); ev.setMouseTracking(True)
+        zv.entered.connect(lambda i: self._on_combo_preview(self.tpl_zh, i))
+        ev.entered.connect(lambda i: self._on_combo_preview(self.tpl_en, i))
+        zv.selectionModel().currentChanged.connect(lambda c, p: self._on_combo_preview(self.tpl_zh, c))
+        ev.selectionModel().currentChanged.connect(lambda c, p: self._on_combo_preview(self.tpl_en, c))
+        zv.installEventFilter(self); ev.installEventFilter(self)
+        self.tpl_zh.activated.connect(self._floating_preview.hide)
+        self.tpl_en.activated.connect(self._floating_preview.hide)
 
         # ── 输出格式（每个格式一个组，组内堆叠「格式卡片」+「专属控制项」） ──
         fmt_label = QLabel("输出格式")
@@ -589,12 +895,7 @@ class MainWindow(QWidget):
                 mh.addWidget(QLabel("页边距"))
                 self.margin_combo = QComboBox()
                 self.margin_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                for val, label in [
-                    ("", "自适应（按尺寸）"),
-                    ("15mm", "15mm（标准）"),
-                    ("20mm", "20mm（宽松）"),
-                    ("25mm", "25mm（宽边距）"),
-                ]:
+                for val, label in MARGIN_LABELS.items():
                     self.margin_combo.addItem(label, val)
                 self.margin_combo.setCurrentIndex(0)
                 mh.addWidget(self.margin_combo)
@@ -744,6 +1045,8 @@ class MainWindow(QWidget):
 
     def _on_plugin_changed(self, idx: int):
         """插件包切换时，更新详情区域 + 显示/隐藏风格行。"""
+        # 插件切换后下拉内容已失效，残留的浮动预览一并隐藏
+        self._floating_preview.hide()
         if idx < 0 or not self._plugins:
             self._detail_area.setVisible(False)
             self._style_row_w.setVisible(False)
@@ -753,7 +1056,6 @@ class MainWindow(QWidget):
             # Also hide source row
             self._source_row.setVisible(False)
             return
-
         plugin = self._plugins[idx]
         schema = plugin.parser_schema or "resume"
 
@@ -774,6 +1076,24 @@ class MainWindow(QWidget):
                     + "\n\n⚠ 未检测到本机已安装 Typora，暂无可用主题。"
                       "请先安装 Typora，其主题会自动出现在「渲染风格」下拉框中。"
                 )
+
+        # ── 公文字体检测：gongwen 插件缺字体时提示安装（免费 Fandol） ──
+        self._font_warn.setVisible(False)
+        self._font_btn.setVisible(False)
+        if plugin.name == "gongwen":
+            try:
+                from md_sync.plugins.gongwen.fonts import missing_fonts
+                missing = missing_fonts()
+            except Exception:
+                missing = []
+            if missing:
+                self._font_warn.setText(
+                    "⚠ 本机缺少公文标准字体（" + "、".join(missing) + "），"
+                    "渲染会回退到 Noto，字形不标准。可一键下载免费 Fandol 字体安装。"
+                )
+                self._font_warn.setVisible(True)
+                self._font_btn.setVisible(True)
+
         self._detail_templates.setText(tpl_list)
         self._detail_area.setVisible(True)
 
@@ -800,6 +1120,11 @@ class MainWindow(QWidget):
             infos = []
         self._reload_style_combos(infos)
         self._style_row_w.setVisible(True)
+
+        # ── 预生成当前默认风格预览（同步，仅一个，用户可接受等 1-2s）─
+        default_style = self.tpl_zh.currentData()
+        if default_style:
+            _get_or_create_preview(default_style, self.tmgr)
 
         # ── 显示「重名处理」并按当前策略勾选 ──
         self._naming_label.setVisible(True)
@@ -863,8 +1188,62 @@ class MainWindow(QWidget):
         p.end()
         return QIcon(pix)
 
+    def _on_style_selected(self, index: int):
+        combo = self.sender()
+        if not isinstance(combo, QComboBox):
+            return
+        style_name = combo.itemData(index) or ""
+        if not style_name:
+            self._preview_info.setText("")
+            return
+        desc_map = {"bwx": "商务黑白·经典稳重", "modern": "现代蓝色·醒目时尚"}
+        self._preview_info.setText(f"✓ 已选：{style_name} {desc_map.get(style_name, '')}".strip())
+
+    def _on_combo_preview(self, combo: QComboBox, index):
+        # 只在下拉弹层真正打开时显示预览。selectionModel().currentChanged
+        # 在弹层关闭后（如 _reload_style_combos 调用 setCurrentIndex）也会触发，
+        # 此时弹层不可见，预览必须隐藏而不是重新弹出。
+        if not combo.view().isVisible():
+            self._floating_preview.hide(); return
+        if not index.isValid():
+            self._floating_preview.hide(); return
+        style_name = combo.itemData(index.row()) or ""
+        if not style_name:
+            self._floating_preview.hide(); return
+        display_name = style_name[7:].replace("-", " ").title() if style_name.startswith("typora-") else style_name
+
+        # Step 1: 优先从缓存获取（即时）
+        cached_pix = _PREVIEW_CACHE.get(style_name)
+        if cached_pix is not None:
+            self._floating_preview.set_preview(cached_pix, display_name)
+            gp = combo.mapToGlobal(combo.rect().topRight())
+            self._floating_preview.move(gp.x(), gp.y())
+            self._floating_preview.show(); self._floating_preview.raise_()
+            return
+
+        # Step 2: 缓存未命中 → 先显示「加载中…」，强制刷新，再生成
+        self._floating_preview.set_preview(None, display_name)
+        gp = combo.mapToGlobal(combo.rect().topRight())
+        self._floating_preview.move(gp.x(), gp.y())
+        self._floating_preview.show()
+        self._floating_preview.raise_()
+        QApplication.processEvents()  # 立即绘制「加载中…」
+
+        pix = _get_or_create_preview(style_name, self.tmgr)
+        self._floating_preview.set_preview(pix, display_name)
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Hide and hasattr(self, '_floating_preview'):
+            for combo in (getattr(self, 'tpl_zh', None), getattr(self, 'tpl_en', None)):
+                if combo is not None and obj is combo.view():
+                    self._floating_preview.hide()
+                    break
+        return super().eventFilter(obj, event)
+
     def _reload_style_combos(self, infos: list | None = None):
         """填充风格下拉框。包含 Typora 主题的色点预览图标。"""
+        # 下拉即将重建，任何残留的浮动预览都要先隐藏
+        self._floating_preview.hide()
         for combo in (self.tpl_zh, self.tpl_en):
             combo.clear()
         if infos:

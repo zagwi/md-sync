@@ -1,0 +1,40 @@
+# Gongwen 标准公文 plugin pack for md-sync
+#
+# 提供:
+#   - template.md   → 用户写公文时遵循的源模板格式（GB/T 9704-2012）
+#   - parser.py     → 解析 template.md 格式的公文文档
+#   - [gongwen]     → HTML 渲染风格（位于本插件 templates/gongwen/，
+#                     自带 CSS 与打印样式，不依赖 Typora 环境）
+#
+# Schema:  gongwen
+#
+# 说明: gongwen 风格随包分发、安装即有。用户无需安装 Typora 即可渲染
+# 标准公文（二号小标宋标题、黑体/楷体/仿宋分级标题、三号仿宋正文、
+# 28pt 固定行距、A4 版心 156×225mm）。
+
+name: gongwen
+label: 标准公文
+version: "1.0"
+description: 标准公文 — 提供源模板、解析器、gongwen 渲染风格（GB/T 9704-2012，自带 CSS 不依赖 Typora）
+author: md-sync
+type: pack
+
+parser:
+  class: parser.GongwenParser
+  schema: gongwen
+
+pdf_exporter:
+  class: pdf_exporter.GongwenPdfExporter
+
+docx_exporter:
+  class: docx_exporter.GongwenDocxExporter
+
+template: template.md
+
+requires_template: true
+
+templates:
+  - gongwen
+
+hooks: []
+dependencies: []

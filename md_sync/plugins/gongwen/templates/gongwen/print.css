@@ -1,0 +1,40 @@
+/* GB/T 9704-2012 公文纸型：A4，版心 156mm x 225mm
+   天头(上) 37mm / 翻口(右) 26mm / 订口(左) 28mm / 下 35mm
+   浏览器直接打印时用本文件的 @page 边距；经 chromium (export_pdf) 导出时，
+   模板声明的 pdf.margin (template.yaml) 会由管道注入为 #write 的 padding。 */
+@page {
+  size: A4;
+  margin: 37mm 26mm 35mm 28mm;
+}
+
+html, body { background: #fff; }
+body { padding: 0; }
+
+#write {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: #fff;
+}
+
+/* 经 chromium (export_pdf) 导出时，pdf.py 注入 @page { margin: 0 } 并把
+   page_margin 转成 #write 的 padding（box-sizing: border-box，无 max-width），
+   此时 156mm 版心由 padding 撑出，本规则不会与注入样式冲突。 */
+@media print {
+  #write {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* 避免标题/代码块在页间被截断 */
+#write h1, #write h2, #write h3,
+#write h4, #write h5, #write h6 { page-break-after: avoid; }
+#write pre, #write blockquote, #write table { page-break-inside: auto; break-inside: auto; }
+#write tr { page-break-inside: avoid; break-inside: avoid; }
+
+code { word-wrap: break-word; white-space: pre-wrap; }

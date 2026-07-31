@@ -1,0 +1,12 @@
+name: gongwen
+label: 标准公文
+description: 标准公文风格（GB/T 9704-2012），A4 版心 156×225mm，自带 CSS 不依赖 Typora
+version: "1.0"
+author: md-sync
+schema: gongwen
+engine: jinja2
+tags: [gongwen, official, print]
+pdf:
+  page_size: A4
+  margin: 37mm 26mm 35mm 28mm
+sections: {}

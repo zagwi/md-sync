@@ -39,6 +39,7 @@ _THEMES = {
     "bwx": _PROJECT_ROOT / "md_sync/plugins/resume/templates/bwx",
     "modern": _PROJECT_ROOT / "md_sync/plugins/resume/templates/modern",
     "typora": _PROJECT_ROOT / "md_sync/plugins/typora/templates/typora",
+    "gongwen": _PROJECT_ROOT / "md_sync/plugins/gongwen/templates/gongwen",
 }
 
 

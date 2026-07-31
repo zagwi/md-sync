@@ -1,0 +1,297 @@
+/*!
+ * Gongwen 标准公文主题 — GB/T 9704-2012 党政机关公文格式
+ *
+ * 标题层级映射：
+ *   #      公文标题    二号(22pt) 方正小标宋   居中
+ *   ##     一级标题    三号(16pt) 黑体         顶格
+ *   ###    二级标题    三号(16pt) 楷体         缩进2字符
+ *   ####   三级标题    三号(16pt) 仿宋         缩进2字符
+ *   #####  四级标题    三号(16pt) 仿宋         缩进2字符
+ *   正文              三号(16pt) 仿宋  首行缩进2字符 行距28磅 两端对齐
+ *   数字/字母         Times New Roman
+ *
+ * 版式：A4，版心 156mm x 225mm
+ *   天头 37mm | 下 35mm | 左(订口) 28mm | 右(翻口) 26mm
+ */
+
+html {
+    font-size: 16px;
+}
+
+body {
+    font-family: "Times New Roman", "FangSong_GB2312", "FangSong", "STFangSong",
+                 "仿宋_GB2312", "仿宋", "FZFSK", "fzfs", "FandolFang",
+                 "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC",
+                 "AR PL UMing CN", "AR PL SungtiL GB", serif;
+    font-size: 16pt;                    /* 三号 */
+    line-height: 28pt;                  /* 28磅固定行距 */
+    color: #000000;
+    background-color: #ffffff;
+    text-align: justify;
+    text-justify: inter-ideograph;
+    /* 数字/字母按正常规则换行，不拦腰截断（公文规则：一个数字不得拆开回行） */
+    overflow-wrap: break-word;
+    letter-spacing: 0.5px;
+    margin: 0;
+    padding: 0;
+}
+
+/* ============ 编辑区版心 ============ */
+#write {
+    max-width: 156mm;
+    margin: 0 auto;
+    padding: 12mm 0 20mm 0;
+    font-family: inherit;
+    font-size: 16pt;
+    line-height: 28pt;
+    color: #000000;
+}
+
+/* ============ 公文标题（#） ============ */
+#write h1, #write .gongwen-title {
+    font-family: "方正小标宋简体", "方正小标宋_GBK", "FZXiaoBiaoSong-B05S",
+                 "FZXBSJW--GB1-0", "FZ XiaoBiaoSong-B05S", "华文中宋", "STZhongsong",
+                 "SimSun", "宋体", "FandolSong", "Noto Serif CJK SC",
+                 "Source Han Serif SC", "Noto Serif SC", "AR PL UMing CN", serif;
+    font-size: 22pt;                    /* 二号 */
+    font-weight: normal;
+    line-height: 34pt;
+    text-align: center;
+    text-indent: 0;
+    margin: 20pt 0 20pt 0;
+    padding: 0;
+    border-bottom: none;
+}
+
+/* ============ 一级标题（##）黑体 ============ */
+#write h2 {
+    font-family: "SimHei", "STHeiti", "黑体", "Microsoft JhengHei", "微軟正黑體",
+                 "Heiti SC", "FandolHei", "Noto Sans CJK SC", "Source Han Sans SC",
+                 "Noto Sans SC", "WenQuanYi Micro Hei", "Microsoft YaHei", sans-serif;
+    font-size: 16pt;
+    font-weight: normal;
+    line-height: 28pt;
+    text-align: justify;
+    text-justify: inter-ideograph;
+    text-indent: 0;
+    margin: 14pt 0 0 0;
+    padding: 0;
+    border-bottom: none;
+}
+
+/* ============ 二级标题（###）楷体 ============ */
+#write h3 {
+    font-family: "KaiTi_GB2312", "KaiTi", "楷体", "STKaiti", "华文楷体",
+                 "華文楷體", "Kaiti SC", "FandolKai", "Noto Serif CJK SC",
+                 "Source Han Serif SC", "Noto Serif SC", "AR PL UMing CN",
+                 "WenQuanYi Micro Hei", serif;
+    font-size: 16pt;
+    font-weight: normal;
+    line-height: 28pt;
+    text-indent: 2em;
+    margin: 14pt 0 0 0;
+    padding: 0;
+}
+
+/* ============ 三级标题（####）仿宋 ============ */
+#write h4 {
+    font-family: "Times New Roman", "FangSong_GB2312", "FangSong", "STFangSong",
+                 "仿宋_GB2312", "仿宋", "FandolFang", "Noto Serif CJK SC",
+                 "Source Han Serif SC", "Noto Serif SC", "AR PL UMing CN", serif;
+    font-size: 16pt;
+    font-weight: normal;
+    line-height: 28pt;
+    text-indent: 2em;
+    margin: 14pt 0 0 0;
+    padding: 0;
+}
+
+/* ============ 四级标题（#####）仿宋 ============ */
+#write h5 {
+    font-family: "Times New Roman", "FangSong_GB2312", "FangSong", "STFangSong",
+                 "仿宋_GB2312", "仿宋", "FandolFang", "Noto Serif CJK SC",
+                 "Source Han Serif SC", "Noto Serif SC", "AR PL UMing CN", serif;
+    font-size: 16pt;
+    font-weight: normal;
+    line-height: 28pt;
+    text-indent: 2em;
+    margin: 14pt 0 0 0;
+    padding: 0;
+}
+
+#write h6 {
+    font-family: "Times New Roman", "FangSong_GB2312", "FangSong", "STFangSong",
+                 "仿宋_GB2312", "仿宋", "FandolFang", "Noto Serif CJK SC",
+                 "Source Han Serif SC", "Noto Serif SC", "AR PL UMing CN", serif;
+    font-size: 16pt;
+    font-weight: normal;
+    line-height: 28pt;
+    text-indent: 2em;
+    margin: 14pt 0 0 0;
+    padding: 0;
+}
+
+/* ============ 正文 ============ */
+#write p {
+    font-size: 16pt;
+    line-height: 28pt;
+    text-indent: 2em;
+    text-align: justify;
+    text-justify: inter-ideograph;
+    overflow-wrap: break-word;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+#write p + p {
+    margin-top: 0;
+}
+
+/* 无缩进段落（接排/落款等特殊行） */
+#write p.no-indent {
+    text-indent: 0;
+}
+
+/* ============ 主送机关（居左顶格） ============ */
+#write p.gongwen-zhusong {
+    text-indent: 0;
+}
+
+/* ============ 落款（署名右空二字，成文日期右空四字） ============ */
+#write p.gongwen-sign {
+    text-indent: 0;
+    text-align: right;
+    padding-right: 2em;
+    margin-top: 28pt;               /* 正文下空一行 */
+}
+
+#write p.gongwen-sign-date {
+    text-indent: 0;
+    text-align: right;
+    padding-right: 4em;
+}
+
+/* ============ 版头（可选，位于标题之前） ============ */
+/* 发文机关标志（红头）：红色小标宋大字，居中 */
+#write p.gongwen-org {
+    font-family: "方正小标宋简体", "方正小标宋_GBK", "FZXiaoBiaoSong-B05S",
+                 "华文中宋", "STZhongsong", "SimSun", "宋体", "FandolSong",
+                 "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC",
+                 "AR PL UMing CN", serif;
+    font-size: 22pt;
+    font-weight: normal;
+    line-height: 34pt;
+    text-align: center;
+    text-indent: 0;
+    color: #e60012;
+    margin: 20pt 0 4pt 0;
+}
+
+/* 发文字号：3号仿宋，居中，其下 4mm 印与版心等宽的红色分隔线 */
+#write p.gongwen-no {
+    text-indent: 0;
+    text-align: center;
+    margin: 0 0 12pt 0;
+    padding-bottom: 4pt;
+    border-bottom: 1.5px solid #e60012;
+}
+
+/* ============ 列表 ============ */
+#write ul, #write ol {
+    margin: 0 0 0 2em;
+    padding: 0;
+    line-height: 28pt;
+}
+
+#write li {
+    line-height: 28pt;
+    margin: 0;
+}
+
+/* ============ 表格 ============ */
+#write table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: 7pt auto;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000000;
+    border: 1px solid #000000;
+}
+
+#write table th,
+#write table td {
+    border: 1px solid #000000;
+    padding: 3pt 6pt;
+    text-align: center;
+    vertical-align: middle;
+}
+
+#write table th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
+
+/* ============ 代码 ============ */
+#write code {
+    font-family: "Courier New", Consolas, "Microsoft YaHei", monospace;
+    font-size: 12pt;
+    background-color: #f7f7f7;
+    color: #000000;
+    border-radius: 2px;
+}
+
+#write pre {
+    background-color: #f7f7f7;
+    border: 1px solid #d5d5d5;
+    border-radius: 4px;
+    padding: 8pt;
+    font-family: "Courier New", Consolas, monospace;
+    font-size: 12pt;
+    line-height: 1.5;
+    overflow: auto;
+}
+
+#write pre code {
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+/* ============ 引用 ============ */
+#write blockquote {
+    margin: 7pt 0;
+    padding-left: 1em;
+    border-left: 3px solid #7f7f7f;
+    color: #000000;
+    font-size: 16pt;
+    line-height: 28pt;
+    text-align: justify;
+}
+
+/* ============ 图片 ============ */
+#write img {
+    max-width: 100%;
+    margin: 7pt auto;
+    display: block;
+}
+
+/* ============ 分隔线 / 行内 ============ */
+#write hr {
+    border: none;
+    border-top: 1px solid #000000;
+    margin: 14pt 0;
+}
+
+#write strong {
+    font-weight: bold;
+}
+
+#write em {
+    font-style: italic;
+}
+
+#write a {
+    color: #1a0dab;
+    text-decoration: underline;
+}

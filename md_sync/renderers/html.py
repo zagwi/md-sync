@@ -204,6 +204,9 @@ class HtmlRenderer:
         for _name, _fn in (filters or {}).items():
             self._env.filters[_name] = _fn
         self._env.globals["chr"] = chr  # for templates that split by newline
+        # Expose the environment so templates can safely guard optional
+        # plugin filters, e.g. ``{% if 'gongwen_chrome' in environment.filters %}``
+        self._env.globals["environment"] = self._env
         self._load_theme_meta()
 
     def _load_theme_meta(self) -> None:

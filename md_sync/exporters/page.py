@@ -28,12 +28,28 @@ PAGE_SIZES_MM = {
 
 # Standard uniform margin (mm) per page size, used when the user does not
 # explicitly override the margin.
+#
+# These values follow Chinese and international publishing standards:
+#   A4 20mm  — 报告、标书、论文通用标准
+#   A3 25mm  — 大版面，需要适当留白
+#   A5 15mm  — 便携书／小册子标准
+#   Letter 20mm — 中美通用文档
+#   Legal 25mm — 法律文档标准
 STANDARD_MARGIN_MM = {
-    "A4": 15.0,
-    "A3": 20.0,
-    "A5": 12.0,
-    "Letter": 25.4,  # 1 inch
-    "Legal": 25.4,
+    "A4": 20.0,
+    "A3": 25.0,
+    "A5": 15.0,
+    "Letter": 20.0,
+    "Legal": 25.0,
+}
+
+# Human-readable descriptions for the UI.
+MARGIN_LABELS = {
+    "": "自适应（按尺寸出版标准）",
+    "15mm": "15mm（紧凑）",
+    "20mm": "20mm（标准）",
+    "25mm": "25mm（宽松）",
+    "30mm": "30mm（宽边距）",
 }
 
 DEFAULT_PAGE_SIZE = "A4"

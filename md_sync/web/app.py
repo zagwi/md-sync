@@ -116,6 +116,21 @@ def _status_color(status: dict, source_mtime: float = 0) -> str:
     return "#22c55e"
 
 
+def _default_style_for(schema: str, lang: str) -> str:
+    """Default render style for a newly added HTML output.
+
+    Mirrors ``SyncPipeline._default_style_for`` plus the web UI's legacy
+    language split (bwx for Chinese, modern for English).
+    """
+    if schema == "markdown":
+        return "standard"
+    if schema == "typora":
+        return "typora"
+    if schema == "gongwen":
+        return "gongwen"
+    return "bwx" if lang == "zh" else "modern"
+
+
 # ── Format grouping helper ─────────────────────────────────────────────────
 
 
@@ -2116,9 +2131,7 @@ def create_app(
                         config.outputs.append(OutputConfig(
                             format=fmt, lang=lang,
                             path=derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, naming=config.output_naming),
-                            style=("standard" if config.schema == "markdown"
-                                   else "typora" if config.schema == "typora"
-                                   else "bwx" if lang == "zh" else "modern"),
+                            style=_default_style_for(config.schema, lang),
                             pdf=True,
                             pdf_path=derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, pdf=True, naming=config.output_naming),
                         ))
@@ -2140,7 +2153,7 @@ def create_app(
                             raw["outputs"].append({
                                 "format": "html", "lang": lang,
                                 "path": derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, naming=config.output_naming),
-                                "style": "bwx" if lang == "zh" else "modern",
+                                "style": _default_style_for(config.schema, lang),
                                 "pdf": True,
                                 "pdf_path": derive_output_path(config.output_root_path, "html", lang, config.name_map, config.source_path.stem, pdf=True, naming=config.output_naming),
                             })

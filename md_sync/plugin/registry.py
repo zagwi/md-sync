@@ -19,7 +19,9 @@ from md_sync.plugin.interface import (
     PLUGIN_TYPE_PACK,
     PLUGIN_TYPE_PARSER,
     DirectoryPlugin,
+    DocxExporter,
     ParserPlugin,
+    PdfExporter,
     PluginManifest,
     RenderPlugin,
 )
@@ -34,6 +36,8 @@ class PluginRegistry:
         self._project_dir = Path(project_dir).resolve() if project_dir else None
         self._plugins: dict[str, RenderPlugin] = {}
         self._parsers: dict[str, ParserPlugin] = {}  # schema_name -> ParserPlugin
+        self._pdf_exporters: dict[str, PdfExporter] = {}  # schema_or_name -> PdfExporter
+        self._docx_exporters: dict[str, DocxExporter] = {}  # schema_or_name -> DocxExporter
         self._load_all()
 
     # ── Public API (General) ────────────────────────────────────────────
@@ -78,6 +82,49 @@ class PluginRegistry:
         for p in self._plugins.values():
             filters.update(p.register_filters())
         return filters
+
+    # ── PDF export overrides ────────────────────────────────────────────
+
+    def get_pdf_exporter(self, schema: str | None = None) -> PdfExporter | None:
+        """Return the plugin PDF exporter that overrides the built-in one.
+
+        A plugin exporter only ever applies to the document *schema* it was
+        registered for (e.g. ``"gongwen"`` → the gongwen pack's GB/T 9704-2012
+        exporter). It must NEVER affect other schemas — typora, resume,
+        markdown and any unregistered schema keep the built-in exporter.
+
+        Returns ``None`` when the schema has no plugin override — callers then
+        fall back to the built-in Chromium exporter.
+        """
+        if schema and schema in self._pdf_exporters:
+            return self._pdf_exporters[schema]
+        return None
+
+    def list_pdf_exporters(self) -> list[tuple[str, PdfExporter]]:
+        """List all registered PDF exporters: [(key, exporter), ...]."""
+        return list(self._pdf_exporters.items())
+
+    # ── DOCX export overrides ───────────────────────────────────────────
+
+    def get_docx_exporter(self, schema: str | None = None) -> DocxExporter | None:
+        """Return the plugin DOCX exporter that overrides the built-in one.
+
+        A plugin exporter only ever applies to the document *schema* it was
+        registered for (e.g. ``"gongwen"`` → the gongwen pack's GB/T 9704-2012
+        exporter). It must NEVER affect other schemas — typora, resume,
+        markdown and any unregistered schema keep the built-in pandoc
+        exporter.
+
+        Returns ``None`` when the schema has no plugin override — callers then
+        fall back to the built-in pandoc exporter.
+        """
+        if schema and schema in self._docx_exporters:
+            return self._docx_exporters[schema]
+        return None
+
+    def list_docx_exporters(self) -> list[tuple[str, DocxExporter]]:
+        """List all registered DOCX exporters: [(key, exporter), ...]."""
+        return list(self._docx_exporters.items())
 
     # ── Parser resolution ───────────────────────────────────────────────
 
@@ -227,6 +274,10 @@ class PluginRegistry:
                             self._plugins[d.name] = plugin
                             # If this is a pack-type plugin, load its parser
                             self._register_parser_if_pack(plugin)
+                            # If it declares a PDF exporter, register the override
+                            self._register_pdf_exporter(plugin)
+                            # If it declares a DOCX exporter, register the override
+                            self._register_docx_exporter(plugin)
                         except Exception as e:
                             logger.warning("[plugin] Failed to load %s: %s", d.name, e)
 
@@ -252,6 +303,54 @@ class PluginRegistry:
         except Exception as e:
             logger.warning(
                 "[plugin] Failed to load parser for '%s': %s", manifest.name, e)
+
+    def _register_pdf_exporter(self, plugin: DirectoryPlugin) -> None:
+        """Register a plugin's PDF exporter override (if any).
+
+        The exporter is keyed by the plugin's parser schema when available,
+        otherwise by the plugin name, so callers can look it up per document
+        schema via :meth:`get_pdf_exporter`.
+        """
+        manifest = plugin.manifest
+        if not manifest.pdf_exporter_class:
+            return
+        key = manifest.parser_schema or manifest.name
+        if key in self._pdf_exporters:
+            return  # already registered
+        try:
+            exporter = plugin.load_pdf_exporter()
+            if exporter:
+                self._pdf_exporters[key] = exporter
+                logger.info(
+                    "[plugin] ✓ Registered PDF exporter '%s' from '%s'",
+                    key, manifest.name)
+        except Exception as e:
+            logger.warning(
+                "[plugin] Failed to load PDF exporter for '%s': %s", manifest.name, e)
+
+    def _register_docx_exporter(self, plugin: DirectoryPlugin) -> None:
+        """Register a plugin's DOCX exporter override (if any).
+
+        The exporter is keyed by the plugin's parser schema when available,
+        otherwise by the plugin name, so callers can look it up per document
+        schema via :meth:`get_docx_exporter`.
+        """
+        manifest = plugin.manifest
+        if not manifest.docx_exporter_class:
+            return
+        key = manifest.parser_schema or manifest.name
+        if key in self._docx_exporters:
+            return  # already registered
+        try:
+            exporter = plugin.load_docx_exporter()
+            if exporter:
+                self._docx_exporters[key] = exporter
+                logger.info(
+                    "[plugin] ✓ Registered DOCX exporter '%s' from '%s'",
+                    key, manifest.name)
+        except Exception as e:
+            logger.warning(
+                "[plugin] Failed to load DOCX exporter for '%s': %s", manifest.name, e)
 
     def _discovery_paths(self) -> list[Path]:
         """Discovery paths for plugins (later paths override earlier ones).

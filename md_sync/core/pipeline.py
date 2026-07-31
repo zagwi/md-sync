@@ -21,8 +21,8 @@ from md_sync.core.document import Document
 
 logger = logging.getLogger(__name__)
 from md_sync.core.parser import MdParser
-from md_sync.exporters.pandoc import export_via_pandoc
 from md_sync.exporters.page import resolve_margin
+from md_sync.exporters.pandoc import export_via_pandoc
 from md_sync.exporters.pdf import export_pdf as _export_pdf
 from md_sync.plugin.registry import PluginRegistry
 from md_sync.renderers.html import HtmlRenderer
@@ -113,10 +113,23 @@ class SyncPipeline:
 
     # ── Output processing ───────────────────────────────────────────────
 
+    @staticmethod
+    def _default_style_for(schema: str) -> str:
+        """Pick the default render style for a document schema.
+
+        ``markdown`` uses the generic ``standard`` template; the gongwen
+        schema defaults to its own bundled ``gongwen`` style; everything else
+        (resume, typora) falls back to ``bwx``.
+        """
+        if schema == "markdown":
+            return "standard"
+        if schema == "gongwen":
+            return "gongwen"
+        return "bwx"
+
     def _process_output(self, doc: Document, out_cfg: OutputConfig) -> dict:
         result = {"format": out_cfg.format, "lang": out_cfg.lang, "path": out_cfg.path, "ok": False}
-        style_name = out_cfg.style or out_cfg.theme or (
-            "standard" if self._config.schema == "markdown" else "bwx")
+        style_name = out_cfg.style or out_cfg.theme or self._default_style_for(self._config.schema)
         # Normalize typora-* to just the sub-name for display
         if style_name.startswith("typora-"):
             style_name = "typora/" + style_name[7:]
@@ -184,41 +197,44 @@ class SyncPipeline:
 
         # Render
         try:
-            if out_cfg.format in ("docx", "epub"):
-                # Render HTML first, then convert via pandoc
-                html_content = self._render_html(doc, out_cfg, target_lang=target_lang)
-                html_tmp = Path(out_cfg.path).with_suffix(".html")
-                html_tmp.parent.mkdir(parents=True, exist_ok=True)
-                html_tmp.write_text(html_content, encoding="utf-8")
-
+            if out_cfg.format == "docx":
                 out_path = Path(out_cfg.path)
                 out_path.parent.mkdir(parents=True, exist_ok=True)
-                pandoc_ok = export_via_pandoc(
-                    input_path=html_tmp,
-                    output_path=out_path,
-                    to_format=out_cfg.format,
-                    page_size=out_cfg.page_size,
-                    margin=out_cfg.page_margin,
-                )
-                if pandoc_ok:
+                # ③ 插件机制：插件可提供 DOCX 导出器覆盖基础 pandoc 导出
+                # （插件优先）。例如 gongwen 插件直接生成 GB/T 9704-2012
+                # 红头公文 docx（版式/字体/页码），不再经 HTML→pandoc。
+                exporter = self._plugin_registry.get_docx_exporter(self._config.schema)
+                if exporter is not None:
+                    try:
+                        docx_ok = exporter.export(
+                            doc=doc,
+                            output_path=out_path,
+                            style_name=style_name,
+                            lang=target_lang,
+                            translator=self._translator,
+                        )
+                    except Exception as e:
+                        logger.warning("Plugin DOCX exporter failed (%s), falling back: %s", exporter.name, e)
+                        docx_ok = False
+                    if not docx_ok:
+                        # 插件导出失败（或返回 False）→ 回退基础 pandoc 路径，
+                        # 与 PDF 分支行为一致。
+                        logger.warning("Plugin DOCX export produced no file for %s, falling back to pandoc", out_path.name)
+                        self._export_docx_via_pandoc(doc, out_cfg, target_lang, style_name, result)
+                        return result
                     result["ok"] = True
                     size_kb = out_path.stat().st_size // 1024 if out_path.exists() else 0
-                    logger.info("  ✓ %s (%d KB, via pandoc) [%s]", out_path.name, size_kb, style_name)
+                    logger.info("  ✓ %s (%d KB, plugin docx) [%s]", out_path.name, size_kb, style_name)
                     # ② 插件机制：转换产物写出后触发 after_render hook
                     self._plugin_registry.emit_after_render(
                         out_path,
-                        {"lang": target_lang, "format": out_cfg.format, "path": str(out_path)},
+                        {"lang": target_lang, "format": "docx", "path": str(out_path)},
                     )
-                else:
-                    result["error"] = f"Pandoc export failed for {out_cfg.format}"
-                    self._stats["errors"].append(result["error"])
                     return result
-
-                # Cleanup temp HTML unless user also wants HTML output
-                html_cfg = [o for o in self._config.outputs
-                            if o.format == "html" and o.lang == out_cfg.lang and o.path]
-                if not html_cfg:
-                    html_tmp.unlink(missing_ok=True)
+                # 无插件导出器 → 退回基础 pandoc 路径
+                self._export_docx_via_pandoc(doc, out_cfg, target_lang, style_name, result)
+            elif out_cfg.format == "epub":
+                self._export_docx_via_pandoc(doc, out_cfg, target_lang, style_name, result)
             elif out_cfg.format == "html":
                 content = self._render_html(doc, out_cfg, target_lang=target_lang)
                 out_path = Path(out_cfg.path)
@@ -235,13 +251,42 @@ class SyncPipeline:
                 # PDF
                 if out_cfg.pdf and out_cfg.pdf_path:
                     Path(out_cfg.pdf_path).parent.mkdir(parents=True, exist_ok=True)
-                    pdf_ok = _export_pdf(
-                        html_path=out_path,
-                        pdf_path=out_cfg.pdf_path,
-                        page_margin=resolve_margin(out_cfg.page_size, out_cfg.page_margin),
-                        page_size=out_cfg.page_size,
-                        style_name=style_name,
-                    )
+                    # The template's template.yaml may declare its own PDF
+                    # margin (e.g. gongwen's GB/T 9704-2012 版心). When the
+                    # output config doesn't override, honor the template.
+                    page_margin = out_cfg.page_margin or ""
+                    if not page_margin.strip():
+                        page_margin = (self._template_catalog(out_cfg).pdf or {}).get("margin", "")
+                    page_margin = resolve_margin(out_cfg.page_size, page_margin)
+                    # ③ 插件机制：插件可提供 PDF 导出器覆盖基础功能（插件优先）。
+                    # 例如 gongwen 插件用 CDP 注入 GB/T 9704-2012 页码。
+                    exporter = self._plugin_registry.get_pdf_exporter(self._config.schema)
+                    if exporter is not None:
+                        try:
+                            pdf_ok = exporter.export(
+                                html_path=out_path,
+                                pdf_path=out_cfg.pdf_path,
+                                page_margin=page_margin,
+                                page_size=out_cfg.page_size,
+                                style_name=style_name,
+                            )
+                        except Exception as e:
+                            logger.warning("Plugin PDF exporter failed (%s), falling back: %s", exporter.name, e)
+                            pdf_ok = _export_pdf(
+                                html_path=out_path,
+                                pdf_path=out_cfg.pdf_path,
+                                page_margin=page_margin,
+                                page_size=out_cfg.page_size,
+                                style_name=style_name,
+                            )
+                    else:
+                        pdf_ok = _export_pdf(
+                            html_path=out_path,
+                            pdf_path=out_cfg.pdf_path,
+                            page_margin=page_margin,
+                            page_size=out_cfg.page_size,
+                            style_name=style_name,
+                        )
                     result["pdf"] = pdf_ok
                     # ② 插件机制：PDF 生成后触发 after_render hook
                     self._plugin_registry.emit_after_render(
@@ -267,6 +312,76 @@ class SyncPipeline:
 
         return result
 
+    def _template_catalog(self, out_cfg: OutputConfig):
+        """Resolve the TemplateCatalog for an output config.
+
+        Mirrors the template-name resolution used by :meth:`_render_html`
+        (style > theme > schema default, ``typora-*`` normalised to the shared
+        ``typora`` base). Falls back to ``bwx`` when the template is missing.
+        """
+        template_name = out_cfg.style or out_cfg.theme or self._default_style_for(self._config.schema)
+        if template_name.startswith("typora-"):
+            template_name = "typora"
+        try:
+            return self._template_mgr.resolve(template_name)
+        except FileNotFoundError:
+            logger.warning("Template '%s' not found, falling back to 'bwx'", template_name)
+            return self._template_mgr.resolve("bwx")
+
+    def _export_docx_via_pandoc(
+        self,
+        doc: Document,
+        out_cfg: OutputConfig,
+        target_lang: str,
+        style_name: str,
+        result: dict,
+    ) -> bool:
+        """Render HTML first, then convert via pandoc to .docx / .epub.
+
+        This is the built-in fallback used when a schema has no plugin DOCX
+        exporter (gongwen provides one that bypasses pandoc entirely).
+        """
+        html_content = self._render_html(doc, out_cfg, target_lang=target_lang)
+        html_tmp = Path(out_cfg.path).with_suffix(".html")
+        html_tmp.parent.mkdir(parents=True, exist_ok=True)
+        html_tmp.write_text(html_content, encoding="utf-8")
+
+        out_path = Path(out_cfg.path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        # Honor the template's declared PDF margin (template.yaml) when
+        # the output config doesn't override it (e.g. gongwen's
+        # GB/T 9704-2012 版心), matching the PDF export path below.
+        page_margin = out_cfg.page_margin or ""
+        if not page_margin.strip():
+            page_margin = (self._template_catalog(out_cfg).pdf or {}).get("margin", "")
+        pandoc_ok = export_via_pandoc(
+            input_path=html_tmp,
+            output_path=out_path,
+            to_format=out_cfg.format,
+            page_size=out_cfg.page_size,
+            margin=page_margin,
+        )
+        if pandoc_ok:
+            result["ok"] = True
+            size_kb = out_path.stat().st_size // 1024 if out_path.exists() else 0
+            logger.info("  ✓ %s (%d KB, via pandoc) [%s]", out_path.name, size_kb, style_name)
+            # ② 插件机制：转换产物写出后触发 after_render hook
+            self._plugin_registry.emit_after_render(
+                out_path,
+                {"lang": target_lang, "format": out_cfg.format, "path": str(out_path)},
+            )
+        else:
+            result["error"] = f"Pandoc export failed for {out_cfg.format}"
+            self._stats["errors"].append(result["error"])
+            return False
+
+        # Cleanup temp HTML unless user also wants HTML output
+        html_cfg = [o for o in self._config.outputs
+                    if o.format == "html" and o.lang == out_cfg.lang and o.path]
+        if not html_cfg:
+            html_tmp.unlink(missing_ok=True)
+        return True
+
     def _render_html(self, doc: Document, out_cfg: OutputConfig, target_lang: str = "zh") -> str:
         """Render doc to HTML using TemplateManager.
 
@@ -276,8 +391,7 @@ class SyncPipeline:
         default ``style.css``.
         """
         # Determine template name: style > theme (legacy) > default
-        template_name = out_cfg.style or out_cfg.theme or (
-            "standard" if self._config.schema == "markdown" else "bwx")
+        template_name = out_cfg.style or out_cfg.theme or self._default_style_for(self._config.schema)
 
         # Typora theme handling
         typora_css = None
@@ -312,11 +426,7 @@ class SyncPipeline:
             # Use the typora Jinja2 template (shared by all typora-* themes)
             template_name = "typora"
 
-        try:
-            catalog = self._template_mgr.resolve(template_name)
-        except FileNotFoundError:
-            logger.warning("Template '%s' not found, falling back to 'bwx'", template_name)
-            catalog = self._template_mgr.resolve("bwx")
+        catalog = self._template_catalog(out_cfg)
 
         theme_dir = catalog.info.directory
         if not theme_dir:
@@ -339,15 +449,16 @@ class SyncPipeline:
 
         # Both schemas are rendered by a single HtmlRenderer whose *layout*
         # strategy is selected by the schema, not by a separate code path:
-        #   * "raw"        — linear docs (markdown / typora) in the source
-        #                    language: render the whole source in one shot via
-        #                    markdown-it (maximal fidelity, no Item splitting).
+        #   * "raw"        — linear docs (markdown / typora / gongwen) in the
+        #                    source language: render the whole source in one
+        #                    shot via markdown-it (maximal fidelity, no Item
+        #                    splitting).
         #   * "structured" — resume-style docs (per-item chrome) and any
         #                    translation target (per-item translation cache).
         layout = (
             "raw"
             if (
-                self._config.schema in ("markdown", "typora")
+                self._config.schema in ("markdown", "typora", "gongwen")
                 and target_lang == doc.source_lang
                 and doc.source_raw
             )

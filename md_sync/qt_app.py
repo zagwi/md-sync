@@ -818,7 +818,8 @@ class MainWindow(QWidget):
         self.tpl_zh = QComboBox()
         self.tpl_zh.activated.connect(self._on_style_selected)
         style_h.addWidget(self.tpl_zh, 1)
-        style_h.addWidget(QLabel("英文"))
+        self._tpl_en_label = QLabel("英文")
+        style_h.addWidget(self._tpl_en_label)
         self.tpl_en = QComboBox()
         self.tpl_en.activated.connect(self._on_style_selected)
         style_h.addWidget(self.tpl_en, 1)
@@ -1059,6 +1060,9 @@ class MainWindow(QWidget):
         plugin = self._plugins[idx]
         schema = plugin.parser_schema or "resume"
 
+        # ── 语言策略：公文（gongwen）仅支持中文，禁用英文选项 ──
+        self._apply_lang_policy()
+
         # ── 更新插件详情 ──
         tpl_list = ", ".join(plugin.templates) if plugin.templates else "系统内置"
         self._detail_name.setText(plugin.label or plugin.name)
@@ -1137,6 +1141,17 @@ class MainWindow(QWidget):
         self._append_log(
             f"已选择插件包「{plugin.name}」schema={schema}，"
             f"风格：{', '.join(t.name for t in infos) if infos else '系统内置'}")
+
+    def _apply_lang_policy(self):
+        """公文（gongwen）仅支持中文：禁用英文输出选项与英文模板选择。"""
+        zh_only = self._current_schema() == "gongwen"
+        for (fmt, lang), cb in self.fmt_checks.items():
+            if lang == "en":
+                cb.setEnabled(not zh_only)
+                if zh_only:
+                    cb.setChecked(False)
+        self._tpl_en_label.setEnabled(not zh_only)
+        self.tpl_en.setEnabled(not zh_only)
 
     @staticmethod
     def _typora_theme_icon(css_stem: str) -> QIcon:

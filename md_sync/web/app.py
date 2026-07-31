@@ -455,6 +455,7 @@ var confirmedSource = '';
 (function initTemplateVisibility() {{
   var sel = document.getElementById('schemaSelect');
   applyTemplateVisibility(sel ? sel.value : 'resume');
+  applyLangVisibility(sel ? sel.value : 'resume');
 }})();
 
 function confirmSource() {{
@@ -606,6 +607,18 @@ function onSchemaChange() {{
     r.textContent = '';
   }}
   applyTemplateVisibility(val);
+  applyLangVisibility(val);
+}}
+
+// 公文（gongwen）仅支持中文输出：禁用并取消勾选各格式下的 English 复选框。
+function applyLangVisibility(schema) {{
+  var zhOnly = (schema === 'gongwen');
+  document.querySelectorAll('.lang-cb').forEach(function(lcb) {{
+    if (lcb.value === 'en') {{
+      lcb.disabled = zhOnly;
+      if (zhOnly) lcb.checked = false;
+    }}
+  }});
 }}
 
 // Templates that belong to the generic "markdown" schema. For other schemas
@@ -658,6 +671,7 @@ async function autoDetectSchema(sourcePath) {{
           }}
         }}
       }}
+      applyLangVisibility(schemaName);
     }} else if (data.status === 'ok') {{
       hint.textContent = '📄 未检测到特定插件 schema，将使用通用 Markdown 解析';
       hint.style.color = '#999';

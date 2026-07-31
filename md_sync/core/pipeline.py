@@ -129,6 +129,13 @@ class SyncPipeline:
 
     def _process_output(self, doc: Document, out_cfg: OutputConfig) -> dict:
         result = {"format": out_cfg.format, "lang": out_cfg.lang, "path": out_cfg.path, "ok": False}
+        # 公文（gongwen）仅支持中文：英文输出直接跳过（不报错，配置里写了也忽略）。
+        if self._config.schema == "gongwen" and out_cfg.lang != "zh":
+            result["skipped"] = "gongwen-zh-only"
+            result["ok"] = True
+            result["reason"] = "公文仅支持中文输出"
+            logger.info("  – %s/%s: 公文（gongwen）仅支持中文输出，跳过", out_cfg.format, out_cfg.lang)
+            return result
         style_name = out_cfg.style or out_cfg.theme or self._default_style_for(self._config.schema)
         # Normalize typora-* to just the sub-name for display
         if style_name.startswith("typora-"):

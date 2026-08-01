@@ -236,6 +236,7 @@ class HtmlRenderer:
     def render(self, doc: Document, sections_meta: dict | None = None,
                 translator=None, lang: str = "zh",
                 typora_css: str | None = None,
+                typora_dark: bool = False,
                 layout: str = "structured") -> str:
         """Render the document to a complete HTML string.
 
@@ -265,6 +266,11 @@ class HtmlRenderer:
                   Used by templates to pick the right translation.
             typora_css: When provided, overrides ``style_css`` with a Typora
                         theme's CSS content.
+            typora_dark: Whether the Typora theme is dark (computed in the
+                        pipeline from the theme CSS). Lets the template inject
+                        concrete light/dark table colors instead of relying on
+                        CSS variable fallback chains that fail for themes that
+                        define neither --text nor --text-color.
             layout: ``"raw"`` or ``"structured"``.
         """
         template = self._env.get_template("base.html.j2")
@@ -294,6 +300,7 @@ class HtmlRenderer:
             style_css=typora_css or self.css,
             print_css=self.print_css,
             typora_css=typora_css,
+            typora_dark=typora_dark,
             translator=translator,
             source_lang=doc.source_lang,
             target_lang=lang,

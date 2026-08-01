@@ -72,6 +72,64 @@ _PREVIEW_CACHE_DIR = (
     / "md-sync" / "previews"
 )
 
+# theme.typora.io 官方画廊缩略图映射（本地 CSS stem → 画廊缩略图 URL）。
+# 由 https://theme.typora.io/ 页面抓取生成（2026-07 快照）。
+_TYPORA_GALLERY_URLS = {
+    "Screenplay": "https://theme.typora.io/media/thumbnails/screenplay.png", "alto": "https://theme.typora.io/media/thumbnails/alto.png", "amatriz": "https://theme.typora.io/media/thumbnails/amatriz.png",
+    "amatriz-print-white": "https://theme.typora.io/media/thumbnails/amatriz.png", "amber": "https://theme.typora.io/media/thumbnails/Amber.png", "animal-island": "https://theme.typora.io/media/thumbnails/animal-island-thumbnail.png",
+    "ash": "https://theme.typora.io/media/thumbnails/ash.png", "aspartate": "https://theme.typora.io/media/thumbnails/aspartate.png", "autumnus": "https://theme.typora.io/media/thumbnails/autumnus.png",
+    "ava-diana": "https://theme.typora.io/media/thumbnails/ava-diana.png", "barfi": "https://theme.typora.io/media/thumbnails/barfi.png", "bios": "https://theme.typora.io/media/thumbnails/bios.png",
+    "bit-clean-dark": "https://theme.typora.io/media/thumbnails/bit-clean-thumbnail.png", "bit-clean-light": "https://theme.typora.io/media/thumbnails/bit-clean-thumbnail.png", "blackout": "https://theme.typora.io/media/thumbnails/blackout.png",
+    "blubook": "https://theme.typora.io/media/thumbnails/blubook.png", "blue-topaz": "https://theme.typora.io/media/thumbnails/blue-topaz.png", "blue-topaz-dark": "https://theme.typora.io/media/thumbnails/blue-topaz.png",
+    "bluetex": "https://theme.typora.io/media/thumbnails/blueTex.png", "bonne-nouvelle": "https://theme.typora.io/media/thumbnails/bonne-nouvelle.png", "bronya": "https://theme.typora.io/media/thumbnails/bronya.png",
+    "catfish": "https://theme.typora.io/media/thumbnails/catfish.png", "cement": "https://theme.typora.io/media/thumbnails/cement.png", "ceylon": "https://theme.typora.io/media/thumbnails/ceylon.png",
+    "claude": "https://theme.typora.io/media/thumbnails/claude-typora-theme.png", "clean-light": "https://theme.typora.io/media/thumbnails/clean.png", "cobalt": "https://theme.typora.io/media/thumbnails/cobalt.png",
+    "compact": "https://theme.typora.io/media/thumbnails/compact.png", "compact-night": "https://theme.typora.io/media/thumbnails/compact-night.png", "crisp-gothic": "https://theme.typora.io/media/thumbnails/crisp.png",
+    "crisp-mincho": "https://theme.typora.io/media/thumbnails/crisp.png", "dracula": "https://theme.typora.io/media/thumbnails/dracula-typora.png", "drake": "https://theme.typora.io/media/thumbnails/drake-thumb.png",
+    "dyzj": "https://theme.typora.io/media/thumbnails/dyzj.png", "dyzj-dark": "https://theme.typora.io/media/thumbnails/dyzj.png", "dyzj-light": "https://theme.typora.io/media/thumbnails/dyzj.png",
+    "eloquent": "https://theme.typora.io/media/thumbnails/eloquent.png", "engwrite": "https://theme.typora.io/media/thumbnails/engwrite.png", "eternal": "https://theme.typora.io/media/thumbnails/Eternal.png",
+    "eva": "https://theme.typora.io/media/thumbnails/eva.png", "everforest": "https://theme.typora.io/media/thumbnails/everforest.png", "everforest-dark": "https://theme.typora.io/media/thumbnails/everforest.png",
+    "everforest-light": "https://theme.typora.io/media/thumbnails/everforest.png", "eyes-green": "https://theme.typora.io/media/thumbnails/eyes-green.png", "flexoki-light": "https://theme.typora.io/media/thumbnails/flexoki-light.png",
+    "fluent": "https://theme.typora.io/media/thumbnails/fluent.png", "folio": "https://theme.typora.io/media/thumbnails/folio.png", "forest": "https://theme.typora.io/media/thumbnails/forest.png",
+    "fro": "https://theme.typora.io/media/thumbnails/typora-fro.png", "github": "https://theme.typora.io/media/thumbnails/github.png", "github-night": "https://theme.typora.io/media/thumbnails/github-night.png",
+    "gitlab": "https://theme.typora.io/media/thumbnails/gitlab.png", "gruvbox": "https://theme.typora.io/media/thumbnails/gruvbox.png", "happysimple": "https://theme.typora.io/media/thumbnails/Happysimple.png",
+    "haru": "https://theme.typora.io/media/thumbnails/haru.png", "ia-typora": "https://theme.typora.io/media/thumbnails/iatypora.jpeg", "inkwell": "https://theme.typora.io/media/thumbnails/inkwell.png",
+    "inside": "https://theme.typora.io/media/thumbnails/inside.png", "ivory-flow": "https://theme.typora.io/media/thumbnails/ivory-flow-thumbnail.png", "jamstatic": "https://theme.typora.io/media/thumbnails/jamstatic.png",
+    "jetbrains-dark": "https://theme.typora.io/media/thumbnails/jetbrains-dark.png", "jinxiu": "https://theme.typora.io/media/thumbnails/Jinxiu.png", "johntor-dark-blue": "https://theme.typora.io/media/thumbnails/johntor-dark-blue.png",
+    "juejin": "https://theme.typora.io/media/thumbnails/juejin.png", "kiro": "https://theme.typora.io/media/thumbnails/kiro.png", "konayuki-dark": "https://theme.typora.io/media/thumbnails/Konayuki.png",
+    "konayuki-light": "https://theme.typora.io/media/thumbnails/Konayuki.png", "krafty": "https://theme.typora.io/media/thumbnails/krafty.png", "ladder": "https://theme.typora.io/media/thumbnails/ladder-theme.png",
+    "lanyue": "https://theme.typora.io/media/thumbnails/lanyue.png", "lapis": "https://theme.typora.io/media/thumbnails/lapis.png", "lavender": "https://theme.typora.io/media/thumbnails/lavender.png",
+    "law": "https://theme.typora.io/media/thumbnails/law.png", "lcars": "https://theme.typora.io/media/thumbnails/lcars.png", "light-monokai": "https://theme.typora.io/media/thumbnails/light-monokai.png",
+    "lightmind": "https://theme.typora.io/media/thumbnails/lightmind.png", "liquid": "https://theme.typora.io/media/thumbnails/liquid.png", "lostkeys": "https://theme.typora.io/media/thumbnails/lostkeys.png",
+    "maize": "https://theme.typora.io/media/thumbnails/maize.png", "mdmdt": "https://theme.typora.io/media/thumbnails/mdmdt.png", "mint": "https://theme.typora.io/media/thumbnails/mint.png",
+    "mist-blue": "https://theme.typora.io/media/thumbnails/mist-blue.png", "mlike": "https://theme.typora.io/media/thumbnails/mlike.png", "mo": "https://theme.typora.io/media/thumbnails/mo.png",
+    "monospace": "https://theme.typora.io/media/thumbnails/monospace.png", "morandigarden": "https://theme.typora.io/media/thumbnails/morandigarden.jpg", "neil-jetbrains-mono": "https://theme.typora.io/media/thumbnails/neil-jetbrains-mono-theme.png",
+    "newsprint": "https://theme.typora.io/media/thumbnails/newsprint.png", "next": "https://theme.typora.io/media/thumbnails/next.jpg", "night": "https://theme.typora.io/media/thumbnails/night.png",
+    "nocturne": "https://theme.typora.io/media/thumbnails/nocturne.png", "nord": "https://theme.typora.io/media/thumbnails/nord.png", "notes-dark": "https://theme.typora.io/media/thumbnails/notes-dark.png",
+    "notion": "https://theme.typora.io/media/thumbnails/notion-thumb.jpg", "notion-onedark": "https://theme.typora.io/media/thumbnails/notion-onedark.png", "notion-style-dark": "https://theme.typora.io/media/thumbnails/notion-style.png",
+    "notion-style-light": "https://theme.typora.io/media/thumbnails/notion-style.png", "onedark": "https://theme.typora.io/media/thumbnails/onedark.png", "onelight": "https://theme.typora.io/media/thumbnails/onelight.png",
+    "onigiri": "https://theme.typora.io/media/thumbnails/onigiri.png", "opencode": "https://theme.typora.io/media/thumbnails/opencode.png", "orangeheart": "https://theme.typora.io/media/thumbnails/orangeheart.png",
+    "panda": "https://theme.typora.io/media/thumbnails/panda.png", "paper": "https://theme.typora.io/media/thumbnails/paper.png", "paperglow": "https://theme.typora.io/media/thumbnails/paperglow-theme.png",
+    "phycat.dark": "https://theme.typora.io/media/thumbnails/phycat.png", "phycat.light": "https://theme.typora.io/media/thumbnails/phycat.png", "pie": "https://theme.typora.io/media/thumbnails/pie.png",
+    "pink-fairy": "https://theme.typora.io/media/thumbnails/pink-fairy.png", "pink-hsiao": "https://theme.typora.io/media/thumbnails/pink-hsiao.png", "pixyll": "https://theme.typora.io/media/thumbnails/pixyll.png",
+    "print": "https://theme.typora.io/media/thumbnails/print.png", "purclaude": "https://theme.typora.io/media/thumbnails/purclaude.png", "purple": "https://theme.typora.io/media/thumbnails/purple.png",
+    "rainbow": "https://theme.typora.io/media/thumbnails/rainbow.png", "ravel": "https://theme.typora.io/media/thumbnails/ravel.png", "redefine-dark": "https://theme.typora.io/media/thumbnails/redefine.png",
+    "redefine-light": "https://theme.typora.io/media/thumbnails/redefine.png", "refine": "https://theme.typora.io/media/thumbnails/refine.png", "rhapsody": "https://theme.typora.io/media/thumbnails/Rhapsody.png",
+    "rubrication": "https://theme.typora.io/media/thumbnails/rubrication.png", "saffron": "https://theme.typora.io/media/thumbnails/saffron.png", "salamander": "https://theme.typora.io/media/thumbnails/salamander.png",
+    "scrolls": "https://theme.typora.io/media/thumbnails/scrolls.png", "see-yue-dark": "https://theme.typora.io/media/thumbnails/see-yue.png", "seniva": "https://theme.typora.io/media/thumbnails/seniva.png",
+    "softgreen": "https://theme.typora.io/media/thumbnails/softgreen.png", "solarized": "https://theme.typora.io/media/thumbnails/solarized.png", "sonnet": "https://theme.typora.io/media/thumbnails/sonnet.png",
+    "spring": "https://theme.typora.io/media/thumbnails/Spring.png", "swiss": "https://theme.typora.io/media/thumbnails/swiss.png", "tailwind": "https://theme.typora.io/media/thumbnails/tailwind.png",
+    "tanda": "https://theme.typora.io/media/thumbnails/Tanda.png", "techo": "https://theme.typora.io/media/thumbnails/techo.png", "torillic": "https://theme.typora.io/media/thumbnails/torillic.png",
+    "turing": "https://theme.typora.io/media/thumbnails/turing.png", "typora-docsify": "https://theme.typora.io/media/thumbnails/typora_docsify.png", "valve": "https://theme.typora.io/media/thumbnails/valve.png",
+    "vercel": "https://theme.typora.io/media/thumbnails/vercel.png", "vintage": "https://theme.typora.io/media/thumbnails/vintage.png", "virgo": "https://theme.typora.io/media/thumbnails/virgo.png",
+    "vlook-fancy": "https://theme.typora.io/media/thumbnails/vlook-fancy.png", "vlook-fancy-dark": "https://theme.typora.io/media/thumbnails/vlook-fancy.png", "vlook-fancy-light": "https://theme.typora.io/media/thumbnails/vlook-fancy.png",
+    "vue": "https://theme.typora.io/media/thumbnails/vue.png", "warp-gradient": "https://theme.typora.io/media/thumbnails/warp-gradient.png", "whitelines": "https://theme.typora.io/media/thumbnails/whitelines.png",
+    "whitey": "https://theme.typora.io/media/thumbnails/whitey.png", "xydark": "https://theme.typora.io/media/thumbnails/xydark.png", "zeus": "https://theme.typora.io/media/thumbnails/zeus.png",
+}
+
+# 访问 theme.typora.io 本机直连会超时，需走代理（依次尝试）
+_TYPORA_PROXIES = ("http://127.0.0.1:1080", "")
+
 _SAMPLE_PREVIEW_HTML = """<!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -118,6 +176,10 @@ def _crop_whitespace(pixmap: QPixmap) -> QPixmap:
     """
     if pixmap.isNull():
         return pixmap
+    # 预览框仅 360×460：画廊原图可能高达 1967×1521（≈300 万像素），纯 Python
+    # 逐像素扫描会阻塞 UI 1-4s。先等比缩小到 ≤700px 宽，裁剪再缩略显示。
+    if pixmap.width() > 700:
+        pixmap = pixmap.scaledToWidth(700, Qt.SmoothTransformation)
     img = pixmap.toImage()
     w, h = img.width(), img.height()
 
@@ -189,11 +251,42 @@ def _get_style_css(style_name: str, tmgr: TemplateManager) -> str:
     return ""
 
 
-def _get_or_create_preview(style_name: str, tmgr: TemplateManager) -> QPixmap | None:
-    """获取风格预览图。优先从缓存加载（内存→磁盘→画廊下载→Chromium渲染）。
+def _download_typora_file(css_stem: str, cache_path: Path) -> bool:
+    """Download a theme.typora.io gallery thumbnail to local cache (file only)."""
+    url = _TYPORA_GALLERY_URLS.get(css_stem)
+    if not url:
+        return False
+    try:
+        _PREVIEW_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        for proxy in _TYPORA_PROXIES:
+            cmd = ["curl", "-s", "--fail", "--max-time", "15"]
+            if proxy:
+                cmd += ["-x", proxy]
+            cmd += ["-o", str(cache_path), url]
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+            if r.returncode == 0 and cache_path.exists() and cache_path.stat().st_size > 100:
+                return True
+        # 下载失败：清掉可能残留的半截文件，避免磁盘缓存加载到损坏的图片
+        try:
+            if cache_path.exists():
+                cache_path.unlink()
+        except OSError:
+            pass
+        return False
+    except Exception:
+        try:
+            if cache_path.exists():
+                cache_path.unlink()
+        except OSError:
+            pass
+        return False
 
-    全部在主线程运行（慢但稳定）。首次生成某风格可能阻塞 1-2s（Chromium
-    headless 启动），之后即时从缓存返回。
+
+def _get_or_create_preview(style_name: str, tmgr: TemplateManager) -> QPixmap | None:
+    """获取风格预览图。优先级：内存 → 磁盘 → Typora 画廊下载 → Chromium 渲染。
+
+    全部在主线程运行（慢但稳定）。首次生成某风格可能阻塞 1-2s（下载或
+    Chromium headless 启动），之后即时从缓存返回。
     """
     try:
         if style_name in _PREVIEW_CACHE:
@@ -206,7 +299,16 @@ def _get_or_create_preview(style_name: str, tmgr: TemplateManager) -> QPixmap | 
                 pix = _crop_whitespace(pix)
                 _PREVIEW_CACHE[style_name] = pix
                 return pix
-        # 全部主题统一本地 Chromium 渲染（不下载任何外部图片）
+        # Typora 主题：优先从 theme.typora.io 官方画廊下载缩略图
+        if style_name.startswith("typora-"):
+            css_stem = style_name[7:]
+            if _download_typora_file(css_stem, cache_path):
+                pix = QPixmap(str(cache_path))
+                if not pix.isNull():
+                    pix = _crop_whitespace(pix)
+                    _PREVIEW_CACHE[style_name] = pix
+                    return pix
+            # 画廊未命中 → fall through 到本地 Chromium 渲染
         css_text = _get_style_css(style_name, tmgr)
         if not css_text:
             _PREVIEW_CACHE[style_name] = None
@@ -430,7 +532,7 @@ class TitleBar(QWidget):
 
 
 class FloatingPreview(QWidget):
-    """浮动预览窗口：下拉选项悬停/导航时在光标处弹出真实截图预览。"""
+    """浮动预览窗口：下拉选项悬停/导航时在 combobox 右侧弹出真实截图预览。"""
     MARGIN = 8
     SS_W, SS_H = 360, 460
     NAME_H, GAP, SHADOW = 24, 10, 3
@@ -588,6 +690,11 @@ class MainWindow(QWidget):
         self._pulse_timer.timeout.connect(self._pulse_step)
         self._pulse_timer.start(450)
         self._drag_pos: QPoint | None = None
+
+        # 后台分块预下载 Typora 画廊预览图（主线程 QTimer，不阻塞不崩溃）
+        self._pregen_queue: list[str] = []
+        self._pregen_timer = QTimer(self)
+        self._pregen_timer.timeout.connect(self._pregen_step)
 
         self._build_ui()
         self._load_templates()
@@ -848,32 +955,34 @@ class MainWindow(QWidget):
         out_h.addWidget(out_btn)
         cv.addWidget(out_row_w)
 
-        # ── 渲染风格（选插件后显示）—— 下拉时在选项光标处浮动预览 ──
+        # ── 渲染主题（选插件后显示）—— 下拉时在选项光标处浮动预览 ──
         self._style_row_w = QWidget()
         self._style_row_w.setVisible(False)
+        self._style_row_w.setMinimumHeight(48)  # 窗口偏矮时防止下拉框被压扁
         sr_lay = QVBoxLayout(self._style_row_w)
         sr_lay.setContentsMargins(0, 0, 0, 0)
         sr_lay.setSpacing(4)
         style_h = QHBoxLayout()
         style_h.setSpacing(6)
-        style_lbl = QLabel("渲染风格")
+        style_lbl = QLabel("渲染主题")
         style_lbl.setFixedWidth(60)
         style_h.addWidget(style_lbl)
-        style_h.addWidget(QLabel("中文"))
+        zh_tag = QLabel("中文")
+        zh_tag.setFixedWidth(32)
+        style_h.addWidget(zh_tag)
         self.tpl_zh = QComboBox()
-        self.tpl_zh.activated.connect(self._on_style_selected)
-        style_h.addWidget(self.tpl_zh, 1)
+        self.tpl_zh.setFixedWidth(160)
+        style_h.addWidget(self.tpl_zh)
         self._tpl_en_label = QLabel("英文")
+        self._tpl_en_label.setFixedWidth(32)
         style_h.addWidget(self._tpl_en_label)
         self.tpl_en = QComboBox()
-        self.tpl_en.activated.connect(self._on_style_selected)
-        style_h.addWidget(self.tpl_en, 1)
+        self.tpl_en.setFixedWidth(160)
+        style_h.addWidget(self.tpl_en)
+        style_h.addStretch(1)
         sr_lay.addLayout(style_h)
-        self._preview_info = QLabel("")
-        self._preview_info.setStyleSheet("font-size:11px;color:#bbb;padding-left:68px;")
-        sr_lay.addWidget(self._preview_info)
         cv.addWidget(self._style_row_w)
-        # ── 浮动预览窗口
+        # ── 浮动预览窗口（紧贴 combobox 右侧，随下拉导航更新） ──
         self._floating_preview = FloatingPreview()
         zv = self.tpl_zh.view(); zv.setMouseTracking(True)
         ev = self.tpl_en.view(); ev.setMouseTracking(True)
@@ -1093,6 +1202,7 @@ class MainWindow(QWidget):
         """插件包切换时，更新详情区域 + 显示/隐藏风格行。"""
         # 插件切换后下拉内容已失效，残留的浮动预览一并隐藏
         self._floating_preview.hide()
+        self._pregen_timer.stop()
         if idx < 0 or not self._plugins:
             self._detail_area.setVisible(False)
             self._style_row_w.setVisible(False)
@@ -1123,7 +1233,7 @@ class MainWindow(QWidget):
                 self._detail_desc.setText(
                     (plugin.description or "")
                     + "\n\n⚠ 未检测到本机已安装 Typora，暂无可用主题。"
-                      "请先安装 Typora，其主题会自动出现在「渲染风格」下拉框中。"
+                      "请先安装 Typora，其主题会自动出现在「渲染主题」下拉框中。"
                 )
 
         # ── 公文字体检测：gongwen 插件缺字体时提示安装（免费 Fandol） ──
@@ -1170,10 +1280,12 @@ class MainWindow(QWidget):
         self._reload_style_combos(infos)
         self._style_row_w.setVisible(True)
 
-        # ── 预生成当前默认风格预览（同步，仅一个，用户可接受等 1-2s）─
+        # ── 预生成当前默认风格预览（同步，仅一个，用户可接受等 1-2s） ──
         default_style = self.tpl_zh.currentData()
         if default_style:
             _get_or_create_preview(default_style, self.tmgr)
+        # ── 后台分块预下载 Typora 画廊预览图（QTimer 主线程，不阻塞 UI） ──
+        self._start_pregen(infos)
 
         # ── 显示「重名处理」并按当前策略勾选 ──
         self._naming_label.setVisible(True)
@@ -1198,66 +1310,42 @@ class MainWindow(QWidget):
         self._tpl_en_label.setEnabled(not zh_only)
         self.tpl_en.setEnabled(not zh_only)
 
-    @staticmethod
-    def _typora_theme_icon(css_stem: str) -> QIcon:
-        """Extract theme colors from a Typora CSS file and return a preview icon.
-
-        Creates a 14×14 pixmap with two dots side by side:
-           left = background color (--bg-color or body background)
-           right = text color (--text-color or --control-text-color)
-
-        Returns a blank (grey) icon when the CSS file can't be read or
-        no colors are found.
-        """
-        import re
-
-        from md_sync.plugins.typora.paths import get_typora_themes_dir
-        typora_dir = get_typora_themes_dir()
-        css_path = (typora_dir / f"{css_stem}.css") if typora_dir else None
-        bg = "#cccccc"  # fallback grey
-        fg = "#333333"
-
-        if css_path is not None and css_path.exists():
-            try:
-                text = css_path.read_text(encoding="utf-8")
-                # Extract from :root CSS variables
-                m = re.search(r'--bg-color\s*:\s*(#[0-9a-fA-F]{6})\s*;', text)
-                if m:
-                    bg = m.group(1)
-                m = re.search(r'--text-color\s*:\s*(#[0-9a-fA-F]{6})\s*;', text)
-                if m:
-                    fg = m.group(1)
-                # Fallback: body background
-                if bg == "#cccccc":
-                    m = re.search(r'body\s*\{[^}]*background(?:-color)?:\s*(#[0-9a-fA-F]{6})', text)
-                    if m:
-                        bg = m.group(1)
-            except Exception:
-                pass
-
-        # Render a 14×14 pixmap with two 5px circles
-        pix = QPixmap(14, 14)
-        pix.fill(Qt.transparent)
-        p = QPainter(pix)
-        p.setRenderHint(QPainter.Antialiasing)
-        p.setPen(Qt.NoPen)
-        p.setBrush(QColor(bg))
-        p.drawEllipse(0, 4, 6, 6)
-        p.setBrush(QColor(fg))
-        p.drawEllipse(8, 4, 6, 6)
-        p.end()
-        return QIcon(pix)
-
-    def _on_style_selected(self, index: int):
-        combo = self.sender()
-        if not isinstance(combo, QComboBox):
+    def _start_pregen(self, infos: list | None):
+        """收集未缓存的 Typora 主题，分块下载画廊预览图（主线程 QTimer）。"""
+        if self._pregen_timer.isActive():
+            self._pregen_timer.stop()
+        self._pregen_queue = []
+        if not infos:
             return
-        style_name = combo.itemData(index) or ""
-        if not style_name:
-            self._preview_info.setText("")
+        for t in infos:
+            if not t.name.startswith("typora-"):
+                continue
+            css_stem = t.name[7:]
+            if css_stem not in _TYPORA_GALLERY_URLS:
+                continue  # 画廊无此主题 → 交给运行时 Chromium 渲染
+            p = _PREVIEW_CACHE_DIR / f"{t.name}.png"
+            if p.exists() or t.name in _PREVIEW_CACHE:
+                continue  # 已有缓存
+            self._pregen_queue.append(css_stem)
+        if self._pregen_queue:
+            self._pregen_timer.start(200)  # 每 200ms 下载一个，降低 UI 抖动
+
+    def _pregen_step(self):
+        """每个 tick 下载一个画廊缩略图到磁盘缓存。"""
+        if not self._pregen_queue:
+            self._pregen_timer.stop()
             return
-        desc_map = {"bwx": "商务黑白·经典稳重", "modern": "现代蓝色·醒目时尚"}
-        self._preview_info.setText(f"✓ 已选：{style_name} {desc_map.get(style_name, '')}".strip())
+        css_stem = self._pregen_queue.pop(0)
+        cache_path = _PREVIEW_CACHE_DIR / f"typora-{css_stem}.png"
+        if not cache_path.exists():
+            _download_typora_file(css_stem, cache_path)
+        if not self._pregen_queue:
+            self._pregen_timer.stop()
+
+    def closeEvent(self, event):
+        self._floating_preview.hide()
+        self._pregen_timer.stop()
+        super().closeEvent(event)
 
     def _on_combo_preview(self, combo: QComboBox, index):
         # 只在下拉弹层真正打开时显示预览。selectionModel().currentChanged
@@ -1301,19 +1389,18 @@ class MainWindow(QWidget):
         return super().eventFilter(obj, event)
 
     def _reload_style_combos(self, infos: list | None = None):
-        """填充风格下拉框。包含 Typora 主题的色点预览图标。"""
+        """填充渲染主题下拉框。"""
         # 下拉即将重建，任何残留的浮动预览都要先隐藏
         self._floating_preview.hide()
         for combo in (self.tpl_zh, self.tpl_en):
             combo.clear()
         if infos:
             for t in infos:
-                icon = QIcon()  # default empty icon for non-typora templates
-                if t.name.startswith("typora-"):
-                    css_stem = t.name[7:]  # strip "typora-" prefix
-                    icon = self._typora_theme_icon(css_stem)
-                self.tpl_zh.addItem(icon, t.label, t.name)
-                self.tpl_en.addItem(icon, t.label, t.name)
+                disp = t.label
+                if disp.lower().startswith("typora "):
+                    disp = disp[len("Typora "):]
+                self.tpl_zh.addItem(disp, t.name)
+                self.tpl_en.addItem(disp, t.name)
             for combo in (self.tpl_zh, self.tpl_en):
                 idx = combo.findData("bwx")
                 if idx >= 0:

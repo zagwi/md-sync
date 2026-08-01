@@ -76,6 +76,8 @@ md-sync 会自动发现本机 Typora 主题目录下的主题，并以
 - **macOS**：`~/Library/Application Support/abnerworks.Typora/themes`
 - **Linux**：`~/.config/Typora/themes`
 
+访问 <https://github.com/zagwi/typora-themes-util> 可一次下载并安装 Typora 官网推荐的所有社区主题。
+
 未检测到上述目录时，Typora 主题不会出现在「渲染风格」下拉框，GUI 会提示「未检测到本机已安装 Typora」。
 
 渲染层针对「Typora 编辑器主题」与

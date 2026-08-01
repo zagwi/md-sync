@@ -20,6 +20,7 @@ from md_sync.config import OutputConfig, ProjectConfig
 from md_sync.core.document import Document
 
 logger = logging.getLogger(__name__)
+
 from md_sync.core.parser import MdParser
 from md_sync.exporters.page import resolve_margin
 from md_sync.exporters.pandoc import export_via_pandoc
@@ -31,6 +32,122 @@ from md_sync.template.manager import TemplateManager
 from md_sync.translate.fallback import _detect_provider
 from md_sync.translate.manager import TranslationManager
 from md_sync.translate.service import translate_document
+
+# ── Typora dark-theme detection ────────────────────────────────────────
+# The template injects concrete (not var-derived) table colors so dark
+# themes get clearly visible borders. Detection must survive the wide
+# variety of theme naming conventions:
+#   * bloom 系            --bg / --text (hex)
+#   * night / github-night --bg-color / --text-color (hex)
+#   * compact-night       --bg-color / --text-color (hsl!)
+#   * vlook-*-dark        --db-dk / --df-dk (own naming, filename has -dark)
+#   * ia-typora night     no variables at all → filename/night heuristic
+_TYPORA_BG_RX = re.compile(r"--(?:bg|bg-color)\s*:\s*([^;]+);")
+_TYPORA_TEXT_RX = re.compile(r"--(?:text|text-color)\s*:\s*([^;]+);")
+_VLOOK_DK_RX = re.compile(r"--db-dk\s*:\s*([^;]+);")
+_HEX_RX = re.compile(r"#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
+_RGB_RX = re.compile(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)")
+_HSL_RX = re.compile(r"hsla?\(\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)%\s*[, ]\s*(\d+(?:\.\d+)?)%")
+_DIRECT_BG_RX = re.compile(
+    r"(?:html|body)\s*\{[^}]*background(?:-color)?\s*:\s*([#a-fA-F0-9]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\))"
+)
+_DIRECT_TEXT_RX = re.compile(r"#write\s*\{[^}]*color\s*:\s*([#a-fA-F0-9]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\))")
+
+
+def _css_luminance(value: str) -> float | None:
+    """Return relative luminance (0=black, 1=white) of a CSS color value.
+
+    Accepts hex (#rgb/#rrggbb), rgb()/rgba() and hsl()/hsla() — some
+    themes (compact-night) declare their palette in hsl(). Returns None
+    when the value can't be parsed (var() indirection, named colors…).
+    """
+    v = (value or "").strip()
+    m = _HEX_RX.search(v)
+    if m:
+        h = m.group(1)
+        if len(h) == 3:
+            h = "".join(c * 2 for c in h)
+        r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    m = _RGB_RX.search(v)
+    if m:
+        r, g, b = (int(m.group(i)) / 255 for i in (1, 2, 3))
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    m = _HSL_RX.search(v)
+    if m:
+        h = float(m.group(1)) / 360
+        s = float(m.group(2)) / 100
+        l = float(m.group(3)) / 100
+        if s == 0:
+            r = g = b = l
+        else:
+            def _hue(p, q, t):
+                if t < 0:
+                    t += 1
+                if t > 1:
+                    t -= 1
+                if t < 1 / 6:
+                    return p + (q - p) * 6 * t
+                if t < 1 / 2:
+                    return q
+                if t < 2 / 3:
+                    return p + (q - p) * (2 / 3 - t) * 6
+                return p
+            q = l * (1 + s) if l < 0.5 else l + s - l * s
+            p = 2 * l - q
+            r = _hue(p, q, h + 1 / 3)
+            g = _hue(p, q, h)
+            b = _hue(p, q, h - 1 / 3)
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return None
+
+
+def _detect_typora_dark(css: str, css_name: str = "") -> bool:
+    """Detect whether a Typora theme is dark.
+
+    Strategy (first conclusive answer wins):
+      1. Filename heuristic — official themes are named ``*-night`` /
+         ``*-dark``; vlook dark variants are ``vlook-*-dark``.
+      2. Explicit ``--text``/``--text-color`` (light text ⇒ dark bg).
+      3. ``--bg``/``--bg-color`` (dark bg ⇒ dark theme).
+      4. vlook's own ``--db-dk`` (dark background token).
+      5. Direct ``html/body`` background and ``#write`` color rules for
+         themes with no variables at all.
+    Returns False when nothing conclusive (safe light default).
+    """
+    name = css_name or ""
+    # Filename is the most reliable signal. vlook ships *both* -light and
+    # -dark variants whose CSS contains both -lg and -dk tokens, so an
+    # explicit "light" in the name must win over any --db-dk token below.
+    if re.search(r"dark", name, re.IGNORECASE) and not re.search(r"light", name, re.IGNORECASE):
+        return True
+    if re.search(r"light", name, re.IGNORECASE):
+        return False
+    if re.search(r"night", name, re.IGNORECASE):
+        return True
+    for rx in (_TYPORA_TEXT_RX, _TYPORA_BG_RX):
+        for m in rx.finditer(css):
+            lum = _css_luminance(m.group(1))
+            if lum is None:
+                continue
+            if rx is _TYPORA_TEXT_RX:
+                return lum > 0.55  # light text ⇒ dark bg
+            return lum < 0.45  # dark bg ⇒ dark theme
+    # vlook 的 --db-dk 只对 vlook 命名的文件可信(其它主题可能只是同名变量)
+    if re.search(r"vlook", name, re.IGNORECASE):
+        for m in _VLOOK_DK_RX.finditer(css):
+            lum = _css_luminance(m.group(1))
+            if lum is not None and lum < 0.45:
+                return True
+    for rx in (_DIRECT_BG_RX, _DIRECT_TEXT_RX):
+        for m in rx.finditer(css):
+            lum = _css_luminance(m.group(1))
+            if lum is None:
+                continue
+            if rx is _DIRECT_TEXT_RX:
+                return lum > 0.55  # light text ⇒ dark bg
+            return lum < 0.45  # dark bg ⇒ dark theme
+    return False
 
 
 class SyncPipeline:
@@ -432,7 +549,6 @@ class SyncPipeline:
                 typora_css = css_raw
             # Use the typora Jinja2 template (shared by all typora-* themes)
             template_name = "typora"
-
         catalog = self._template_catalog(out_cfg)
 
         theme_dir = catalog.info.directory
@@ -453,6 +569,10 @@ class SyncPipeline:
         kwargs = {}
         if typora_css:
             kwargs["typora_css"] = typora_css
+            # 明暗检测：表格边框/表头底色注入具体颜色而非 CSS 变量回退链，
+            # 确保 compact-night / vlook-*-dark 等非标准变量命名的 dark 主题
+            # 也能得到可见的边框（不再落到深色 #333 而隐形）。
+            kwargs["typora_dark"] = _detect_typora_dark(typora_css, css_name)
 
         # Both schemas are rendered by a single HtmlRenderer whose *layout*
         # strategy is selected by the schema, not by a separate code path:

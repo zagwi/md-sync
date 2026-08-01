@@ -1,5 +1,5 @@
 name: typora
-label: Typora 主题
+label: 默认
 description: 标准 Markdown HTML 输出，搭配 Typora CSS 主题渲染，支持任意文档类型
 version: "1.0"
 author: md-sync

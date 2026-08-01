@@ -59,6 +59,17 @@ html, body {
 #write {
   background-color: color-mix(in srgb, var(--bg, #ffffff), white 12%);
 }
+{% elif typora_dark %}
+/* dark 主题：部分主题(compact-night 等)只通过 Typora 专属选择器
+   (body.typora-export / content)设置背景，导出 HTML 没有这些类导致
+   白底。pipeline 已判定为 dark，这里把主题背景色补到 html/body。
+   变量回退链：--bg-color(night/compact) → --bg(bloom) → --db-dk(vlook) */
+html, body {
+  background: var(--bg-color, var(--bg, var(--db-dk, #1b1b1b))) !important;
+}
+#write {
+  background-color: transparent;
+}
 {% endif %}
 /* 打印(PDF)时让 #write 铺满整页、去掉卡片圆角/阴影,并由 pdf.py 注入的
    print-color-adjust: exact 保证 html/body/#write 底色延伸到 @page 边缘,
@@ -75,14 +86,31 @@ html, body {
   }
 }
 {% endif %}
-/* 表格拉满宽度 */
-table { width: 100%; border-collapse: collapse; }
-th, td { padding: 6px 10px; text-align: left; border: 1px solid #ddd; }
-th { background: #f5f5f5; font-weight: 700; }
+/* 表格拉满宽度。边框/表头底色由 pipeline 检测的主题明暗决定(typora_dark)，
+   注入具体颜色而非 CSS 变量回退链——很多 dark 主题(ia_typora_night、
+   vlook-*)既不定义 --text 也不定义 --text-color，变量回退链会落到深色
+   #333 导致深底深框边框隐形。这里直接按明暗给两套确定颜色：
+     dark:  边框 #4a5058(深底上清晰可见)，表头 12% 白(略亮的浅条)
+     light: 边框 #ddd，表头 #f5f5f5(与 Typora 浅色主题原生观感一致) */
+#write table { width: 100%; border-collapse: collapse; }
+#write th, #write td { padding: 6px 10px; text-align: left; }
+{% if typora_dark %}
+#write th, #write td { border: 1px solid #4a5058; }
+#write th { background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+{% else %}
+#write th, #write td { border: 1px solid #ddd; }
+#write th { background: #f5f5f5; font-weight: 700; }
+{% endif %}
 @media print {
-  table { width: 100%; border-collapse: collapse; }
-  th, td { padding: 4px 8px; text-align: left; border: 1px solid #ccc; }
-  th { background: #f0f0f0; font-weight: 700; }
+  #write table { width: 100%; border-collapse: collapse; }
+  #write th, #write td { padding: 4px 8px; text-align: left; }
+{% if typora_dark %}
+  #write th, #write td { border: 1px solid #4a5058; }
+  #write th { background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+{% else %}
+  #write th, #write td { border: 1px solid #ccc; }
+  #write th { background: #f0f0f0; font-weight: 700; }
+{% endif %}
   /* 允许代码块在页间自然断开，避免大块空白 */
   pre { page-break-inside: auto; break-inside: auto; }
   code { word-wrap: break-word; white-space: pre-wrap; }

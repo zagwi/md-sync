@@ -31,7 +31,17 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QPoint, QRectF, Qt, QThread, QTimer, QUrl, Signal
-from PySide6.QtGui import QBrush, QColor, QDesktopServices, QFont, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QDesktopServices,
+    QFont,
+    QIcon,
+    QPainter,
+    QPen,
+    QPixmap,
+    QStandardItem,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -129,6 +139,58 @@ _TYPORA_GALLERY_URLS = {
 
 # 访问 theme.typora.io 本机直连会超时，需走代理（依次尝试）
 _TYPORA_PROXIES = ("http://127.0.0.1:1080", "")
+
+# ── Typora 主题分组（两级下拉：仓库 → 主题） ─────────────────
+# 分组条件：同一 GitHub 仓库的所有主题为一组，它们通常共享公共前缀
+# （参考 https://theme.typora.io/ 按作者仓库分组）。前缀按「长的在前」排序，
+# 避免短前缀误吞（如 claude-like 需先于 claude）。未命中的主题归入「其他主题」。
+_TYPORA_GROUPS: list[tuple[str, str]] = [
+    ("Claude-like", "claude-like"), ("Novel Tex", "novel-tex-"),
+    ("Animal Island", "animal-island"), ("Esther Inspired", "esther-inspired-"),
+    ("Neil JetBrains Mono", "neil-jetbrains-mono"), ("Middle East", "middle-east-"),
+    ("Bit Clean", "bit-clean"), ("Blue Topaz", "blue-topaz"),
+    ("Eyes Green", "eyes-green"), ("Konayuki", "konayuki-"),
+    ("See-Yue", "see-yue-"), ("Themeable", "themeable"),
+    ("Autumnus", "autumnus"), ("Everforest", "everforest"),
+    ("Paperglow", "paperglow"), ("Redefine", "redefine"),
+    ("Solarized", "solarized"), ("Lightmind", "lightmind"),
+    ("Lostkeys", "lostkeys"), ("Monospace", "monospace"),
+    ("Neumorphism", "neumorphism"), ("Happysimple", "happysimple"),
+    ("Gruvbox", "gruvbox"), ("Inkwell", "inkwell"), ("Ladder", "ladder"),
+    ("Lapis", "lapis"), ("Liquid", "liquid"), ("MDMDT", "mdmdt"),
+    ("MLike", "mlike"), ("Onigiri", "onigiri"), ("Scrolls", "scrolls"),
+    ("Sonnet", "sonnet"), ("Tailwind", "tailwind"), ("Terminal", "terminal"),
+    ("Vintage", "vintage"), ("Virgo", "virgo"), ("Bloom", "bloom-"),
+    ("Nexmoe", "nexmoe-"), ("Paradox", "paradox-"), ("Quartz", "quartz-"),
+    ("Riwaq", "riwaq-"), ("Dogs", "dogs-"), ("I-W", "i-w-"),
+    ("Pink", "pink-"), ("Crisp", "crisp-"), ("Clean", "clean-"),
+    ("Compact", "compact"), ("Fluent", "fluent"), ("Folio", "folio"),
+    ("Jinxiu", "jinxiu"), ("Ceylon", "ceylon"), ("Cement", "cement"),
+    ("Amatriz", "amatriz"), ("Bluetex", "bluetex"), ("Alto", "alto"),
+    ("iA Typora", "ia-typora"), ("One Dark", "onedark"),
+    ("One Light", "onelight"), ("GitHub", "github"),
+    ("Notion", "notion"), ("Purple", "purple-"), ("Phycat", "phycat-"),
+    ("Drake", "drake"), ("vlook", "vlook-"), ("Seniva", "seniva"),
+    ("Next", "next"), ("Ravel", "ravel"), ("Pie", "pie"),
+    ("Print", "print"), ("Claude", "claude"), ("Mint", "mint"),
+    ("Mo", "mo-"), ("DYZJ", "dyzj"), ("Haru", "haru"),
+    ("Inside", "inside"), ("Vue", "vue"), ("Xy", "xy"),
+]
+
+# 下拉模型角色：组头行存分组显示名
+_ROLE_GROUP = Qt.UserRole + 1
+
+
+def _typora_group_key(stem: str) -> str | None:
+    """返回 typora 主题 CSS stem 所属分组名，未命中返回 None。"""
+    # 精确匹配优先（如 "mo" 主题：前缀 "mo-" 不含裸 "mo"，但 "mo" 不能作
+    # 前缀否则会误吞 morandigarden）
+    if stem.lower() == "mo":
+        return "Mo"
+    for name, prefix in _TYPORA_GROUPS:
+        if stem.lower().startswith(prefix):
+            return name
+    return None
 
 _SAMPLE_PREVIEW_HTML = """<!DOCTYPE html>
 <html lang="zh">
@@ -544,6 +606,10 @@ class FloatingPreview(QWidget):
         self.setWindowFlags(Qt.ToolTip | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setAttribute(Qt.WA_TranslucentBackground)
+        # 鼠标事件穿透：预览是置顶窗口，若悬浮在下拉选项上方会吃掉点击
+        # （三列弹层 684px 宽后，贴在 combo 右缘的预览会盖住弹层右侧），
+        # 设为对鼠标透明后点击直接落到下面的下拉选项上。
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.setFixedSize(self.TOTAL_W, self.TOTAL_H)
         self._pixmap: QPixmap | None = None
         self._name = ""
@@ -695,6 +761,11 @@ class MainWindow(QWidget):
         self._pregen_queue: list[str] = []
         self._pregen_timer = QTimer(self)
         self._pregen_timer.timeout.connect(self._pregen_step)
+
+        # 渲染主题下拉：两级分组（组头可折叠）
+        self._style_base: list = []               # 非 typora- 前缀的模板（置顶）
+        self._style_groups: list[tuple[str, list]] = []  # [(组名, [TemplateInfo])]
+        self._collapsed_groups: set[str] | None = None  # 折叠的组名；None=未初始化（首次全部折叠）
 
         self._build_ui()
         self._load_templates()
@@ -991,8 +1062,25 @@ class MainWindow(QWidget):
         zv.selectionModel().currentChanged.connect(lambda c, p: self._on_combo_preview(self.tpl_zh, c))
         ev.selectionModel().currentChanged.connect(lambda c, p: self._on_combo_preview(self.tpl_en, c))
         zv.installEventFilter(self); ev.installEventFilter(self)
+        # 组头点击必须在 viewport 层拦截（见 eventFilter）：QComboBox 的弹层
+        # 容器在 viewport 上也装了事件过滤器，鼠标释放落在任意 enabled 项上都会
+        # hidePopup；组头是 enabled 但不可选中，若让释放事件传到内部过滤器，
+        # 弹层会被关闭。我们在 viewport 上先消费掉组头点击，弹层保持打开。
+        zvv = zv.viewport(); evv = ev.viewport()
+        zvv.installEventFilter(self); evv.installEventFilter(self)
         self.tpl_zh.activated.connect(self._floating_preview.hide)
         self.tpl_en.activated.connect(self._floating_preview.hide)
+        # 兜底：若 viewport 过滤器因平台差异未命中，clicked 信号仍可触发折叠
+        zv.clicked.connect(lambda i: self._on_style_group_clicked(self.tpl_zh, i))
+        ev.clicked.connect(lambda i: self._on_style_group_clicked(self.tpl_en, i))
+        # 键盘导航落组头（不可选中）时跳到组内首个主题（保险起见）
+        self.tpl_zh.currentIndexChanged.connect(lambda _: self._fix_group_current(self.tpl_zh))
+        self.tpl_en.currentIndexChanged.connect(lambda _: self._fix_group_current(self.tpl_en))
+        # 弹层高度：此 PySide6 版本忽略 maxVisibleItems（实测 359 项弹层仍撑到
+        # 800px），设标准值仅作兜底；真正生效靠 eventFilter 在弹层打开后
+        # 延迟一帧封顶容器高度（_cap_popup_height），超长列表自动滚动。
+        for combo in (self.tpl_zh, self.tpl_en):
+            combo.setMaxVisibleItems(14)
 
         # ── 输出格式（每个格式一个组，组内堆叠「格式卡片」+「专属控制项」） ──
         fmt_label = QLabel("输出格式")
@@ -1381,33 +1469,181 @@ class MainWindow(QWidget):
         self._floating_preview.set_preview(pix, display_name)
 
     def eventFilter(self, obj, event):
+        # 弹层打开（视图被弹层容器接管后收到 Show）：延迟一帧封顶弹层高度。
+        # 此 PySide6 版本 QComboBox 弹层忽略 maxVisibleItems，359 项能撑出 800px
+        # 弹层；限制容器高度后其余滚动（竖向滚动条 ScrollBarAsNeeded）。
+        if event.type() == QEvent.Show:
+            for combo in (getattr(self, 'tpl_zh', None), getattr(self, 'tpl_en', None)):
+                if combo is not None and obj is combo.view():
+                    QTimer.singleShot(0, lambda c=combo: self._cap_popup_height(c))
+                    break
         if event.type() == QEvent.Hide and hasattr(self, '_floating_preview'):
             for combo in (getattr(self, 'tpl_zh', None), getattr(self, 'tpl_en', None)):
                 if combo is not None and obj is combo.view():
                     self._floating_preview.hide()
                     break
+        # 组头点击（▸/▾ 分组行）→ 展开/收起，弹层保持打开、不误选。
+        # 在 viewport 上消费鼠标释放：QComboBox 内部容器在 viewport 上也装了
+        # 事件过滤器，释放落在任意 enabled 项上都会 hidePopup；组头是 enabled
+        # 但不可选中，若不拦截，弹层会被内部过滤器关闭。返回 True 后事件不再
+        # 传给容器，弹层保留，同时视图不产生 clicked（不会重复触发）。
+        if event.type() == QEvent.MouseButtonRelease:
+            for combo in (getattr(self, 'tpl_zh', None), getattr(self, 'tpl_en', None)):
+                if combo is not None and obj is combo.view().viewport():
+                    idx = combo.view().indexAt(event.position().toPoint())
+                    if idx.isValid():
+                        gname = combo.itemData(idx.row(), _ROLE_GROUP)
+                        if gname:
+                            # 延迟一帧重建：先让本次点击事件完整结束，再改模型，
+                            # 弹层容器在 modelReset 后按新行数自适应高度。
+                            QTimer.singleShot(0, lambda g=gname, c=combo:
+                                              self._toggle_style_group(g, c))
+                            return True
+                    break
         return super().eventFilter(obj, event)
 
+    def _cap_popup_height(self, combo: QComboBox):
+        """普通下拉弹层封顶 ~14 行：行数少时按实际行数自适应，多时其余滚动。"""
+        cont = combo.view().parent()
+        if cont is None or cont is combo:
+            return  # 容器尚未创建/未被接管（弹层未打开过）
+        n = combo.count()
+        # 组头为粗体行，略高于普通行；取首行行高并加保险值，避免末行被裁
+        row_h = combo.view().sizeHintForRow(0)
+        if row_h <= 0:
+            row_h = 24
+        row_h = max(row_h, 22)
+        h = min(max(n, 1), 14) * row_h + 12  # +12 容器边框/内边距余量
+        if cont.height() != h:
+            cont.setFixedHeight(h)
+
     def _reload_style_combos(self, infos: list | None = None):
-        """填充渲染主题下拉框。"""
+        """填充渲染主题下拉框（Typora 主题按仓库分组，两级可折叠）。"""
         # 下拉即将重建，任何残留的浮动预览都要先隐藏
         self._floating_preview.hide()
-        for combo in (self.tpl_zh, self.tpl_en):
-            combo.clear()
         if infos:
-            for t in infos:
-                disp = t.label
-                if disp.lower().startswith("typora "):
-                    disp = disp[len("Typora "):]
-                self.tpl_zh.addItem(disp, t.name)
-                self.tpl_en.addItem(disp, t.name)
-            for combo in (self.tpl_zh, self.tpl_en):
-                idx = combo.findData("bwx")
-                if idx >= 0:
-                    combo.setCurrentIndex(idx)
+            self._style_base = [t for t in infos if not t.name.startswith("typora-")]
+            self._style_groups = self._group_typora_infos(
+                [t for t in infos if t.name.startswith("typora-")])
+            # 默认全部折叠，减少选项；保留用户展开过的组不变。
+            # 仅在首次遇到非空分组列表时初始化（None 哨兵）：resume 等无分组
+            # 插件会把集合置空，切回 typora 时若再判断空集就会错误地全部重折叠。
+            if self._collapsed_groups is None and self._style_groups:
+                self._collapsed_groups = set(g for g, _ in self._style_groups)
         else:
-            for combo in (self.tpl_zh, self.tpl_en):
-                combo.addItem("(默认 bwx)", "bwx")
+            self._style_base = []
+            self._style_groups = []
+        for combo in (self.tpl_zh, self.tpl_en):
+            self._rebuild_style_combo(combo)
+            self._cap_popup_height(combo)
+
+    @staticmethod
+    def _style_disp(t) -> str:
+        """模板显示名：去掉 "Typora " 前缀。"""
+        disp = t.label
+        if disp.lower().startswith("typora "):
+            disp = disp[len("Typora "):]
+        return disp
+
+    def _group_typora_infos(self, infos: list) -> list[tuple[str, list]]:
+        """把 typora 主题按仓库公共前缀分组，保持字母序。"""
+        groups: dict[str, list] = {}
+        others: list = []
+        for t in infos:
+            stem = t.name[len("typora-"):]
+            key = _typora_group_key(stem)
+            if key:
+                groups.setdefault(key, []).append(t)
+            else:
+                others.append(t)
+        ordered = [(k, groups[k]) for k in sorted(groups)]
+        if others:
+            ordered.append(("其他主题", sorted(others, key=lambda t: t.name)))
+        return ordered
+
+    def _rebuild_style_combo(self, combo: QComboBox):
+        """按当前分组状态重建单个下拉框（组头不可选中，可点击折叠）。"""
+        prev = combo.currentData()
+        # 当前选中的主题所在组强制展开：避免收起后选中项消失、无声回退到 bwx
+        if prev is not None:
+            for gname, members in self._style_groups:
+                if any(m.name == prev for m in members):
+                    self._collapsed_groups.discard(gname)
+                    break
+        combo.clear()
+        model = combo.model()
+
+        def _add_item(disp: str, name: str):
+            it = QStandardItem(disp)
+            it.setData(name, Qt.UserRole)
+            it.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            model.appendRow(it)
+
+        if not self._style_base and not self._style_groups:
+            _add_item("(默认 bwx)", "bwx")
+            combo.setCurrentIndex(0)
+            return
+
+        for t in self._style_base:
+            _add_item(self._style_disp(t), t.name)
+        for gname, members in self._style_groups:
+            collapsed = gname in self._collapsed_groups
+            head = QStandardItem(f"{'▸' if collapsed else '▾'} {gname} ({len(members)})")
+            head.setData(gname, _ROLE_GROUP)
+            head.setFlags(Qt.ItemIsEnabled)  # 可点击（事件过滤器），不可选中
+            f = head.font()
+            f.setBold(True)
+            head.setFont(f)
+            head.setForeground(QBrush(QColor("#6b7280")))
+            head.setBackground(QBrush(QColor("#f1f1f4")))
+            model.appendRow(head)
+            if not collapsed:
+                for t in members:
+                    _add_item(self._style_disp(t), t.name)
+
+        # 恢复之前选中（当前选中仍有效则保持；否则回退 bwx / 首项）
+        idx = combo.findData(prev) if prev is not None else -1
+        if idx < 0:
+            idx = combo.findData("bwx")
+        if idx < 0 and combo.count() > 0:
+            idx = 0
+        if idx >= 0:
+            combo.setCurrentIndex(idx)
+
+    def _on_style_group_clicked(self, combo: QComboBox, index):
+        """点击组头（▸/▾）→ 展开/收起该分组（viewport 过滤器未命中时的兜底）。"""
+        if not index.isValid():
+            return
+        gname = combo.itemData(index.row(), _ROLE_GROUP)
+        if not gname:
+            return
+        QTimer.singleShot(0, lambda g=gname, c=combo: self._toggle_style_group(g, c))
+
+    def _toggle_style_group(self, gname: str, combo: QComboBox):
+        """展开/收起一个分组，重建两个下拉框（保持弹层打开）。"""
+        if self._collapsed_groups is None:
+            self._collapsed_groups = set()
+        if gname in self._collapsed_groups:
+            self._collapsed_groups.discard(gname)
+        else:
+            self._collapsed_groups.add(gname)
+        for c in (self.tpl_zh, self.tpl_en):
+            self._rebuild_style_combo(c)
+            self._cap_popup_height(c)
+
+    def _fix_group_current(self, combo: QComboBox):
+        """键盘导航落到组头（不可选中）时，跳到组内第一个主题。"""
+        idx = combo.currentIndex()
+        if idx < 0 or idx >= combo.count():
+            return
+        if combo.itemData(idx, _ROLE_GROUP) is None:
+            return  # 非组头
+        # 找到下一个可选中项（组内第一个主题，或后续项）
+        for i in range(idx + 1, combo.count()):
+            if combo.itemData(i, _ROLE_GROUP) is None:
+                combo.setCurrentIndex(i)
+                return
+        combo.setCurrentIndex(0)
 
     # ── Styling (shadcn-inspired) ─────────────────────────────────────
     def _apply_style(self):

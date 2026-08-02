@@ -5,16 +5,17 @@ Two backends live here:
 * :func:`export_pdf` — the classic CLI path (``--print-to-pdf``). Fast and
   dependency-light, but Chromium's CLI cannot inject a custom footer, so there
   are no page numbers.
-* :func:`export_pdf_cdp` — a DevTools-protocol path (driven over ``websockets``,
-  which ``uvicorn[standard]`` already pulls in) that renders the page in a
-  real headless browser and calls ``Page.printToPDF`` with an arbitrary
-  header/footer template. This is what plugins use when they need special PDF
-  behaviour — e.g. the gongwen plugin's GB/T 9704-2012 page numbers
-  (``— 1 —``). Plugins *override* the built-in behaviour, never the reverse.
+* :func:`export_pdf_cdp` — a DevTools-protocol path (driven over ``websockets``)
+  that renders the page in a real headless browser and calls ``Page.printToPDF``
+  with an arbitrary header/footer template. This is what plugins use when they
+  need special PDF behaviour — e.g. the gongwen plugin's GB/T 9704-2012 page
+  numbers (``— 1 —``). Plugins *override* the built-in behaviour, never the
+  reverse.
 
 Plugins register a :class:`~md_sync.plugin.interface.PdfExporter`; the pipeline
 prefers it over :func:`export_pdf` automatically.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -73,6 +74,7 @@ def export_pdf(
     pdf_path = Path(pdf_path).resolve()
 
     from .page import normalize_page_size
+
     page_size = normalize_page_size(page_size)
 
     if not html_path.exists():
@@ -137,7 +139,8 @@ def export_pdf(
     # Render from a temp copy (same directory so relative URLs in the HTML
     # still resolve) — the source HTML artifact is left untouched.
     fd, tmp_html = tempfile.mkstemp(
-        prefix=".md-sync-pdf-", suffix=".html", dir=str(html_path.parent))
+        prefix=".md-sync-pdf-", suffix=".html", dir=str(html_path.parent)
+    )
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(html_text)
     tmp_path = Path(tmp_html)
@@ -291,7 +294,8 @@ async def _cdp_print(
     else:
         html = "<style>" + _page_rule + "</style>" + html
     fd, tmp_html = tempfile.mkstemp(
-        prefix=".md-sync-cdp-", suffix=".html", dir=str(html_path.parent))
+        prefix=".md-sync-cdp-", suffix=".html", dir=str(html_path.parent)
+    )
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(html)
     tmp_path = Path(tmp_html)
@@ -342,32 +346,41 @@ async def _cdp_print(
             deadline = time.monotonic() + timeout
             while time.monotonic() < deadline:
                 try:
-                    ready = await call("Runtime.evaluate", {
-                        "expression": "document.readyState", "returnByValue": True,
-                    })
+                    ready = await call(
+                        "Runtime.evaluate",
+                        {
+                            "expression": "document.readyState",
+                            "returnByValue": True,
+                        },
+                    )
                     if ready.get("result", {}).get("value") == "complete":
                         break
                 except Exception:
                     pass
                 await asyncio.sleep(0.2)
 
-            mm = lambda v: v / 25.4
+            def mm(v: float) -> float:
+                return v / 25.4
+
             w_mm, h_mm = PAGE_SIZES_MM[page_size]
             t, r, b, l = _parse_four_margins_mm(page_margin)
-            result = await call("Page.printToPDF", {
-                "landscape": False,
-                "displayHeaderFooter": bool(header_template or footer_template),
-                "printBackground": True,
-                "paperWidth": round(mm(w_mm), 4),
-                "paperHeight": round(mm(h_mm), 4),
-                "marginTop": round(mm(t), 4),
-                "marginRight": round(mm(r), 4),
-                "marginBottom": round(mm(b), 4),
-                "marginLeft": round(mm(l), 4),
-                "headerTemplate": header_template or "",
-                "footerTemplate": footer_template or "",
-                "preferCSSPageSize": False,
-            })
+            result = await call(
+                "Page.printToPDF",
+                {
+                    "landscape": False,
+                    "displayHeaderFooter": bool(header_template or footer_template),
+                    "printBackground": True,
+                    "paperWidth": round(mm(w_mm), 4),
+                    "paperHeight": round(mm(h_mm), 4),
+                    "marginTop": round(mm(t), 4),
+                    "marginRight": round(mm(r), 4),
+                    "marginBottom": round(mm(b), 4),
+                    "marginLeft": round(mm(l), 4),
+                    "headerTemplate": header_template or "",
+                    "footerTemplate": footer_template or "",
+                    "preferCSSPageSize": False,
+                },
+            )
             data = result.get("data")
             if not data:
                 print(f"[pdf] CDP ERROR: printToPDF returned no data ({result})")

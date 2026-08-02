@@ -8,6 +8,7 @@ Parser dispatch chain (in order):
 The built-in resume parser has been moved to ``md_sync/plugins/resume/``
 as a proper ``ParserPlugin``, auto-discovered by the plugin registry.
 """
+
 from __future__ import annotations
 
 import re
@@ -90,7 +91,7 @@ class MdParser:
         doc.source_path = str(path)
         doc.source_raw = text
         # Detect language from file content
-        zh_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+        zh_chars = sum(1 for c in text if "\u4e00" <= c <= "\u9fff")
         doc.source_lang = "zh" if zh_chars > 100 else "en"
         return doc
 
@@ -116,7 +117,6 @@ class MdParser:
 
         # 3. Generic Markdown fallback (always works)
         return self._parse_generic(text)
-
 
     # ── Generic Markdown fallback ───────────────────────────────────────
 
@@ -181,7 +181,11 @@ class MdParser:
                 i += 1
                 continue
 
-            target = current_section if current_section is not None else Section(id="body", title="", level=1)
+            target = (
+                current_section
+                if current_section is not None
+                else Section(id="body", title="", level=1)
+            )
             if current_section is None:
                 current_section = target
 
@@ -194,9 +198,9 @@ class MdParser:
                     code_lines.append(lines[i])
                     i += 1
                 i += 1  # skip closing fence
-                target.items.append(Item(
-                    type="code", content="\n".join(code_lines),
-                    language=fence_lang))
+                target.items.append(
+                    Item(type="code", content="\n".join(code_lines), language=fence_lang)
+                )
                 continue
 
             # Table: consecutive lines starting with |
@@ -236,5 +240,6 @@ def parse_resume(path: Path | str) -> Document:
     Uses a PluginRegistry to discover the built-in resume parser.
     """
     from md_sync.plugin.registry import PluginRegistry
+
     reg = PluginRegistry()
     return MdParser(plugin_registry=reg).parse_file(path, schema="resume")

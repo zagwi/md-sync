@@ -3,6 +3,7 @@
 A Document is composed of Sections, each containing Items.
 This model is format-agnostic — parsers produce it, renderers consume it.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -14,6 +15,7 @@ from dataclasses import dataclass, field
 @dataclass
 class Metric:
     """A quantified metric value (e.g. QPS 10K+, 99.9%+)."""
+
     value: str
     context: str = ""  # what this metric measures
 
@@ -28,14 +30,15 @@ class Item:
         project    → ``period``, ``title``, ``role``, ``content``, ``metrics``, ``tags``
         open_source→ ``title``, ``content``, ``features``, ``url``, ``tags``
     """
-    type: str                       # bullet | entry | project | open_source
-    content: str = ""               # main description text (markdown allowed)
+
+    type: str  # bullet | entry | project | open_source
+    content: str = ""  # main description text (markdown allowed)
 
     # Common structured fields
     period: str | None = None
-    title: str | None = None     # company / school / project name
+    title: str | None = None  # company / school / project name
     subtitle: str | None = None  # role / department
-    people: str | None = None    # team size
+    people: str | None = None  # team size
 
     # Project-specific
     role: str | None = None
@@ -69,9 +72,10 @@ class Item:
 @dataclass
 class Section:
     """A heading-level section containing items."""
-    id: str                  # machine-readable key: "professional_summary"
-    title: str               # display title: "综合素质及能力"
-    level: int               # heading depth (1 = top)
+
+    id: str  # machine-readable key: "professional_summary"
+    title: str  # display title: "综合素质及能力"
+    level: int  # heading depth (1 = top)
     items: list[Item] = field(default_factory=list)
     badge: str | None = None  # optional badge text: "20年"
 
@@ -82,6 +86,7 @@ class Section:
 @dataclass
 class Document:
     """Top-level document: header metadata + list of sections."""
+
     # Header
     name: str = ""
     title: str = ""

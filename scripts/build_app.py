@@ -21,7 +21,6 @@ from pathlib import Path
 
 import PyInstaller.__main__
 
-
 ROOT = Path(__file__).resolve().parent.parent  # repo root (scripts/ -> repo/)
 APP_NAME = "md-sync"
 ENTRY = ROOT / "md_sync" / "cli.py"
@@ -38,8 +37,6 @@ def _collect_datas() -> list[tuple[str, str]]:
     bundles = [
         (ROOT / "md_sync" / "templates", "md_sync/templates"),
         (ROOT / "md_sync" / "plugins", "md_sync/plugins"),
-        (ROOT / "md_sync" / "web" / "static", "md_sync/web/static"),
-        (ROOT / "md_sync" / "web" / "templates", "md_sync/web/templates"),
     ]
     return [(str(src), dest) for src, dest in bundles if src.exists()]
 
@@ -54,24 +51,26 @@ def build(clean: bool = False) -> None:
 
     args = [
         str(ENTRY),
-        "--name", APP_NAME,
+        "--name",
+        APP_NAME,
         "--onefile",
         "--noconfirm",
-        "--paths", str(ROOT),
+        "--paths",
+        str(ROOT),
         *datas_args,
-        "--hidden-import", "md_sync.web.app",
-        "--hidden-import", "md_sync.watcher",
-        "--hidden-import", "md_sync.plugin.loader",
-        "--hidden-import", "md_sync.plugin.registry",
-        "--hidden-import", "uvicorn.logging",
-        "--hidden-import", "uvicorn.loops.auto",
-        "--hidden-import", "uvicorn.protocols.auto",
-        "--hidden-import", "uvicorn.lifespan.auto",
+        "--hidden-import",
+        "md_sync.watcher",
+        "--hidden-import",
+        "md_sync.plugin.loader",
+        "--hidden-import",
+        "md_sync.plugin.registry",
         # mypy (and its mypyc-compiled extensions) may live in the global
         # site-packages and get pulled in by analysis on some Python builds.
         # md-sync does not use it, so exclude to avoid corrupt-bundle errors.
-        "--exclude-module", "mypy",
-        "--exclude-module", "mypy_extensions",
+        "--exclude-module",
+        "mypy",
+        "--exclude-module",
+        "mypy_extensions",
     ]
     if clean:
         args.append("--clean")

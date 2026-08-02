@@ -5,6 +5,7 @@ TemplateManager discovers templates from multiple sources:
                      live inside each plugin's own templates/ directory)
   2. Typora OS themes: auto-discovered from the user's Typora themes dir
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -20,16 +21,17 @@ from md_sync.plugin.registry import PluginRegistry
 @dataclass
 class TemplateInfo:
     """Metadata for a registered template."""
+
     name: str
     label: str = ""
     description: str = ""
     version: str = "1.0"
     author: str = "md-sync"
-    schema: str = "resume"          # which document schema this works with
+    schema: str = "resume"  # which document schema this works with
     inherits: str | None = None  # base template name
     engine: str = "jinja2"
     tags: list[str] = field(default_factory=list)
-    preview: str | None = None   # preview image path
+    preview: str | None = None  # preview image path
 
     # Resolved
     directory: Path | None = None
@@ -38,6 +40,7 @@ class TemplateInfo:
 @dataclass
 class TemplateCatalog:
     """Full template metadata including section config."""
+
     info: TemplateInfo
     pdf: dict = field(default_factory=lambda: {"page_size": "A4", "margin": "5mm 8mm"})
     sections: dict[str, dict] = field(default_factory=dict)
@@ -90,12 +93,11 @@ class TemplateManager:
         # 2. Typora themes — only if Typora is installed on this machine
         #    (themes live in an OS-specific dir; see md_sync.plugins.typora.paths).
         from md_sync.plugins.typora.paths import get_typora_themes_dir
+
         typora_dir = get_typora_themes_dir()
         if typora_dir is not None:
             # The bundled "typora" base style now ships inside the typora plugin.
-            typora_base = (
-                self._install_dir / "plugins" / "typora" / "templates" / "typora"
-            )
+            typora_base = self._install_dir / "plugins" / "typora" / "templates" / "typora"
             for css_file in sorted(typora_dir.glob("*.css")):
                 name = f"typora-{css_file.stem}"
                 if name in seen:
@@ -108,16 +110,18 @@ class TemplateManager:
                 # never leak into the generic markdown / resume style lists.
                 if schema is not None and schema != "typora":
                     continue
-                results.append(TemplateInfo(
-                    name=name,
-                    label=f"Typora {css_file.stem.title()}",
-                    description=f"Typora 主题: {css_file.stem}",
-                    version="1.0",
-                    author="Typora Community",
-                    schema="typora",
-                    engine="jinja2",
-                    directory=typora_base,
-                ))
+                results.append(
+                    TemplateInfo(
+                        name=name,
+                        label=f"Typora {css_file.stem.title()}",
+                        description=f"Typora 主题: {css_file.stem}",
+                        version="1.0",
+                        author="Typora Community",
+                        schema="typora",
+                        engine="jinja2",
+                        directory=typora_base,
+                    )
+                )
                 seen.add(name)
 
         return results
@@ -192,6 +196,5 @@ class TemplateManager:
         distributed with the wheel and resolvable at runtime.
         """
         import md_sync
+
         return Path(md_sync.__file__).resolve().parent
-
-

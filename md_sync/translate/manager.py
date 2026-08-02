@@ -19,6 +19,7 @@ Legacy helpers (``lookup``, ``store``, ``mark_pending`` with no target
 language) are kept for backward compatibility and default to the ``en``
 target.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -75,8 +76,9 @@ class TranslationManager:
         entry = self._data.get(key)
         return entry.get("status") if entry else None
 
-    def store(self, source: str, translation: str, target_lang: str = "en",
-              status: str = "done") -> None:
+    def store(
+        self, source: str, translation: str, target_lang: str = "en", status: str = "done"
+    ) -> None:
         key = _hash(source)
         entry = self._data.setdefault(key, {})
         entry[target_lang] = translation

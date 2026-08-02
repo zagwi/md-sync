@@ -24,18 +24,37 @@ from pathlib import Path
 # 每个公文角色可接受的字体族（按优先级；命中其一即视为已具备）
 FONT_ROLES: dict[str, list[str]] = {
     "小标宋（标题）": [
-        "FZXiaoBiaoSong-B05S", "FZXiaoBiaoSong-B05B",
-        "方正小标宋简体", "方正小标宋_GBK", "FandolSong",
-        "华文中宋", "STZhongsong", "SimSun", "宋体",
+        "FZXiaoBiaoSong-B05S",
+        "FZXiaoBiaoSong-B05B",
+        "方正小标宋简体",
+        "方正小标宋_GBK",
+        "FandolSong",
+        "华文中宋",
+        "STZhongsong",
+        "SimSun",
+        "宋体",
     ],
     "黑体（一级标题）": [
-        "SimHei", "黑体", "STHeiti", "Heiti SC", "FandolHei",
+        "SimHei",
+        "黑体",
+        "STHeiti",
+        "Heiti SC",
+        "FandolHei",
     ],
     "楷体（二级标题）": [
-        "KaiTi", "楷体", "STKaiti", "Kaiti SC", "FandolKai", "AR PL UKai CN",
+        "KaiTi",
+        "楷体",
+        "STKaiti",
+        "Kaiti SC",
+        "FandolKai",
+        "AR PL UKai CN",
     ],
     "仿宋（正文）": [
-        "FangSong", "仿宋", "FangSong_GB2312", "STFangSong", "FandolFang",
+        "FangSong",
+        "仿宋",
+        "FangSong_GB2312",
+        "STFangSong",
+        "FandolFang",
     ],
 }
 
@@ -49,7 +68,9 @@ def _installed_families() -> set[str]:
     try:
         out = subprocess.run(
             ["fc-list", ":", "family"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         ).stdout
     except Exception:
         return set()
@@ -66,7 +87,8 @@ def missing_fonts() -> list[str]:
     """Return the list of missing 公文 font roles ([] = all present)."""
     families = _installed_families()
     return [
-        role for role, candidates in FONT_ROLES.items()
+        role
+        for role, candidates in FONT_ROLES.items()
         if not any(c.lower() in families for c in candidates)
     ]
 
@@ -96,7 +118,9 @@ def install_fonts() -> list[str]:
                     installed.append(base)
         subprocess.run(
             ["fc-cache", "-f", str(_INSTALL_DIR)],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         return installed
     finally:

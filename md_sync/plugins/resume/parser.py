@@ -53,9 +53,7 @@ def _enrich_resume(doc: Document) -> None:
             doc.name = doc.name.strip()
         else:
             doc.name = title.strip()
-        contact_text = " ".join(
-            it.content for it in hsec.items if it.type == "text"
-        )
+        contact_text = " ".join(it.content for it in hsec.items if it.type == "text")
         if contact_text.strip():
             _parse_contacts(doc, contact_text)
         del doc.sections[hdr_idx]
@@ -81,7 +79,6 @@ def _enrich_resume(doc: Document) -> None:
         sec.items = new_items
         _extract_metrics(sec)
         _extract_tech_tags(sec)
-
 
 
 def _process_md_block(sec: Section, content: str, out: list[Item]) -> None:
@@ -134,7 +131,7 @@ def _process_md_block(sec: Section, content: str, out: list[Item]) -> None:
         bm = _BOLD_ITEM_RE.match(first)
         if bm:
             inner = bm.group(1).strip()
-            trailing = first[bm.end():].strip()
+            trailing = first[bm.end() :].strip()
             # Clean sub-bullet markers from continuation lines
             cleaned_rest: list[str] = []
             for ln in rest:
@@ -145,7 +142,11 @@ def _process_md_block(sec: Section, content: str, out: list[Item]) -> None:
             _add_bold_item(sec, inner, remaining, out)
         else:
             # Plain text block — keep as-is with paragraph breaks
-            out.append(Item(type="text", content="\n\n".join(l for l in [first, *rest] if l.strip()).strip()))
+            out.append(
+                Item(
+                    type="text", content="\n\n".join(l for l in [first, *rest] if l.strip()).strip()
+                )
+            )
 
 
 def _process_text(sec: Section, content: str, out: list[Item]) -> None:
@@ -165,7 +166,7 @@ def _process_text(sec: Section, content: str, out: list[Item]) -> None:
     bm = _BOLD_ITEM_RE.match(first)
     if bm:
         inner = bm.group(1).strip()
-        trailing = first[bm.end():].strip()
+        trailing = first[bm.end() :].strip()
         remaining = "\n\n".join(p for p in [trailing, *rest] if p).strip()
         _add_bold_item(sec, inner, remaining, out)
     else:
@@ -191,7 +192,7 @@ def _process_bullet(sec: Section, content: str, out: list[Item]) -> None:
 
     if sec.id == "open_source" and bm:
         inner = bm.group(1).strip()
-        remaining = first[bm.end():].strip()
+        remaining = first[bm.end() :].strip()
         item = Item(type="open_source", title=inner, content=remaining)
         for ln in lines[1:]:
             tm = re.search(r"\*\*涉及技术[：:]\*\*\s*(.+)", ln) or re.search(
@@ -210,7 +211,7 @@ def _process_bullet(sec: Section, content: str, out: list[Item]) -> None:
     # role/subtitle for all three section types.
     if bm and sec.id in ("education", "work_experience", "project_experience"):
         inner = bm.group(1).strip()
-        trailing = first[bm.end():].strip()
+        trailing = first[bm.end() :].strip()
         remaining = " ".join([trailing, *lines[1:]]).strip()
         _add_bold_item(sec, inner, remaining, out)
         return
@@ -221,7 +222,7 @@ def _process_bullet(sec: Section, content: str, out: list[Item]) -> None:
         pm = _DATE_PERIOD_RE.match(first)
         if pm:
             period = f"{pm.group(1)}-{pm.group(2)}"
-            rest = first[pm.end():].strip()
+            rest = first[pm.end() :].strip()
             if rest:
                 # The remainder may itself start with **bold** markup; strip it.
                 bm2 = _BOLD_ITEM_RE.match(rest)
@@ -280,24 +281,20 @@ def _add_bold_item(sec: Section, inner: str, remaining: str, out: list[Item]) ->
     pm = _DATE_PERIOD_RE.match(inner)
     if pm:
         period = f"{pm.group(1)}-{pm.group(2)}"
-        rest = inner[pm.end():].strip()
+        rest = inner[pm.end() :].strip()
 
     sec_id = sec.id
     if sec_id == "work_experience":
         role, title = _split_role(rest)
-        out.append(
-            Item(type="entry", period=period, title=title, subtitle=role, content=remaining)
-        )
+        out.append(Item(type="entry", period=period, title=title, subtitle=role, content=remaining))
     elif sec_id == "education":
         school, major = _split_edu(rest)
-        out.append(Item(type="entry", period=period, title=school, subtitle=major, content=remaining))
+        out.append(
+            Item(type="entry", period=period, title=school, subtitle=major, content=remaining)
+        )
     elif sec_id == "project_experience":
         role, title = _split_role(rest)
-        out.append(
-            Item(
-                type="project", period=period, title=title, role=role, content=remaining
-            )
-        )
+        out.append(Item(type="project", period=period, title=title, role=role, content=remaining))
     elif sec_id == "open_source":
         out.append(Item(type="open_source", title=inner, content=remaining))
     else:
@@ -348,7 +345,7 @@ def _split_role_inline(rest: str):
     if mm:
         role = mm.group(1).strip()
         title = rest[: mm.start()].strip()
-        content = rest[mm.end():].strip()
+        content = rest[mm.end() :].strip()
         return role, title, content
 
     return None, rest, ""
@@ -405,14 +402,15 @@ def _extract_tech_tags(section: Section) -> None:
             # Remove the tech-tags line from content entirely; the template
             # renders ``.proj-tech`` / ``.exp-tech`` separately.
             before = item.content[: tech_m.start()]
-            after = item.content[tech_m.end():]
+            after = item.content[tech_m.end() :]
             # Trim trailing whitespace / paragraph break before the match
             # and leading whitespace after the match to avoid dangling blank
             # paragraphs.
             before = before.rstrip("\n \t")
             after = after.lstrip("\n \t")
-            item.content = (before + "\n\n" + after).strip() if before and after else (before or after).strip()
-
+            item.content = (
+                (before + "\n\n" + after).strip() if before and after else (before or after).strip()
+            )
 
 
 class ResumeParser(ParserPlugin):

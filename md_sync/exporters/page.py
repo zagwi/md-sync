@@ -15,7 +15,6 @@ import re
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Optional, Tuple
 
 # (width_mm, height_mm)
 PAGE_SIZES_MM = {
@@ -83,7 +82,7 @@ def resolve_margin(page_size: str, page_margin: str = "") -> str:
     return f"{mm:g}mm"
 
 
-def parse_margin_mm(margin: str) -> Tuple[float, float]:
+def parse_margin_mm(margin: str) -> tuple[float, float]:
     """Parse a CSS-like margin string into ``(vertical_mm, horizontal_mm)``.
 
     Accepts a single value (uniform) or two values ``"5mm 8mm"`` (vertical
@@ -114,14 +113,12 @@ def _to_mm(token: str) -> float:
     return num * factor
 
 
-def page_size_to_twips(page_size: str) -> Tuple[int, int]:
+def page_size_to_twips(page_size: str) -> tuple[int, int]:
     w, h = PAGE_SIZES_MM[normalize_page_size(page_size)]
     return (int(round(w * _MM_TO_TWIPS)), int(round(h * _MM_TO_TWIPS)))
 
 
-def build_reference_docx(
-    page_size: str, margin: str, dest: Optional[Path] = None
-) -> Path:
+def build_reference_docx(page_size: str, margin: str, dest: Path | None = None) -> Path:
     """Build a minimal ``.docx`` whose ``w:sectPr`` sets the page size & margins.
 
     Pandoc copies the page setup (``w:pgSz`` / ``w:pgMar``) from the reference
@@ -141,9 +138,7 @@ def build_reference_docx(
     document_xml = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-        '<w:body><w:p><w:r><w:t> </w:t></w:r></w:p>'
-        + sect
-        + "</w:body></w:document>"
+        "<w:body><w:p><w:r><w:t> </w:t></w:r></w:p>" + sect + "</w:body></w:document>"
     )
     content_types = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -159,10 +154,7 @@ def build_reference_docx(
         '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
         "</Relationships>"
     )
-    if dest is None:
-        dest = Path(tempfile.mktemp(suffix=".docx"))
-    else:
-        dest = Path(dest)
+    dest = Path(tempfile.mktemp(suffix=".docx")) if dest is None else Path(dest)
     with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("[Content_Types].xml", content_types)
         z.writestr("_rels/.rels", rels)

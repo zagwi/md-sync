@@ -6,7 +6,7 @@
 - 一份源 → 多份产物：`html/zh`、`html/en`、`pdf/zh`、`pdf/en`、`md/zh`、`md/en`、 …
 - 源文件改了 → 自动重新同步（带防抖 / debounce）
 - 翻译走 **缓存优先**：已有译文直接复用，缺失才回退到 AI
-- 自带 Web 风格UI 与原生桌面 GUI
+- 原生桌面 GUI（Qt）+ 命令行，零 HTTP 服务器
 
 ---
 
@@ -62,7 +62,6 @@ md-sync 只负责「把稿子变成发布物」，**写稿仍用你最顺手的 
 | **文件监听** | 基于 `watchdog` 监听源文件，`debounce` 默认 1.5s，改动即同步 |
 | **模板 / 主题** | `bwx`、`modern` 等内置样式；并可直接选用 Typora 主题目录（`~/.config/Typora/themes/`）下的主题（`typora-bloom-mist`、`typora-night`、`typora-claude-like` 等），自动兼容背景、dark/light 与代码块（`md-sync template` / `md-sync plugin`） |
 | **翻译缓存** | `strategy: mapping` + `mapping_file`，译文只更新缓存字典、不直接出文件，渲染时再取用 |
-| **Web 仪表盘** | 浏览器里配置源文件、查看解析信息、启动/停止监听、手动同步、查看同步事件与历史项目 |
 | **桌面 GUI（Qt 原生）** | PySide6 原生界面，直接调用核心 pipeline，持续监听同步，零 HTTP 服务器 |
 | **标准公文（gongwen）** | 内置公文插件：按模板写 Markdown，一键导出符合 GB/T 9704-2012 的红头公文 `docx` / `pdf`（红头、版式、页码自动排版） |
 
@@ -140,7 +139,7 @@ md-sync plugin template gongwen -o 通知.md    # 生成公文源稿模板
 ```
 md-sync/
 ├── md_sync/                # 核心包
-│   ├── cli.py              # 命令行入口（md-sync start / sync / gui / status …）
+│   ├── cli.py              # 命令行入口（md-sync sync / gui / status …）
 │   ├── config.py           # ProjectConfig 解析（md-sync.yaml）
 │   ├── qt_app.py           # 原生 PySide6 桌面 GUI（python -m md_sync.qt_app / md-sync gui）
 │   ├── watcher.py          # 文件监听（watchdog + debounce）
@@ -149,14 +148,12 @@ md-sync/
 │   ├── translate/          # 翻译管理 + AI 回退
 │   ├── exporters/          # PDF 导出（Chromium）/ pandoc 导出（docx/epub）
 │   ├── template/           # 模板管理
-│   ├── plugin/             # 插件引擎（接口 / 注册表 / 加载器 / 钩子），不含插件实例
-│   └── web/app.py          # FastAPI 后端 + 仪表盘
+│   └── plugin/             # 插件引擎（接口 / 注册表 / 加载器 / 钩子），不含插件实例
 ├── plugins/                # 内置插件（typora / resume / generic-markdown / gongwen），各自携带模板
 ├── docs/example-plugin/    # 插件开发示例（resume-pack：源模板 + 解析器 + 渲染风格）
 ├── projects/               # 示例 / 项目配置（md-sync.yaml）
-├── scripts/                # 构建与启动脚本
-│   ├── build_app.py        # PyInstaller 单文件打包
-│   └── start_server.py     # Web 模式启动（加载 projects/resume 配置）
+├── scripts/                # 构建脚本
+│   └── build_app.py        # PyInstaller 单文件打包
 ├── tests/                  # 测试脚本
 └── pyproject.toml
 ```
@@ -176,7 +173,7 @@ python -m md_sync.qt_app      # 或：md-sync gui
 启动后：选择源 `.md` 文件 → 选择输出目录 → 勾选需要的格式 / 语言 → 点〔开始监听〕。
 源文件一保存（防抖 1.5s）即自动同步，产物出现在「输出文件」列表，可双击直接打开。
 
-> 也支持 Web 仪表盘与命令行，见下方「使用方式」。
+> 也支持命令行模式（无界面 / CI / 脚本），见下方「使用方式」。
 
 ---
 
@@ -188,7 +185,7 @@ python -m md_sync.qt_app      # 或：md-sync gui
 pip install -e .
 ```
 
-依赖：`pyyaml`、`jinja2`、`watchdog`、`fastapi`、`uvicorn[standard]`、`httpx`。
+依赖：`pyyaml`、`jinja2`、`watchdog`、`httpx`、`websockets`、`python-docx`。
 
 桌面 GUI（Qt）额外需要 PySide6：
 
@@ -211,7 +208,7 @@ PDF 由本机 **Chromium / Chrome** 以 headless 方式打印生成，**它是�
 
 ## 使用方式
 
-> 推荐从**桌面 GUI（方式 A）** 开始；Web 仪表盘与命令行作为补充。
+> 桌面 GUI 是主界面；命令行作为补充（无界面 / CI / 脚本）。
 
 ### 方式 A：桌面 GUI（Qt 原生，推荐）
 
@@ -223,38 +220,16 @@ PDF 由本机 **Chromium / Chrome** 以 headless 方式打印生成，**它是�
 python -m md_sync.qt_app      # 或：md-sync gui
 ```
 
-GUI 功能对照 Web 仪表盘：
+GUI 功能：
 
-- **📄 源文件**：选择 `.md` 源文件，自动检测源语言、章节数与待译条数（同时作为「开始监听」的必填项）
-- **🎯 输出设置**：每种格式一个组（HTML / Markdown / PDF / DOCX / EPUB，后两者需插件），组内勾选中文、英文；**默认均不勾选**，须至少为一种格式勾选一种语言才可开始；PDF 组下方附带「页边距」下拉（15 / 20 / 25mm）控制 PDF 留白
+- **📄 源文件**：选择 `.md` 源文件，自动检测源语言、章节数与待译条数（同时作为「开始监听」的必填项）；点「✂ 规范化源文档」按当前排版规范把源文档生成一份规范化副本（`<stem>_normalized.md`）并将其设为源文件，自动勾选语言跟随源文件的 `md` 输出——**原始文件不会被修改**
+- **🎯 输出设置**：每种格式一个组（HTML / Markdown / PDF / DOCX / EPUB，后两者需插件），组内勾选中文、英文；**默认均不勾选**，须至少为一种格式勾选一种语言才可开始；PDF 组下方附带「页边距」下拉（15 / 20 / 25mm）控制 PDF 留白；标题栏「📐 文档标准配置」按钮可开关排版规范及其 7 条子规则（作用于生成产物，不改源文件）
 - **〔开始监听 / 停止监听〕**：选定源文件且填好输出目录后按钮才可点击；开启监听后源改动自动同步，首次启动立即同步一次
 - **输出文件列表**：以单表呈现，每行含状态、格式、语言（带 badge）、文件、修改时间，双击〔打开文件〕或右键〔复制路径〕
 - **〔打开输出目录〕**：一键打开生成文件所在目录
 - **同步日志**：本次会话的同步日志（时间、生成文件、耗时、错误）
 
-### 方式 B：Web 仪表盘（浏览器访问）
-
-```bash
-# 1) 直接以示例项目启动（加载 projects/resume/md-sync.yaml）
-python scripts/start_server.py
-# 浏览器打开 http://127.0.0.1:8580
-
-# 2) 或用 CLI（不读配置也能开，进浏览器再配置）
-md-sync start
-```
-
-仪表盘功能：
-
-- **📄 源文件**：点「打开」选择 `.md` 源文件，自动解析并展示语言、章节与条目数
-- **🎯 同步后生成**：列出所有输出目标（格式 / 语言 / 模板 / PDF / 路径），可分别开关
-- **⚙️ 转换模板** / **🌐 翻译方式**：选择与配置模板、翻译策略与 AI provider
-- **〔同步一次〕**：手动触发一次同步
-- **〔开始监听 / 停止监听〕**：开启/关闭文件监听（源改动自动同步）
-- **🔔 同步事件**：本次会话的同步日志（时间、生成文件、耗时、错误）
-- **⏱ 同步历史**：历史项目列表，点「打开」可切换已配置过的项目
-- **📤 输出文件**：表格列出每个产物（格式 / 语言 / 文件名 / 大小 / 状态 / **最新时间** / 是否源文件 / 操作），可双击〔打开文件〕或右键〔复制路径〕
-
-### 方式 C：命令行（无界面 / CI / 脚本）
+### 方式 B：命令行（无界面 / CI / 脚本）
 
 ```bash
 md-sync init              # 在当前目录生成默认 md-sync.yaml
@@ -444,10 +419,17 @@ translation:
   ai:
     provider: auto                  # 缺失译文回退的 AI provider
 
-web_ui:
-  enabled: true
-  host: 127.0.0.1
-  port: 8580
+typography:                          # 文档排版规范（全局，默认全部开启）
+  enabled: true                      # 总开关；关闭则产物与源文件完全一致
+  # 中文混排规则（作用于中文产物，参照 W3C CLReq / CY/T 154-2017）
+  cjk_latin_space: true              # 中英文之间加空格（支持ChatGPT → 支持 ChatGPT）
+  cjk_digit_space: true              # 中文与数字之间加空格（花100元 → 花 100 元）
+  number_unit_space: true            # 数字与单位之间加空格（20Gbps → 20 Gbps；90°、15% 除外）
+  fullwidth_punct_no_space: true     # 全角标点旁不加空格（iPhone ，好用 → iPhone，好用）
+  # 英文排版规则（作用于英文产物）
+  en_no_space_before_punct: true     # 标点前不加空格（Hello ,world → Hello,world）
+  en_space_after_punct: true         # 标点后加空格（Hello,world → Hello, world；1,000、10:30 除外）
+  en_collapse_spaces: true           # 合并连续空格（Hello   world → Hello world；保留缩进与换行）
 ```
 
 要点：
@@ -455,6 +437,7 @@ web_ui:
 - `source` 指向你的源 Markdown。
 - `outputs` 每项是一个「格式 × 语言」组合；`html` 可指定 `style` 并可选 `pdf`。
 - `translation.mapping_file` 是译文缓存：翻译只更新该 JSON，渲染时再取用，因此**翻译本身不直接生成输出文件**。
+- `typography` 是文档排版规范：中文混排（参照 W3C CLReq / CY/T 154-2017）作用于中文产物，英文标点间距规则作用于英文产物。覆盖全部产物路径——结构化版式（resume 等）逐条经模板 `t()` 钩子规范化，raw 版式（markdown / typora）对整篇正文（含翻译后的英文）规范化。仅作用于**生成的产物**（md/html/pdf），**绝不修改你的源文件**；代码块、行内代码与网址链接始终不受影响。Qt GUI「输出设置」标题栏的「📐 文档标准配置」按钮可配置（内存生效）；CLI 侧直接编辑此段 yaml。
 
 ---
 
@@ -491,7 +474,7 @@ python scripts/build_app.py --clean        # 清缓存后重新构建
 > 当前环境是 Linux，本地构建只会得到 `dist/md-sync`；Windows / macOS 二进制需在对应系统
 > 或下面的 CI 上产出。`dist/`、`build/`、`*.spec` 都已写入 `.gitignore`，不会进版本库。
 
-- 脚本自动把 `md_sync/templates`、`md_sync/themes`、`md_sync/web` 等资源打进 bundle，
+- 脚本自动把 `md_sync/templates`、`md_sync/plugins` 等资源打进 bundle，
   运行时通过 `md_sync.template.manager._find_install_dir()` 解析，**无需用户机器安装任何东西**。
 - **构建 Python 版本建议用 3.12**（PyInstaller 官方稳定支持）。在 3.14 上需排除 `mypy`
   （脚本已默认 `--exclude-module mypy`，因其 mypyc 扩展与 3.14 的 CArchive 压缩不兼容会导致
@@ -518,7 +501,7 @@ artifact 命名为 `md-sync-ubuntu-latest` / `md-sync-windows-latest` / `md-sync
 - **「打开」选完文件后输入框清空**：这是预期行为——选文件即加载，无需手填路径。
 - **翻译后为什么还有 HTML？** 翻译只换文字（语言），HTML 由渲染器（转换）生成（格式），两者是各自独立的产物，可分别勾选。
 - **Qt GUI 的同步日志在哪？** 直接显示在 GUI 的「同步日志」面板中。
-- **端口被占用？** Web 模式默认使用 8580；若该端口被占用，改 `web_ui.port` 即可。
+- **GUI 里改了「文档标准配置」要不要重启？** 不需要——保存后若正在监听会立即用新规则重跑输出；「✂ 规范化源文档」也始终使用当前配置。
 
 ---
 

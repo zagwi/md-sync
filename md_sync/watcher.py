@@ -3,6 +3,7 @@
 Uses ``watchdog`` to detect file modifications and triggers
 the sync pipeline with debouncing.
 """
+
 from __future__ import annotations
 
 import time
@@ -95,8 +96,7 @@ class FileWatcher:
         if self._observer:
             return
 
-        handler = _ChangeHandler(
-            self._source, self._on_change, self._debounce, None)
+        handler = _ChangeHandler(self._source, self._on_change, self._debounce, None)
         self._observer = Observer()
         self._observer.schedule(handler, str(self._source.parent), recursive=False)
 

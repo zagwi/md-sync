@@ -5,6 +5,7 @@ letters and picks the dominant script. Good enough to decide whether a
 source file is Chinese or English so the translation step can run the
 right direction (zh→en or en→zh).
 """
+
 from __future__ import annotations
 
 import re

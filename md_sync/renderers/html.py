@@ -3,6 +3,7 @@
 Loads a theme's Jinja2 environment and renders each section
 through its corresponding component template.
 """
+
 from __future__ import annotations
 
 import re
@@ -12,8 +13,8 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import escape
 
 from md_sync.core.document import Document
-from md_sync.core.md_engine import render_inline as _md_inline
 from md_sync.core.md_engine import render_block as _md_block
+from md_sync.core.md_engine import render_inline as _md_inline
 
 # Metric pattern: digits followed by K/k/+/%/×/倍 etc.
 _METRIC_RX = re.compile(
@@ -31,13 +32,18 @@ def _replace_metrics(text: str) -> str:
 
     Numbers ≥ 100 are wrapped in metric-blue, others in metric.
     """
+
     def _wrap(m):
-        val = m.group(0).strip()
+        match = m.group(0)
+        # The regex may consume trailing whitespace (e.g. "12 " before CJK);
+        # re-append it so metric highlighting never eats a real space.
+        trailing = match[len(match.rstrip()) :]
+        val = match.strip()
         # Extract numeric part
         nums = re.findall(r"\d+", val)
-        is_high = nums and int(nums[0]) >= 100 and '%' not in val
+        is_high = nums and int(nums[0]) >= 100 and "%" not in val
         cls = "metric-blue" if is_high else "metric"
-        return f'<span class="{cls}">{val}</span>'
+        return f'<span class="{cls}">{val}</span>{trailing}'
 
     return _METRIC_RX.sub(_wrap, text)
 
@@ -61,8 +67,8 @@ def _linkify(text: str) -> str:
         # last '<' and this match). They belong to an attribute value such as
         # href="…" and must not be linkified again.
         pre = text[pos:start]
-        lt = pre.rfind('<')
-        if lt != -1 and '>' not in pre[lt + 1:]:
+        lt = pre.rfind("<")
+        if lt != -1 and ">" not in pre[lt + 1 :]:
             out.append(text[pos:start])
             pos = start
             continue
@@ -70,7 +76,8 @@ def _linkify(text: str) -> str:
         url = m.group(1)
         out.append(
             f'<a class="ext-link" href="{escape(url)}" target="_blank" '
-            f'rel="noopener noreferrer">{escape(url)}</a>')
+            f'rel="noopener noreferrer">{escape(url)}</a>'
+        )
         pos = m.end()
     out.append(escape(text[pos:]))
     return "".join(out)
@@ -85,8 +92,7 @@ def _replace_metrics_tag_safe(html: str) -> str:
     segments.
     """
     parts = re.split(r"(<[^>]+>)", html)
-    return "".join(_replace_metrics(p) if i % 2 == 0 else p
-                   for i, p in enumerate(parts))
+    return "".join(_replace_metrics(p) if i % 2 == 0 else p for i, p in enumerate(parts))
 
 
 def _rich(text: str) -> str:
@@ -185,10 +191,12 @@ class HtmlRenderer:
     def __init__(self, theme_dir: Path | str, filters: dict | None = None):
         self._theme_dir = Path(theme_dir).resolve()
         self._env = Environment(
-            loader=FileSystemLoader([
-                str(self._theme_dir),
-                str(self._theme_dir / "sections"),
-            ]),
+            loader=FileSystemLoader(
+                [
+                    str(self._theme_dir),
+                    str(self._theme_dir / "sections"),
+                ]
+            ),
             autoescape=select_autoescape(["html", "xml"]),
             trim_blocks=True,
             lstrip_blocks=True,
@@ -213,6 +221,7 @@ class HtmlRenderer:
         meta_path = self._theme_dir / "theme.yaml"
         if meta_path.exists():
             import yaml
+
             self._meta = yaml.safe_load(meta_path.read_text(encoding="utf-8")) or {}
         else:
             self._meta = {}
@@ -233,11 +242,17 @@ class HtmlRenderer:
             return css_path.read_text(encoding="utf-8")
         return ""
 
-    def render(self, doc: Document, sections_meta: dict | None = None,
-                translator=None, lang: str = "zh",
-                typora_css: str | None = None,
-                typora_dark: bool = False,
-                layout: str = "structured") -> str:
+    def render(
+        self,
+        doc: Document,
+        sections_meta: dict | None = None,
+        translator=None,
+        lang: str = "zh",
+        typora_css: str | None = None,
+        typora_dark: bool = False,
+        layout: str = "structured",
+        normalize=None,
+    ) -> str:
         """Render the document to a complete HTML string.
 
         A single markdown-it kernel (``render_block`` / ``render_inline`` from
@@ -272,16 +287,29 @@ class HtmlRenderer:
                         CSS variable fallback chains that fail for themes that
                         define neither --text nor --text-color.
             layout: ``"raw"`` or ``"structured"``.
+            normalize: Optional callable ``(text, lang)`` applied to text emitted
+                       by templates (中英文混排 / 英文排版). Never used as a
+                       translation cache key — lookups run on the original text.
         """
         template = self._env.get_template("base.html.j2")
 
         def _t(text):
             """Translate ``text`` into the target language, falling back to
-            the original when no translation is cached."""
-            if translator is None or lang == doc.source_lang:
+            the original when no translation is cached. The optional
+            ``normalize`` hook (中英文混排 / 英文排版) is applied to the emitted
+            value (source-language or translated text); the translation cache is
+            always keyed on the original text."""
+            if lang == doc.source_lang:
+                if normalize is not None:
+                    return normalize(text, lang)
+                return text
+            if translator is None:
                 return text
             cached = translator.lookup(text, lang)
-            return cached if cached else text
+            result = cached if cached else text
+            if normalize is not None:
+                return normalize(result, lang)
+            return result
 
         if layout == "raw":
             source_raw = doc.source_raw or ""
@@ -289,6 +317,11 @@ class HtmlRenderer:
                 body_md = _translate_raw_blocks(source_raw, translator, lang)
             else:
                 body_md = source_raw
+            # 中英文混排 / 英文排版：raw 版式不经 t() 逐块钩子，整篇 body 在此按
+            # 目标语言规范化（normalize 自带代码块/URL 保护，逐块语义不受影响）。
+            # 源语言时 source_raw 已被 _apply_typography 规范化，此处幂等。
+            if normalize is not None and body_md:
+                body_md = normalize(body_md, lang)
             body_html = _md_block(body_md)
         else:
             body_html = None

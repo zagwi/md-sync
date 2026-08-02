@@ -10,6 +10,7 @@ Reference paths (Typora docs / common installs):
   * macOS:   ``~/Library/Application Support/abnerworks.Typora/themes``
   * Linux:   ``~/.config/Typora/themes``
 """
+
 from __future__ import annotations
 
 import os

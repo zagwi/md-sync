@@ -21,6 +21,7 @@ The intermediate representation (``Document`` / ``Section`` / ``Item``) is
 intentionally preserved so the existing theme templates, translation layer
 and multi-format exporters keep working unchanged.
 """
+
 from __future__ import annotations
 
 import re
@@ -291,8 +292,13 @@ def _blockquote_is_complex(tokens, start: int, end: int) -> bool:
     para_breaks = 0
     for k in range(start, end):
         tk = tokens[k].type
-        if tk in ("bullet_list_open", "ordered_list_open", "blockquote_open",
-                  "fence", "table_open"):
+        if tk in (
+            "bullet_list_open",
+            "ordered_list_open",
+            "blockquote_open",
+            "fence",
+            "table_open",
+        ):
             return True
         if tk == "paragraph_close":
             para_breaks += 1
@@ -313,7 +319,7 @@ def _slice_raw(src: str, open_token, close_token) -> str:
     if not omap:
         return ""
     end = cmap[0] if cmap else omap[1]
-    return "\n".join(lines[omap[0]:end])
+    return "\n".join(lines[omap[0] : end])
 
 
 def _slug(title: str, idx: int) -> str:

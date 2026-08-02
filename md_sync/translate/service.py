@@ -12,6 +12,7 @@ fills in missing translations for the requested target language, using
 the configured provider (OpenAI key, or free Google/Bing web endpoint).
 It does NOT touch any output files.
 """
+
 from __future__ import annotations
 
 import logging
@@ -58,6 +59,10 @@ def _distinct_contents(doc: Document) -> list[str]:
         _add(section.title)
 
         for item in section.items:
+            # Code blocks are never translated (they contain config/code that
+            # must stay byte-for-byte identical).
+            if item.type == "code":
+                continue
             # Always translate content
             _add(item.content)
 
@@ -111,16 +116,15 @@ def translate_document(
         {
           "source_lang": "zh",
           "target_lang": "en",
-          "provider": "google",
+          "provider": "mymemory",
           "total": 8,
           "translated": 5,     # freshly translated this run
           "cached": 3,         # already in cache
           "failed": 0,
+          "results": {...},    # text -> translation for fresh successes
         }
     """
-    provider = provider or _detect_provider()
-    # provider resolution: explicit > config.ai.provider > auto
-    if provider == "auto":
+    if provider is None or provider == "auto":
         provider = _detect_provider()
 
     total = 0
@@ -137,7 +141,10 @@ def translate_document(
             local_tm = TranslationManager(cfg.translation_path())
             translator = local_tm
 
-    # First pass: identify uncached texts and count everything
+    # First pass: identify texts we still need to translate and count the rest.
+    # ``pending`` entries are RETRIED rather than skipped forever — a transient
+    # provider failure (e.g. MyMemory daily quota) must not permanently poison
+    # the cache.
     pending_texts: list[str] = []
     for text in _distinct_contents(doc):
         total += 1
@@ -146,12 +153,12 @@ def translate_document(
             if progress_callback:
                 progress_callback(total, total, text, "cached")
             continue
-        if translator and translator.get_status(text) == "pending":
-            failed += 1
-            continue
         pending_texts.append(text)
 
-    # Second pass: translate uncached texts in parallel
+    # Second pass: translate uncached texts in parallel. Successful results are
+    # stored into the cache so renderers (which read via ``lookup``) can find
+    # them; failures are marked pending so a later run can retry.
+    results: dict[str, str] = {}
     if pending_texts:
         with ThreadPoolExecutor(max_workers=_TRANSLATE_WORKERS) as pool:
             fut_to_text = {}
@@ -164,7 +171,7 @@ def translate_document(
                     target_lang=target_lang,
                 )
                 fut_to_text[fut] = text
-            done_count = cached + failed  # items already known before parallel run
+            done_count = cached  # items already resolved before the parallel run
             for fut in as_completed(fut_to_text):
                 text = fut_to_text[fut]
                 try:
@@ -173,6 +180,7 @@ def translate_document(
                     logger.debug("translate task failed", exc_info=True)
                     result = None
                 if result:
+                    results[text] = result
                     if translator:
                         translator.store(text, result, target_lang, status="auto")
                     translated += 1
@@ -182,8 +190,7 @@ def translate_document(
                     failed += 1
                 done_count += 1
                 if progress_callback:
-                    progress_callback(done_count, total, text,
-                                      "translated" if result else "failed")
+                    progress_callback(done_count, total, text, "translated" if result else "failed")
 
     if local_tm is not None:
         local_tm.save()
@@ -196,6 +203,7 @@ def translate_document(
         "translated": translated,
         "cached": cached,
         "failed": failed,
+        "results": results,
     }
 
 

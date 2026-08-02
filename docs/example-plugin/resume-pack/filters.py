@@ -19,9 +19,11 @@ _METRIC_RX = re.compile(
 
 def highlight_metric(text: str) -> str:
     """Wrap metric values in a styled span."""
+
     def _wrap(m):
         val = m.group(0).strip()
         return f'<span class="metric">{val}</span>'
+
     return _METRIC_RX.sub(_wrap, text)
 
 

@@ -3,6 +3,7 @@
 This renders the Document back to the source MD format (for the source language)
 or generates an MD file in the target language (using the translation cache).
 """
+
 from __future__ import annotations
 
 from md_sync.core.document import Document
@@ -45,6 +46,15 @@ class MdRenderer:
 
         # ── Sections ───────────────────────────────────────────────────
         for section in doc.sections:
+            if not section.title:
+                # Intro/body section without a heading — render its items
+                # directly instead of emitting an empty "# " heading.
+                for item in section.items:
+                    line = self._render_item(item, lang, doc.source_lang)
+                    if line:
+                        lines.append(line)
+                lines.append("")
+                continue
             section_title = self._maybe_translate(section.title, lang, doc.source_lang)
             lines.append(f"{'#' * section.level} {section_title}")
             lines.append("")
@@ -70,6 +80,13 @@ class MdRenderer:
 
         if item.type == "open_source":
             return self._render_open_source(item, lang, source_lang)
+
+        # Code blocks are NEVER translated and keep their fenced syntax
+        # verbatim — translating them would corrupt the code/config content.
+        if item.type == "code":
+            fence = "```"
+            lang_tag = item.language or ""
+            return f"{fence}{lang_tag}\n{item.content}\n{fence}"
 
         # text / fallback
         if item.content:

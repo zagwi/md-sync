@@ -10,7 +10,7 @@ keywords = ["markdown", "sync", "translation", "html", "resume", "static-site"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
-    "Environment :: Web Environment",
+    "Environment :: X11 Applications :: Qt",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -24,9 +24,8 @@ dependencies = [
     "pyyaml>=6.0",
     "jinja2>=3.0",
     "watchdog>=3.0",
-    "fastapi>=0.100",
-    "uvicorn[standard]>=0.20",
     "httpx>=0.24",
+    "websockets>=12.0",
     "python-docx>=1.1",
 ]
 
@@ -57,14 +56,13 @@ include = ["md_sync*"]
 [tool.setuptools.package-data]
 md_sync = [
     "plugins/**/*",
-    "web/templates/**/*",
-    "web/static/**/*",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
+norecursedirs = ["manual"]
 
 [tool.ruff]
 line-length = 100
@@ -77,8 +75,8 @@ ignore = ["E501", "F403", "F405", "E402", "B027", "C401", "SIM102", "SIM110", "E
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B", "SIM", "PTH"]
-"md_sync/qt_app.py" = ["B", "SIM", "PTH"]
-"md_sync/web/app.py" = ["B", "SIM"]
+"tests/manual/*" = ["E402", "B", "SIM", "PTH", "UP"]
+"md_sync/qt_app.py" = ["B", "SIM", "PTH", "E702"]
 
 [tool.ruff.format]
 quote-style = "double"

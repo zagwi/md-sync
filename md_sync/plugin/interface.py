@@ -5,6 +5,7 @@ Plugins can be:
   - ``ParserPlugin``: provides a custom Markdown source parser
   - ``PluginPack``:    bundles parser + template.md + HTML templates + CSS
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -17,12 +18,12 @@ if TYPE_CHECKING:
 
 # ── Plugin types ────────────────────────────────────────────────────────────
 
-PLUGIN_TYPE_RENDER = "render"       # provides rendering templates
-PLUGIN_TYPE_PARSER = "parser"       # provides a custom MD source parser
-PLUGIN_TYPE_PACK = "pack"           # provides parser + template + style (full pack)
+PLUGIN_TYPE_RENDER = "render"  # provides rendering templates
+PLUGIN_TYPE_PARSER = "parser"  # provides a custom MD source parser
+PLUGIN_TYPE_PACK = "pack"  # provides parser + template + style (full pack)
 PLUGIN_TYPE_TRANSLATE = "translate"  # provides translation backend
-PLUGIN_TYPE_EXPORT = "export"       # provides export backend (e.g. PDF)
-PLUGIN_TYPE_HOOK = "hook"           # provides pipeline hooks only
+PLUGIN_TYPE_EXPORT = "export"  # provides export backend (e.g. PDF)
+PLUGIN_TYPE_HOOK = "hook"  # provides pipeline hooks only
 
 
 # ── Plugin manifest ─────────────────────────────────────────────────────────
@@ -31,23 +32,24 @@ PLUGIN_TYPE_HOOK = "hook"           # provides pipeline hooks only
 @dataclass
 class PluginManifest:
     """Information about an installed plugin."""
+
     name: str
     version: str = "1.0"
     description: str = ""
-    label: str = ""                   # 中文显示名（用户语言）；为空时回退到 name
+    label: str = ""  # 中文显示名（用户语言）；为空时回退到 name
     author: str = ""
     plugin_type: str = PLUGIN_TYPE_RENDER
-    entry_point: str = ""           # Python module path, e.g. "my_plugin.main"
+    entry_point: str = ""  # Python module path, e.g. "my_plugin.main"
     directory: Path | None = None
     templates: list[str] = field(default_factory=list)  # template names provided
     dependencies: list[str] = field(default_factory=list)
-    hooks: list[str] = field(default_factory=list)      # hook names provided
+    hooks: list[str] = field(default_factory=list)  # hook names provided
 
     # Plugin Pack fields (type="pack")
-    template: str | None = None   # relative path to source template.md
+    template: str | None = None  # relative path to source template.md
     parser_schema: str | None = None  # schema identifier, e.g. "my-resume"
-    parser_class: str | None = None   # Python class path, e.g. "parser.MyParser"
-    requires_template: bool = False      # 是否要求用户必须使用生成的源模板（如简历格式）
+    parser_class: str | None = None  # Python class path, e.g. "parser.MyParser"
+    requires_template: bool = False  # 是否要求用户必须使用生成的源模板（如简历格式）
 
     # PDF export override (type="export" / pack): plugins may provide their own
     # PDF backend that takes precedence over the built-in Chromium exporter.
@@ -118,6 +120,7 @@ class ParserPlugin(ABC):
       ``detect(text)``  — auto-detect if this parser can handle the text
       ``parse(text)``   — parse text into a ``Document``
     """
+
     @property
     @abstractmethod
     def manifest(self) -> PluginManifest:
@@ -142,13 +145,14 @@ class ParserPlugin(ABC):
         text = path.read_text(encoding="utf-8")
         # Import Document inline to avoid circular import
         from md_sync.core.document import Document as _Doc
+
         doc = self.parse(text)
         if not isinstance(doc, _Doc):
             raise TypeError(f"ParserPlugin.parse() must return a Document, got {type(doc)}")
         doc.source_path = str(path)
         doc.source_raw = text
         # Detect language from file content
-        zh_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+        zh_chars = sum(1 for c in text if "\u4e00" <= c <= "\u9fff")
         doc.source_lang = "zh" if zh_chars > 100 else "en"
         return doc
 
@@ -262,6 +266,7 @@ class DirectoryPlugin(RenderPlugin):
         filters_path = self._directory / "filters.py"
         if filters_path.exists():
             import importlib.util
+
             spec = importlib.util.spec_from_file_location(
                 f"{self._manifest.name}_filters", filters_path
             )
@@ -273,6 +278,7 @@ class DirectoryPlugin(RenderPlugin):
         filters_path = self._directory / "filters.py"
         if filters_path.exists():
             import importlib.util
+
             spec = importlib.util.spec_from_file_location(
                 f"{self._manifest.name}_filters", filters_path
             )
@@ -291,9 +297,8 @@ class DirectoryPlugin(RenderPlugin):
         if not parser_path.exists():
             return None
         import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            f"{self._manifest.name}_parser", parser_path
-        )
+
+        spec = importlib.util.spec_from_file_location(f"{self._manifest.name}_parser", parser_path)
         if not spec or not spec.loader:
             return None
         mod = importlib.util.module_from_spec(spec)
@@ -318,6 +323,7 @@ class DirectoryPlugin(RenderPlugin):
         if not exporter_path.exists():
             return None
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             f"{self._manifest.name}_pdf_exporter", exporter_path
         )
@@ -345,6 +351,7 @@ class DirectoryPlugin(RenderPlugin):
         if not exporter_path.exists():
             return None
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             f"{self._manifest.name}_docx_exporter", exporter_path
         )
@@ -372,6 +379,7 @@ class DirectoryPlugin(RenderPlugin):
         yaml_path = self._directory / "plugin.yaml"
         if yaml_path.exists():
             import yaml
+
             raw = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
             if raw:
                 # Parse parser config if present

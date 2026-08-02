@@ -19,6 +19,7 @@ Provider selection (``auto`` by default):
   2. ``TRANSLATE_PROVIDER`` env (google|bing|openai|mymemory|none) → that
   3. otherwise                → ``mymemory`` (free, no key, no proxy)
 """
+
 from __future__ import annotations
 
 import logging
@@ -30,6 +31,78 @@ import httpx
 from md_sync.translate.langdetect import detect_lang
 
 logger = logging.getLogger(__name__)
+
+
+# Placeholder tokens must survive translation engines unaltered: use ASCII
+# letters only (no digits/symbols that engines may strip or reformat).
+_PLACEHOLDER_PREFIX = "ZXQWPZLP"
+_PLACEHOLDER_RE = re.compile(r"ZXQWPZLP(\d+)")
+
+
+def _protect_code_and_urls(text: str) -> tuple[str, dict[str, str]]:
+    """Replace inline code, URLs, and fenced code blocks with placeholders.
+
+    Translation engines (Google/Bing/MyMemory) often rewrite inline code or
+    URLs embedded in a paragraph (e.g. ``@page { margin: 0 }`` → ``@ page
+    {margin: 0}``, ``--bg`` → `` --bg ``). Replacing them before translation
+    and restoring afterwards keeps code and URLs byte-for-byte identical.
+
+    Returns ``(protected_text, {placeholder: original})``.
+    """
+    placeholder_map: dict[str, str] = {}
+    counter = [0]
+
+    def _sub(match: re.Match) -> str:
+        placeholder = f"{_PLACEHOLDER_PREFIX}{counter[0]}"
+        counter[0] += 1
+        placeholder_map[placeholder] = match.group(0)
+        return placeholder
+
+    # Fenced code blocks first (whole block protected so its content is kept
+    # byte-for-byte; the backticks would otherwise confound the regexes below).
+    text = re.sub(
+        r"```.*?```",
+        _sub,
+        text,
+        flags=re.DOTALL,
+    )
+    # Inline code `` `...` `` (single-line, no backticks inside).
+    text = re.sub(r"`[^`\n]+`", _sub, text)
+    # Bare URLs.
+    text = re.sub(
+        r"https?://[^\s)`\]}>]+",
+        _sub,
+        text,
+    )
+    return text, placeholder_map
+
+
+def _restore_code_and_urls(text: str, placeholder_map: dict[str, str]) -> str:
+    """Put protected code/URL fragments back into the translated text.
+
+    If the engine dropped or reordered a placeholder, the original fragment is
+    re-appended so no code is ever lost.
+    """
+    result = text
+    seen: set[str] = set()
+
+    def _restore(match: re.Match) -> str:
+        ph = match.group(0)
+        seen.add(ph)
+        return placeholder_map.get(ph, ph)
+
+    result = _PLACEHOLDER_RE.sub(_restore, result)
+
+    # Any placeholder the engine dropped entirely (never appeared in the
+    # translated output) gets re-appended in order, so code is never lost.
+    dropped = [
+        (int(ph[len(_PLACEHOLDER_PREFIX) :]), placeholder_map[ph])
+        for ph in placeholder_map
+        if ph not in seen
+    ]
+    for _, orig in sorted(dropped):
+        result = result.rstrip() + "\n" + orig
+    return result
 
 
 def translate_via_api(
@@ -59,19 +132,35 @@ def translate_via_api(
     if provider == "auto":
         provider = _detect_provider()
 
-    if provider == "openai":
-        return _call_openai(
-            text, model=model, api_key=api_key, base_url=base_url,
-            source_lang=source_lang, target_lang=target_lang,
-        )
-    if provider == "google":
-        return _call_google(text, source_lang=source_lang, target_lang=target_lang)
-    if provider == "bing":
-        return _call_bing(text, source_lang=source_lang, target_lang=target_lang)
-    if provider == "mymemory":
-        return _call_mymemory(text, source_lang=source_lang, target_lang=target_lang)
+    # Protect inline code, URLs, and code fences from being mangled by the
+    # translation engine, then restore them after translation. This keeps the
+    # output format strictly identical to the source (code is never translated).
+    protected, placeholder_map = _protect_code_and_urls(text)
+    try:
+        if provider == "openai":
+            result = _call_openai(
+                protected,
+                model=model,
+                api_key=api_key,
+                base_url=base_url,
+                source_lang=source_lang,
+                target_lang=target_lang,
+            )
+        elif provider == "google":
+            result = _call_google(protected, source_lang=source_lang, target_lang=target_lang)
+        elif provider == "bing":
+            result = _call_bing(protected, source_lang=source_lang, target_lang=target_lang)
+        elif provider == "mymemory":
+            result = _call_mymemory(protected, source_lang=source_lang, target_lang=target_lang)
+        else:
+            return None
+    except Exception:
+        logger.debug("provider call failed", exc_info=True)
+        return None
 
-    return None
+    if not result:
+        return None
+    return _restore_code_and_urls(result, placeholder_map)
 
 
 def auto_detect_lang(text: str) -> str:
@@ -124,6 +213,7 @@ def _request_without_proxy(method: str, url: str, **kwargs):
     prevent direct HTTPS connection to translation APIs.
     """
     import httpx as _httpx
+
     return _httpx.request(method, url, trust_env=False, **kwargs)
 
 
@@ -138,7 +228,7 @@ def _call_google(
     try:
         proxy = _get_proxy()
         client = httpx.Client(
-            proxies=proxy,
+            proxy=proxy,
             timeout=8,
             headers={"User-Agent": "Mozilla/5.0"},
             follow_redirects=True,
@@ -192,9 +282,7 @@ def _call_bing(
         home = session.get("https://www.bing.com/translator")
         home.raise_for_status()
         ig = re.search(r'IG:"([^"]+)"', home.text)
-        iid = re.search(r'IID":"([^"]+)"', home.text) or re.search(
-            r'data-iid="([^"]+)"', home.text
-        )
+        iid = re.search(r'IID":"([^"]+)"', home.text) or re.search(r'data-iid="([^"]+)"', home.text)
         ig_val = ig.group(1) if ig else ""
         iid_val = iid.group(1) if iid else ""
 
@@ -226,7 +314,9 @@ def _call_openai(
     api_key = api_key or os.environ.get("OPENAI_API_KEY")
     if not api_key:
         return None
-    base_url = (base_url or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
+    base_url = (base_url or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")).rstrip(
+        "/"
+    )
     model = model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
     try:

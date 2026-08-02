@@ -15,6 +15,7 @@ format (heading hierarchy, basic formatting, inline CSS for epub).
 
 from __future__ import annotations
 
+import contextlib
 import subprocess
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from pathlib import Path
 def _find_pandoc() -> str | None:
     """Return the pandoc binary path, or None if not found."""
     import shutil
+
     return shutil.which("pandoc")
 
 
@@ -60,7 +62,9 @@ def export_via_pandoc(
 
     pandoc = _find_pandoc()
     if not pandoc:
-        print("[pandoc] ERROR: pandoc not found. Install it via 'apt install pandoc' or 'brew install pandoc'.")
+        print(
+            "[pandoc] ERROR: pandoc not found. Install it via 'apt install pandoc' or 'brew install pandoc'."
+        )
         return False
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -80,14 +84,13 @@ def export_via_pandoc(
             cmd.extend(["--reference-doc", str(ref.resolve())])
         else:
             print(f"[pandoc] WARNING: reference-doc not found: {ref}")
-    elif to_format == "docx" and page_size and (
-        page_size != "A4" or (margin or "").strip()
-    ):
+    elif to_format == "docx" and page_size and (page_size != "A4" or (margin or "").strip()):
         # No user reference doc but a non-default page size or an explicit margin
         # is requested: build a minimal reference docx carrying the page setup so
         # pandoc adopts it. The default A4 / auto-margin case is left untouched so
         # pandoc's own default reference styling is preserved.
         from .page import build_reference_docx
+
         ref = build_reference_docx(page_size, margin or "")
         temp_refs.append(ref)
         cmd.extend(["--reference-doc", str(ref.resolve())])
@@ -114,7 +117,5 @@ def export_via_pandoc(
         return False
     finally:
         for t in temp_refs:
-            try:
+            with contextlib.suppress(OSError):
                 t.unlink(missing_ok=True)
-            except OSError:
-                pass

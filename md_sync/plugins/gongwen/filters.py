@@ -17,9 +17,7 @@ from __future__ import annotations
 import re
 
 _P_BLOCK = re.compile(r"<p\b[^>]*>.*?</p>", re.DOTALL)
-_SIGN_DATE_RE = re.compile(
-    r"^(?:\d{4}年\d{1,2}月\d{1,2}日|（这里是成文日期[^）]*）)$"
-)
+_SIGN_DATE_RE = re.compile(r"^(?:\d{4}年\d{1,2}月\d{1,2}日|（这里是成文日期[^）]*）)$")
 _OPEN_TAG_RE = re.compile(r"(<p\b)([^>]*)(>)", re.DOTALL)
 
 
@@ -88,19 +86,22 @@ def gongwen_chrome(html: str) -> str:
         if zhusong is not None:
             text = _text_of(zhusong.group(0))
             if text.endswith("：") or text.endswith(":"):
-                edits.append((zhusong.start(), zhusong.end(),
-                              _tag_block(zhusong.group(0), "gongwen-zhusong")))
+                edits.append(
+                    (
+                        zhusong.start(),
+                        zhusong.end(),
+                        _tag_block(zhusong.group(0), "gongwen-zhusong"),
+                    )
+                )
 
         # ── 版头（可选）：标题之前的段落 → 红头 + 发文字号 ──
         head_ps = [m for m in ps if m.end() < h1_pos]
         if head_ps:
             first = head_ps[0]
-            edits.append((first.start(), first.end(),
-                          _tag_block(first.group(0), "gongwen-org")))
+            edits.append((first.start(), first.end(), _tag_block(first.group(0), "gongwen-org")))
             if len(head_ps) > 1:
                 last = head_ps[-1]
-                edits.append((last.start(), last.end(),
-                              _tag_block(last.group(0), "gongwen-no")))
+                edits.append((last.start(), last.end(), _tag_block(last.group(0), "gongwen-no")))
 
     # 从后往前替换，避免索引偏移。
     for start, end, new in sorted(edits, key=lambda e: e[0], reverse=True):

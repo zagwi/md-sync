@@ -17,21 +17,16 @@ Format supported:
 from __future__ import annotations
 
 import re
-from pathlib import Path
-from typing import Optional
 
-from md_sync.plugin.interface import ParserPlugin, PluginManifest, PLUGIN_TYPE_PACK
 from md_sync.core.document import Document, Item, Metric, Section
-
+from md_sync.plugin.interface import PLUGIN_TYPE_PACK, ParserPlugin, PluginManifest
 
 # ── Regex patterns ──────────────────────────────────────────────────────────
 
 _SECTION_TITLE_RE = re.compile(r"^(#{1,3})\s+(.+)$")
 _BULLET_RE = re.compile(r"^-\s+(.+)$")
 _BOLD_ITEM_RE = re.compile(r"^(?:\s*-\s+)?\*\*(.+?)\*\*")
-_DATE_PERIOD_RE = re.compile(
-    r"(\d{4}\.\d{2})\s*[-–]\s*(\d{4}\.\d{2}|至今|Present)"
-)
+_DATE_PERIOD_RE = re.compile(r"(\d{4}\.\d{2})\s*[-–]\s*(\d{4}\.\d{2}|至今|Present)")
 _TECH_TAG_RE = re.compile(r"^\*\*涉及技术[：:]\*\*\s*(.+)", re.IGNORECASE)
 _METRIC_RE = re.compile(
     r"(\d+[Kk]?\s*[+%]?|"
@@ -82,9 +77,13 @@ class MyResumeParser(ParserPlugin):
         """
         has_header = bool(re.match(r"^# .+[—-]", text))
         has_resume_sections = any(
-            sec in text for sec in [
-                "## 工作经历", "## 教育经历", "## 项目经历",
-                "## Work Experience", "## Education",
+            sec in text
+            for sec in [
+                "## 工作经历",
+                "## 教育经历",
+                "## 项目经历",
+                "## Work Experience",
+                "## Education",
             ]
         )
         has_separator = "---" in text
@@ -125,7 +124,7 @@ class MyResumeParser(ParserPlugin):
                 i += 1
 
         # ── Sections ────────────────────────────────────────────────
-        current_section: Optional[Section] = None
+        current_section: Section | None = None
 
         while i < n:
             line = lines[i]
@@ -182,7 +181,7 @@ class MyResumeParser(ParserPlugin):
         bm = _BOLD_ITEM_RE.match(stripped)
         if bm:
             inner = bm.group(1).strip()
-            remaining = stripped[bm.end():].strip()
+            remaining = stripped[bm.end() :].strip()
             self._add_bold_item(section, inner, remaining)
             return
 
@@ -215,26 +214,41 @@ class MyResumeParser(ParserPlugin):
         pm = _DATE_PERIOD_RE.match(inner)
         if pm:
             period = f"{pm.group(1)}-{pm.group(2)}"
-            rest = inner[pm.end():].strip()
+            rest = inner[pm.end() :].strip()
 
         sec_id = section.id
         if sec_id == "work_experience":
             role, title = self._split_role(rest)
-            section.items.append(Item(
-                type="entry", period=period, title=title,
-                subtitle=role, content=remaining,
-            ))
+            section.items.append(
+                Item(
+                    type="entry",
+                    period=period,
+                    title=title,
+                    subtitle=role,
+                    content=remaining,
+                )
+            )
         elif sec_id == "education":
             school, major = self._split_edu(rest)
-            section.items.append(Item(
-                type="entry", period=period, title=school, subtitle=major,
-            ))
+            section.items.append(
+                Item(
+                    type="entry",
+                    period=period,
+                    title=school,
+                    subtitle=major,
+                )
+            )
         elif sec_id == "project_experience":
             role, title = self._split_role(rest)
-            section.items.append(Item(
-                type="project", period=period, title=title,
-                role=role, content=remaining,
-            ))
+            section.items.append(
+                Item(
+                    type="project",
+                    period=period,
+                    title=title,
+                    role=role,
+                    content=remaining,
+                )
+            )
         elif sec_id == "open_source":
             section.items.append(Item(type="open_source", title=inner, content=remaining))
         else:
@@ -264,7 +278,7 @@ class MyResumeParser(ParserPlugin):
         m = re.search(r"[（(](.+?)[）) ]*\s*$", rest)
         if m:
             role = m.group(1).strip()
-            rest = rest[:m.start()].strip()
+            rest = rest[: m.start()].strip()
         return role, rest
 
     @staticmethod

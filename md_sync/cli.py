@@ -1,14 +1,15 @@
 """CLI entry point.
 
 Usage:
-    md-sync start        Start Web UI (no config needed)
     md-sync init         Create a default md-sync.yaml
     md-sync sync         Run a one-shot sync
     md-sync status       Show project status
     md-sync dry-run      Show what would change
+    md-sync gui          Launch the native Qt GUI
     md-sync template     Manage template styles
     md-sync plugin       Manage plugins
 """
+
 from __future__ import annotations
 
 import argparse
@@ -23,12 +24,15 @@ from md_sync.plugin.interface import DirectoryPlugin
 from md_sync.plugin.loader import remove_plugin
 from md_sync.plugin.registry import PluginRegistry
 from md_sync.template.manager import TemplateManager
-from md_sync.watcher import FileWatcher
 
 
 def _add_common_args(sp: argparse.ArgumentParser) -> None:
-    sp.add_argument("-c", "--config", default="md-sync.yaml",
-                    help="Path to project config (default: md-sync.yaml)")
+    sp.add_argument(
+        "-c",
+        "--config",
+        default="md-sync.yaml",
+        help="Path to project config (default: md-sync.yaml)",
+    )
 
 
 def _extract_config(args: argparse.Namespace) -> str:
@@ -47,11 +51,10 @@ def main(argv: list[str] | None = None) -> int:
 
     for cmd, help_text in [
         ("init", "Create a default md-sync.yaml"),
-        ("start", "Start Web UI (no config needed — setup via browser)"),
         ("sync", "Run a one-shot sync"),
         ("status", "Show project status"),
         ("dry-run", "Show what would change without writing"),
-        ("gui", "Launch the native Qt GUI (no server)"),
+        ("gui", "Launch the native Qt GUI"),
     ]:
         sp = sub.add_parser(cmd, help=help_text)
         _add_common_args(sp)
@@ -75,17 +78,22 @@ def main(argv: list[str] | None = None) -> int:
     plg_remove.add_argument("name")
     plg_show = plg_sub.add_parser("show")
     plg_show.add_argument("name")
-    plg_template = plg_sub.add_parser("template", help="Generate source template.md from a plugin pack")
+    plg_template = plg_sub.add_parser(
+        "template", help="Generate source template.md from a plugin pack"
+    )
     plg_template.add_argument("plugin_name", help="Name of the installed plugin pack")
-    plg_template.add_argument("-o", "--output", default="template.md",
-                              help="Output path for template.md (default: template.md)")
+    plg_template.add_argument(
+        "-o",
+        "--output",
+        default="template.md",
+        help="Output path for template.md (default: template.md)",
+    )
 
     args = parser.parse_args(argv)
     cfg_path = _extract_config(args)
 
     handlers = {
         "init": lambda: _cmd_init(),
-        "start": lambda: _cmd_start(cfg_path),
         "sync": lambda: _cmd_sync(cfg_path),
         "status": lambda: _cmd_status(cfg_path),
         "dry-run": lambda: _cmd_dry_run(cfg_path),
@@ -145,58 +153,9 @@ translation:
   mapping_file: .translations.json
   ai:
     provider: auto
-
-web_ui:
-  enabled: true
-  host: 127.0.0.1
-  port: 8580
 """
     cfg_path.write_text(template, encoding="utf-8")
     print(f"[init] ✓ Created: {cfg_path}")
-    return 0
-
-
-# ── Start (no config required) ─────────────────────────────────────────────
-
-
-def _cmd_start(config_path: str) -> int:
-    cfg = None
-    pipeline = None
-    watcher = None
-
-    cfg_file = Path(config_path)
-    if cfg_file.exists():
-        cfg = ProjectConfig.load(cfg_file)
-        pipeline = SyncPipeline(cfg)
-        print(f"[start] ✓ Loaded: {cfg_file.name}")
-
-        def on_change(source_path: Path) -> None:
-            print(f"\n[watch] Change detected: {source_path.name}")
-            pipeline.run(source_path)
-
-        watcher = FileWatcher(
-            source_path=cfg.source_path,
-            on_change=on_change,
-            debounce=cfg.watch.debounce,
-        )
-        if cfg.watch.enabled:
-            watcher.start()
-
-        print("[start] Running initial sync...")
-        pipeline.run()
-    else:
-        print("[start] 🖥 Web UI ready — configure your project in the browser")
-
-    _start_web_ui(cfg, pipeline)
-
-    try:
-        while True:
-            import time
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n[start] Shutting down...")
-        if watcher:
-            watcher.stop()
     return 0
 
 
@@ -300,6 +259,7 @@ def _cmd_plugin(args: argparse.Namespace) -> int:
 
     elif args.plugin_action == "install":
         from md_sync.plugin.loader import install_plugin as ip
+
         try:
             ip(args.source)
         except Exception as e:
@@ -336,8 +296,7 @@ def _cmd_plugin(args: argparse.Namespace) -> int:
         if plugin:
             m = plugin.manifest
             print(f"Name:        {m.name}")
-            print(f"Version:     {m.version}"
-                  if m.version else "Version:     1.0")
+            print(f"Version:     {m.version}" if m.version else "Version:     1.0")
             print(f"Type:        {m.plugin_type}")
             print(f"Description: {m.description}")
             print(f"Author:      {m.author}")
@@ -373,34 +332,15 @@ def _load_config(config_path: str) -> ProjectConfig:
     path = Path(config_path)
     if not path.exists():
         print(f"[error] Config not found: {path}")
-        print("  Run 'md-sync init' to create one, or just 'md-sync start' to use the Web UI.")
+        print("  Run 'md-sync init' to create one, or use the Qt GUI ('md-sync gui').")
         sys.exit(1)
     return ProjectConfig.load(path)
-
-
-def _start_web_ui(cfg, pipeline) -> None:
-    import threading
-
-    from md_sync.web.app import run_web_ui
-
-    host = "127.0.0.1"
-    port = 8580
-    if cfg and hasattr(cfg, "web_ui"):
-        host = cfg.web_ui.host
-        port = cfg.web_ui.port
-
-    t = threading.Thread(
-        target=run_web_ui,
-        args=(cfg, pipeline),
-        daemon=True,
-    )
-    t.start()
-    print(f"[web] 🖥 Dashboard: http://{host}:{port}")
 
 
 def _cmd_gui() -> int:
     """Launch the native Qt GUI (no HTTP server)."""
     from md_sync.qt_app import main as gui_main
+
     gui_main()
     return 0
 

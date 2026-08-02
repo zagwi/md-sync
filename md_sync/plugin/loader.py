@@ -11,6 +11,7 @@ Security notes:
   - Pip installs use ``--no-deps`` and may be constrained by the
     ``MD_SYNC_ALLOWED_PIP_PACKAGES`` allow-list (comma-separated names).
 """
+
 from __future__ import annotations
 
 import logging
@@ -46,7 +47,9 @@ def _pip_allowed(package: str) -> bool:
         # No allow-list configured → allow but warn (operator should pin it).
         logger.warning(
             "Installing pip package '%s' with no MD_SYNC_ALLOWED_PIP_PACKAGES "
-            "allow-list. Set it to restrict installable packages.", package)
+            "allow-list. Set it to restrict installable packages.",
+            package,
+        )
         return True
     allowed = {p.strip() for p in allow.split(",") if p.strip()}
     return package in allowed
@@ -94,7 +97,8 @@ def install_plugin(
             raise ValueError(
                 f"Git host not allowed for plugin install: {source}. "
                 f"Allowed hosts: {', '.join(DEFAULT_GIT_HOSTS)} "
-                f"(extend via MD_SYNC_ALLOWED_GIT_HOSTS).")
+                f"(extend via MD_SYNC_ALLOWED_GIT_HOSTS)."
+            )
         plugin_name = name or source.rstrip("/").split("/")[-1].replace(".git", "")
         dest = target / plugin_name
         if dest.exists():
@@ -102,7 +106,8 @@ def install_plugin(
         try:
             subprocess.run(
                 ["git", "clone", "--depth", "1", source, str(dest)],
-                check=True, timeout=SUBPROCESS_TIMEOUT,
+                check=True,
+                timeout=SUBPROCESS_TIMEOUT,
             )
         except subprocess.TimeoutExpired as e:
             if dest.exists():
@@ -116,18 +121,19 @@ def install_plugin(
         return dest
 
     if source.startswith("http://"):
-        raise ValueError(
-            f"Refusing plaintext http plugin source (use https): {source}")
+        raise ValueError(f"Refusing plaintext http plugin source (use https): {source}")
 
     # Try pip install (package name) — constrained by allow-list, no deps.
     if not _pip_allowed(source):
         raise ValueError(
-            f"Package '{source}' is not in MD_SYNC_ALLOWED_PIP_PACKAGES. "
-            f"Refusing install.")
+            f"Package '{source}' is not in MD_SYNC_ALLOWED_PIP_PACKAGES. Refusing install."
+        )
     try:
         result = subprocess.run(
             ["pip", "install", "--no-deps", source],
-            capture_output=True, text=True, check=True,
+            capture_output=True,
+            text=True,
+            check=True,
             timeout=SUBPROCESS_TIMEOUT,
         )
         logger.info("[plugin] Installed via pip: %s", source)

@@ -16,6 +16,7 @@ Run:
     python -m md_sync.qt_app
     # or: md-sync gui
 """
+
 from __future__ import annotations
 
 import os
@@ -48,7 +49,9 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
     QComboBox,
+    QDialog,
     QFileDialog,
+    QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -71,6 +74,7 @@ from md_sync.exporters.pdf import _find_chromium
 from md_sync.plugin.interface import DirectoryPlugin, PluginManifest
 from md_sync.plugin.registry import PluginRegistry
 from md_sync.template.manager import TemplateManager
+from md_sync.typography import TypographyConfig, normalize_for_lang
 from md_sync.watcher import FileWatcher
 
 LANG_LABELS = {"zh": "中文", "en": "英文"}
@@ -78,63 +82,162 @@ LANG_LABELS = {"zh": "中文", "en": "英文"}
 # ── Preview cache ───────────────────────────────────────────────
 _PREVIEW_CACHE: dict[str, QPixmap | None] = {}
 _PREVIEW_CACHE_DIR = (
-    Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
-    / "md-sync" / "previews"
+    Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "md-sync" / "previews"
 )
 
 # theme.typora.io 官方画廊缩略图映射（本地 CSS stem → 画廊缩略图 URL）。
 # 由 https://theme.typora.io/ 页面抓取生成（2026-07 快照）。
 _TYPORA_GALLERY_URLS = {
-    "Screenplay": "https://theme.typora.io/media/thumbnails/screenplay.png", "alto": "https://theme.typora.io/media/thumbnails/alto.png", "amatriz": "https://theme.typora.io/media/thumbnails/amatriz.png",
-    "amatriz-print-white": "https://theme.typora.io/media/thumbnails/amatriz.png", "amber": "https://theme.typora.io/media/thumbnails/Amber.png", "animal-island": "https://theme.typora.io/media/thumbnails/animal-island-thumbnail.png",
-    "ash": "https://theme.typora.io/media/thumbnails/ash.png", "aspartate": "https://theme.typora.io/media/thumbnails/aspartate.png", "autumnus": "https://theme.typora.io/media/thumbnails/autumnus.png",
-    "ava-diana": "https://theme.typora.io/media/thumbnails/ava-diana.png", "barfi": "https://theme.typora.io/media/thumbnails/barfi.png", "bios": "https://theme.typora.io/media/thumbnails/bios.png",
-    "bit-clean-dark": "https://theme.typora.io/media/thumbnails/bit-clean-thumbnail.png", "bit-clean-light": "https://theme.typora.io/media/thumbnails/bit-clean-thumbnail.png", "blackout": "https://theme.typora.io/media/thumbnails/blackout.png",
-    "blubook": "https://theme.typora.io/media/thumbnails/blubook.png", "blue-topaz": "https://theme.typora.io/media/thumbnails/blue-topaz.png", "blue-topaz-dark": "https://theme.typora.io/media/thumbnails/blue-topaz.png",
-    "bluetex": "https://theme.typora.io/media/thumbnails/blueTex.png", "bonne-nouvelle": "https://theme.typora.io/media/thumbnails/bonne-nouvelle.png", "bronya": "https://theme.typora.io/media/thumbnails/bronya.png",
-    "catfish": "https://theme.typora.io/media/thumbnails/catfish.png", "cement": "https://theme.typora.io/media/thumbnails/cement.png", "ceylon": "https://theme.typora.io/media/thumbnails/ceylon.png",
-    "claude": "https://theme.typora.io/media/thumbnails/claude-typora-theme.png", "clean-light": "https://theme.typora.io/media/thumbnails/clean.png", "cobalt": "https://theme.typora.io/media/thumbnails/cobalt.png",
-    "compact": "https://theme.typora.io/media/thumbnails/compact.png", "compact-night": "https://theme.typora.io/media/thumbnails/compact-night.png", "crisp-gothic": "https://theme.typora.io/media/thumbnails/crisp.png",
-    "crisp-mincho": "https://theme.typora.io/media/thumbnails/crisp.png", "dracula": "https://theme.typora.io/media/thumbnails/dracula-typora.png", "drake": "https://theme.typora.io/media/thumbnails/drake-thumb.png",
-    "dyzj": "https://theme.typora.io/media/thumbnails/dyzj.png", "dyzj-dark": "https://theme.typora.io/media/thumbnails/dyzj.png", "dyzj-light": "https://theme.typora.io/media/thumbnails/dyzj.png",
-    "eloquent": "https://theme.typora.io/media/thumbnails/eloquent.png", "engwrite": "https://theme.typora.io/media/thumbnails/engwrite.png", "eternal": "https://theme.typora.io/media/thumbnails/Eternal.png",
-    "eva": "https://theme.typora.io/media/thumbnails/eva.png", "everforest": "https://theme.typora.io/media/thumbnails/everforest.png", "everforest-dark": "https://theme.typora.io/media/thumbnails/everforest.png",
-    "everforest-light": "https://theme.typora.io/media/thumbnails/everforest.png", "eyes-green": "https://theme.typora.io/media/thumbnails/eyes-green.png", "flexoki-light": "https://theme.typora.io/media/thumbnails/flexoki-light.png",
-    "fluent": "https://theme.typora.io/media/thumbnails/fluent.png", "folio": "https://theme.typora.io/media/thumbnails/folio.png", "forest": "https://theme.typora.io/media/thumbnails/forest.png",
-    "fro": "https://theme.typora.io/media/thumbnails/typora-fro.png", "github": "https://theme.typora.io/media/thumbnails/github.png", "github-night": "https://theme.typora.io/media/thumbnails/github-night.png",
-    "gitlab": "https://theme.typora.io/media/thumbnails/gitlab.png", "gruvbox": "https://theme.typora.io/media/thumbnails/gruvbox.png", "happysimple": "https://theme.typora.io/media/thumbnails/Happysimple.png",
-    "haru": "https://theme.typora.io/media/thumbnails/haru.png", "ia-typora": "https://theme.typora.io/media/thumbnails/iatypora.jpeg", "inkwell": "https://theme.typora.io/media/thumbnails/inkwell.png",
-    "inside": "https://theme.typora.io/media/thumbnails/inside.png", "ivory-flow": "https://theme.typora.io/media/thumbnails/ivory-flow-thumbnail.png", "jamstatic": "https://theme.typora.io/media/thumbnails/jamstatic.png",
-    "jetbrains-dark": "https://theme.typora.io/media/thumbnails/jetbrains-dark.png", "jinxiu": "https://theme.typora.io/media/thumbnails/Jinxiu.png", "johntor-dark-blue": "https://theme.typora.io/media/thumbnails/johntor-dark-blue.png",
-    "juejin": "https://theme.typora.io/media/thumbnails/juejin.png", "kiro": "https://theme.typora.io/media/thumbnails/kiro.png", "konayuki-dark": "https://theme.typora.io/media/thumbnails/Konayuki.png",
-    "konayuki-light": "https://theme.typora.io/media/thumbnails/Konayuki.png", "krafty": "https://theme.typora.io/media/thumbnails/krafty.png", "ladder": "https://theme.typora.io/media/thumbnails/ladder-theme.png",
-    "lanyue": "https://theme.typora.io/media/thumbnails/lanyue.png", "lapis": "https://theme.typora.io/media/thumbnails/lapis.png", "lavender": "https://theme.typora.io/media/thumbnails/lavender.png",
-    "law": "https://theme.typora.io/media/thumbnails/law.png", "lcars": "https://theme.typora.io/media/thumbnails/lcars.png", "light-monokai": "https://theme.typora.io/media/thumbnails/light-monokai.png",
-    "lightmind": "https://theme.typora.io/media/thumbnails/lightmind.png", "liquid": "https://theme.typora.io/media/thumbnails/liquid.png", "lostkeys": "https://theme.typora.io/media/thumbnails/lostkeys.png",
-    "maize": "https://theme.typora.io/media/thumbnails/maize.png", "mdmdt": "https://theme.typora.io/media/thumbnails/mdmdt.png", "mint": "https://theme.typora.io/media/thumbnails/mint.png",
-    "mist-blue": "https://theme.typora.io/media/thumbnails/mist-blue.png", "mlike": "https://theme.typora.io/media/thumbnails/mlike.png", "mo": "https://theme.typora.io/media/thumbnails/mo.png",
-    "monospace": "https://theme.typora.io/media/thumbnails/monospace.png", "morandigarden": "https://theme.typora.io/media/thumbnails/morandigarden.jpg", "neil-jetbrains-mono": "https://theme.typora.io/media/thumbnails/neil-jetbrains-mono-theme.png",
-    "newsprint": "https://theme.typora.io/media/thumbnails/newsprint.png", "next": "https://theme.typora.io/media/thumbnails/next.jpg", "night": "https://theme.typora.io/media/thumbnails/night.png",
-    "nocturne": "https://theme.typora.io/media/thumbnails/nocturne.png", "nord": "https://theme.typora.io/media/thumbnails/nord.png", "notes-dark": "https://theme.typora.io/media/thumbnails/notes-dark.png",
-    "notion": "https://theme.typora.io/media/thumbnails/notion-thumb.jpg", "notion-onedark": "https://theme.typora.io/media/thumbnails/notion-onedark.png", "notion-style-dark": "https://theme.typora.io/media/thumbnails/notion-style.png",
-    "notion-style-light": "https://theme.typora.io/media/thumbnails/notion-style.png", "onedark": "https://theme.typora.io/media/thumbnails/onedark.png", "onelight": "https://theme.typora.io/media/thumbnails/onelight.png",
-    "onigiri": "https://theme.typora.io/media/thumbnails/onigiri.png", "opencode": "https://theme.typora.io/media/thumbnails/opencode.png", "orangeheart": "https://theme.typora.io/media/thumbnails/orangeheart.png",
-    "panda": "https://theme.typora.io/media/thumbnails/panda.png", "paper": "https://theme.typora.io/media/thumbnails/paper.png", "paperglow": "https://theme.typora.io/media/thumbnails/paperglow-theme.png",
-    "phycat.dark": "https://theme.typora.io/media/thumbnails/phycat.png", "phycat.light": "https://theme.typora.io/media/thumbnails/phycat.png", "pie": "https://theme.typora.io/media/thumbnails/pie.png",
-    "pink-fairy": "https://theme.typora.io/media/thumbnails/pink-fairy.png", "pink-hsiao": "https://theme.typora.io/media/thumbnails/pink-hsiao.png", "pixyll": "https://theme.typora.io/media/thumbnails/pixyll.png",
-    "print": "https://theme.typora.io/media/thumbnails/print.png", "purclaude": "https://theme.typora.io/media/thumbnails/purclaude.png", "purple": "https://theme.typora.io/media/thumbnails/purple.png",
-    "rainbow": "https://theme.typora.io/media/thumbnails/rainbow.png", "ravel": "https://theme.typora.io/media/thumbnails/ravel.png", "redefine-dark": "https://theme.typora.io/media/thumbnails/redefine.png",
-    "redefine-light": "https://theme.typora.io/media/thumbnails/redefine.png", "refine": "https://theme.typora.io/media/thumbnails/refine.png", "rhapsody": "https://theme.typora.io/media/thumbnails/Rhapsody.png",
-    "rubrication": "https://theme.typora.io/media/thumbnails/rubrication.png", "saffron": "https://theme.typora.io/media/thumbnails/saffron.png", "salamander": "https://theme.typora.io/media/thumbnails/salamander.png",
-    "scrolls": "https://theme.typora.io/media/thumbnails/scrolls.png", "see-yue-dark": "https://theme.typora.io/media/thumbnails/see-yue.png", "seniva": "https://theme.typora.io/media/thumbnails/seniva.png",
-    "softgreen": "https://theme.typora.io/media/thumbnails/softgreen.png", "solarized": "https://theme.typora.io/media/thumbnails/solarized.png", "sonnet": "https://theme.typora.io/media/thumbnails/sonnet.png",
-    "spring": "https://theme.typora.io/media/thumbnails/Spring.png", "swiss": "https://theme.typora.io/media/thumbnails/swiss.png", "tailwind": "https://theme.typora.io/media/thumbnails/tailwind.png",
-    "tanda": "https://theme.typora.io/media/thumbnails/Tanda.png", "techo": "https://theme.typora.io/media/thumbnails/techo.png", "torillic": "https://theme.typora.io/media/thumbnails/torillic.png",
-    "turing": "https://theme.typora.io/media/thumbnails/turing.png", "typora-docsify": "https://theme.typora.io/media/thumbnails/typora_docsify.png", "valve": "https://theme.typora.io/media/thumbnails/valve.png",
-    "vercel": "https://theme.typora.io/media/thumbnails/vercel.png", "vintage": "https://theme.typora.io/media/thumbnails/vintage.png", "virgo": "https://theme.typora.io/media/thumbnails/virgo.png",
-    "vlook-fancy": "https://theme.typora.io/media/thumbnails/vlook-fancy.png", "vlook-fancy-dark": "https://theme.typora.io/media/thumbnails/vlook-fancy.png", "vlook-fancy-light": "https://theme.typora.io/media/thumbnails/vlook-fancy.png",
-    "vue": "https://theme.typora.io/media/thumbnails/vue.png", "warp-gradient": "https://theme.typora.io/media/thumbnails/warp-gradient.png", "whitelines": "https://theme.typora.io/media/thumbnails/whitelines.png",
-    "whitey": "https://theme.typora.io/media/thumbnails/whitey.png", "xydark": "https://theme.typora.io/media/thumbnails/xydark.png", "zeus": "https://theme.typora.io/media/thumbnails/zeus.png",
+    "Screenplay": "https://theme.typora.io/media/thumbnails/screenplay.png",
+    "alto": "https://theme.typora.io/media/thumbnails/alto.png",
+    "amatriz": "https://theme.typora.io/media/thumbnails/amatriz.png",
+    "amatriz-print-white": "https://theme.typora.io/media/thumbnails/amatriz.png",
+    "amber": "https://theme.typora.io/media/thumbnails/Amber.png",
+    "animal-island": "https://theme.typora.io/media/thumbnails/animal-island-thumbnail.png",
+    "ash": "https://theme.typora.io/media/thumbnails/ash.png",
+    "aspartate": "https://theme.typora.io/media/thumbnails/aspartate.png",
+    "autumnus": "https://theme.typora.io/media/thumbnails/autumnus.png",
+    "ava-diana": "https://theme.typora.io/media/thumbnails/ava-diana.png",
+    "barfi": "https://theme.typora.io/media/thumbnails/barfi.png",
+    "bios": "https://theme.typora.io/media/thumbnails/bios.png",
+    "bit-clean-dark": "https://theme.typora.io/media/thumbnails/bit-clean-thumbnail.png",
+    "bit-clean-light": "https://theme.typora.io/media/thumbnails/bit-clean-thumbnail.png",
+    "blackout": "https://theme.typora.io/media/thumbnails/blackout.png",
+    "blubook": "https://theme.typora.io/media/thumbnails/blubook.png",
+    "blue-topaz": "https://theme.typora.io/media/thumbnails/blue-topaz.png",
+    "blue-topaz-dark": "https://theme.typora.io/media/thumbnails/blue-topaz.png",
+    "bluetex": "https://theme.typora.io/media/thumbnails/blueTex.png",
+    "bonne-nouvelle": "https://theme.typora.io/media/thumbnails/bonne-nouvelle.png",
+    "bronya": "https://theme.typora.io/media/thumbnails/bronya.png",
+    "catfish": "https://theme.typora.io/media/thumbnails/catfish.png",
+    "cement": "https://theme.typora.io/media/thumbnails/cement.png",
+    "ceylon": "https://theme.typora.io/media/thumbnails/ceylon.png",
+    "claude": "https://theme.typora.io/media/thumbnails/claude-typora-theme.png",
+    "clean-light": "https://theme.typora.io/media/thumbnails/clean.png",
+    "cobalt": "https://theme.typora.io/media/thumbnails/cobalt.png",
+    "compact": "https://theme.typora.io/media/thumbnails/compact.png",
+    "compact-night": "https://theme.typora.io/media/thumbnails/compact-night.png",
+    "crisp-gothic": "https://theme.typora.io/media/thumbnails/crisp.png",
+    "crisp-mincho": "https://theme.typora.io/media/thumbnails/crisp.png",
+    "dracula": "https://theme.typora.io/media/thumbnails/dracula-typora.png",
+    "drake": "https://theme.typora.io/media/thumbnails/drake-thumb.png",
+    "dyzj": "https://theme.typora.io/media/thumbnails/dyzj.png",
+    "dyzj-dark": "https://theme.typora.io/media/thumbnails/dyzj.png",
+    "dyzj-light": "https://theme.typora.io/media/thumbnails/dyzj.png",
+    "eloquent": "https://theme.typora.io/media/thumbnails/eloquent.png",
+    "engwrite": "https://theme.typora.io/media/thumbnails/engwrite.png",
+    "eternal": "https://theme.typora.io/media/thumbnails/Eternal.png",
+    "eva": "https://theme.typora.io/media/thumbnails/eva.png",
+    "everforest": "https://theme.typora.io/media/thumbnails/everforest.png",
+    "everforest-dark": "https://theme.typora.io/media/thumbnails/everforest.png",
+    "everforest-light": "https://theme.typora.io/media/thumbnails/everforest.png",
+    "eyes-green": "https://theme.typora.io/media/thumbnails/eyes-green.png",
+    "flexoki-light": "https://theme.typora.io/media/thumbnails/flexoki-light.png",
+    "fluent": "https://theme.typora.io/media/thumbnails/fluent.png",
+    "folio": "https://theme.typora.io/media/thumbnails/folio.png",
+    "forest": "https://theme.typora.io/media/thumbnails/forest.png",
+    "fro": "https://theme.typora.io/media/thumbnails/typora-fro.png",
+    "github": "https://theme.typora.io/media/thumbnails/github.png",
+    "github-night": "https://theme.typora.io/media/thumbnails/github-night.png",
+    "gitlab": "https://theme.typora.io/media/thumbnails/gitlab.png",
+    "gruvbox": "https://theme.typora.io/media/thumbnails/gruvbox.png",
+    "happysimple": "https://theme.typora.io/media/thumbnails/Happysimple.png",
+    "haru": "https://theme.typora.io/media/thumbnails/haru.png",
+    "ia-typora": "https://theme.typora.io/media/thumbnails/iatypora.jpeg",
+    "inkwell": "https://theme.typora.io/media/thumbnails/inkwell.png",
+    "inside": "https://theme.typora.io/media/thumbnails/inside.png",
+    "ivory-flow": "https://theme.typora.io/media/thumbnails/ivory-flow-thumbnail.png",
+    "jamstatic": "https://theme.typora.io/media/thumbnails/jamstatic.png",
+    "jetbrains-dark": "https://theme.typora.io/media/thumbnails/jetbrains-dark.png",
+    "jinxiu": "https://theme.typora.io/media/thumbnails/Jinxiu.png",
+    "johntor-dark-blue": "https://theme.typora.io/media/thumbnails/johntor-dark-blue.png",
+    "juejin": "https://theme.typora.io/media/thumbnails/juejin.png",
+    "kiro": "https://theme.typora.io/media/thumbnails/kiro.png",
+    "konayuki-dark": "https://theme.typora.io/media/thumbnails/Konayuki.png",
+    "konayuki-light": "https://theme.typora.io/media/thumbnails/Konayuki.png",
+    "krafty": "https://theme.typora.io/media/thumbnails/krafty.png",
+    "ladder": "https://theme.typora.io/media/thumbnails/ladder-theme.png",
+    "lanyue": "https://theme.typora.io/media/thumbnails/lanyue.png",
+    "lapis": "https://theme.typora.io/media/thumbnails/lapis.png",
+    "lavender": "https://theme.typora.io/media/thumbnails/lavender.png",
+    "law": "https://theme.typora.io/media/thumbnails/law.png",
+    "lcars": "https://theme.typora.io/media/thumbnails/lcars.png",
+    "light-monokai": "https://theme.typora.io/media/thumbnails/light-monokai.png",
+    "lightmind": "https://theme.typora.io/media/thumbnails/lightmind.png",
+    "liquid": "https://theme.typora.io/media/thumbnails/liquid.png",
+    "lostkeys": "https://theme.typora.io/media/thumbnails/lostkeys.png",
+    "maize": "https://theme.typora.io/media/thumbnails/maize.png",
+    "mdmdt": "https://theme.typora.io/media/thumbnails/mdmdt.png",
+    "mint": "https://theme.typora.io/media/thumbnails/mint.png",
+    "mist-blue": "https://theme.typora.io/media/thumbnails/mist-blue.png",
+    "mlike": "https://theme.typora.io/media/thumbnails/mlike.png",
+    "mo": "https://theme.typora.io/media/thumbnails/mo.png",
+    "monospace": "https://theme.typora.io/media/thumbnails/monospace.png",
+    "morandigarden": "https://theme.typora.io/media/thumbnails/morandigarden.jpg",
+    "neil-jetbrains-mono": "https://theme.typora.io/media/thumbnails/neil-jetbrains-mono-theme.png",
+    "newsprint": "https://theme.typora.io/media/thumbnails/newsprint.png",
+    "next": "https://theme.typora.io/media/thumbnails/next.jpg",
+    "night": "https://theme.typora.io/media/thumbnails/night.png",
+    "nocturne": "https://theme.typora.io/media/thumbnails/nocturne.png",
+    "nord": "https://theme.typora.io/media/thumbnails/nord.png",
+    "notes-dark": "https://theme.typora.io/media/thumbnails/notes-dark.png",
+    "notion": "https://theme.typora.io/media/thumbnails/notion-thumb.jpg",
+    "notion-onedark": "https://theme.typora.io/media/thumbnails/notion-onedark.png",
+    "notion-style-dark": "https://theme.typora.io/media/thumbnails/notion-style.png",
+    "notion-style-light": "https://theme.typora.io/media/thumbnails/notion-style.png",
+    "onedark": "https://theme.typora.io/media/thumbnails/onedark.png",
+    "onelight": "https://theme.typora.io/media/thumbnails/onelight.png",
+    "onigiri": "https://theme.typora.io/media/thumbnails/onigiri.png",
+    "opencode": "https://theme.typora.io/media/thumbnails/opencode.png",
+    "orangeheart": "https://theme.typora.io/media/thumbnails/orangeheart.png",
+    "panda": "https://theme.typora.io/media/thumbnails/panda.png",
+    "paper": "https://theme.typora.io/media/thumbnails/paper.png",
+    "paperglow": "https://theme.typora.io/media/thumbnails/paperglow-theme.png",
+    "phycat.dark": "https://theme.typora.io/media/thumbnails/phycat.png",
+    "phycat.light": "https://theme.typora.io/media/thumbnails/phycat.png",
+    "pie": "https://theme.typora.io/media/thumbnails/pie.png",
+    "pink-fairy": "https://theme.typora.io/media/thumbnails/pink-fairy.png",
+    "pink-hsiao": "https://theme.typora.io/media/thumbnails/pink-hsiao.png",
+    "pixyll": "https://theme.typora.io/media/thumbnails/pixyll.png",
+    "print": "https://theme.typora.io/media/thumbnails/print.png",
+    "purclaude": "https://theme.typora.io/media/thumbnails/purclaude.png",
+    "purple": "https://theme.typora.io/media/thumbnails/purple.png",
+    "rainbow": "https://theme.typora.io/media/thumbnails/rainbow.png",
+    "ravel": "https://theme.typora.io/media/thumbnails/ravel.png",
+    "redefine-dark": "https://theme.typora.io/media/thumbnails/redefine.png",
+    "redefine-light": "https://theme.typora.io/media/thumbnails/redefine.png",
+    "refine": "https://theme.typora.io/media/thumbnails/refine.png",
+    "rhapsody": "https://theme.typora.io/media/thumbnails/Rhapsody.png",
+    "rubrication": "https://theme.typora.io/media/thumbnails/rubrication.png",
+    "saffron": "https://theme.typora.io/media/thumbnails/saffron.png",
+    "salamander": "https://theme.typora.io/media/thumbnails/salamander.png",
+    "scrolls": "https://theme.typora.io/media/thumbnails/scrolls.png",
+    "see-yue-dark": "https://theme.typora.io/media/thumbnails/see-yue.png",
+    "seniva": "https://theme.typora.io/media/thumbnails/seniva.png",
+    "softgreen": "https://theme.typora.io/media/thumbnails/softgreen.png",
+    "solarized": "https://theme.typora.io/media/thumbnails/solarized.png",
+    "sonnet": "https://theme.typora.io/media/thumbnails/sonnet.png",
+    "spring": "https://theme.typora.io/media/thumbnails/Spring.png",
+    "swiss": "https://theme.typora.io/media/thumbnails/swiss.png",
+    "tailwind": "https://theme.typora.io/media/thumbnails/tailwind.png",
+    "tanda": "https://theme.typora.io/media/thumbnails/Tanda.png",
+    "techo": "https://theme.typora.io/media/thumbnails/techo.png",
+    "torillic": "https://theme.typora.io/media/thumbnails/torillic.png",
+    "turing": "https://theme.typora.io/media/thumbnails/turing.png",
+    "typora-docsify": "https://theme.typora.io/media/thumbnails/typora_docsify.png",
+    "valve": "https://theme.typora.io/media/thumbnails/valve.png",
+    "vercel": "https://theme.typora.io/media/thumbnails/vercel.png",
+    "vintage": "https://theme.typora.io/media/thumbnails/vintage.png",
+    "virgo": "https://theme.typora.io/media/thumbnails/virgo.png",
+    "vlook-fancy": "https://theme.typora.io/media/thumbnails/vlook-fancy.png",
+    "vlook-fancy-dark": "https://theme.typora.io/media/thumbnails/vlook-fancy.png",
+    "vlook-fancy-light": "https://theme.typora.io/media/thumbnails/vlook-fancy.png",
+    "vue": "https://theme.typora.io/media/thumbnails/vue.png",
+    "warp-gradient": "https://theme.typora.io/media/thumbnails/warp-gradient.png",
+    "whitelines": "https://theme.typora.io/media/thumbnails/whitelines.png",
+    "whitey": "https://theme.typora.io/media/thumbnails/whitey.png",
+    "xydark": "https://theme.typora.io/media/thumbnails/xydark.png",
+    "zeus": "https://theme.typora.io/media/thumbnails/zeus.png",
 }
 
 # 访问 theme.typora.io 本机直连会超时，需走代理（依次尝试）
@@ -145,36 +248,83 @@ _TYPORA_PROXIES = ("http://127.0.0.1:1080", "")
 # （参考 https://theme.typora.io/ 按作者仓库分组）。前缀按「长的在前」排序，
 # 避免短前缀误吞（如 claude-like 需先于 claude）。未命中的主题归入「其他主题」。
 _TYPORA_GROUPS: list[tuple[str, str]] = [
-    ("Claude-like", "claude-like"), ("Novel Tex", "novel-tex-"),
-    ("Animal Island", "animal-island"), ("Esther Inspired", "esther-inspired-"),
-    ("Neil JetBrains Mono", "neil-jetbrains-mono"), ("Middle East", "middle-east-"),
-    ("Bit Clean", "bit-clean"), ("Blue Topaz", "blue-topaz"),
-    ("Eyes Green", "eyes-green"), ("Konayuki", "konayuki-"),
-    ("See-Yue", "see-yue-"), ("Themeable", "themeable"),
-    ("Autumnus", "autumnus"), ("Everforest", "everforest"),
-    ("Paperglow", "paperglow"), ("Redefine", "redefine"),
-    ("Solarized", "solarized"), ("Lightmind", "lightmind"),
-    ("Lostkeys", "lostkeys"), ("Monospace", "monospace"),
-    ("Neumorphism", "neumorphism"), ("Happysimple", "happysimple"),
-    ("Gruvbox", "gruvbox"), ("Inkwell", "inkwell"), ("Ladder", "ladder"),
-    ("Lapis", "lapis"), ("Liquid", "liquid"), ("MDMDT", "mdmdt"),
-    ("MLike", "mlike"), ("Onigiri", "onigiri"), ("Scrolls", "scrolls"),
-    ("Sonnet", "sonnet"), ("Tailwind", "tailwind"), ("Terminal", "terminal"),
-    ("Vintage", "vintage"), ("Virgo", "virgo"), ("Bloom", "bloom-"),
-    ("Nexmoe", "nexmoe-"), ("Paradox", "paradox-"), ("Quartz", "quartz-"),
-    ("Riwaq", "riwaq-"), ("Dogs", "dogs-"), ("I-W", "i-w-"),
-    ("Pink", "pink-"), ("Crisp", "crisp-"), ("Clean", "clean-"),
-    ("Compact", "compact"), ("Fluent", "fluent"), ("Folio", "folio"),
-    ("Jinxiu", "jinxiu"), ("Ceylon", "ceylon"), ("Cement", "cement"),
-    ("Amatriz", "amatriz"), ("Bluetex", "bluetex"), ("Alto", "alto"),
-    ("iA Typora", "ia-typora"), ("One Dark", "onedark"),
-    ("One Light", "onelight"), ("GitHub", "github"),
-    ("Notion", "notion"), ("Purple", "purple-"), ("Phycat", "phycat-"),
-    ("Drake", "drake"), ("vlook", "vlook-"), ("Seniva", "seniva"),
-    ("Next", "next"), ("Ravel", "ravel"), ("Pie", "pie"),
-    ("Print", "print"), ("Claude", "claude"), ("Mint", "mint"),
-    ("Mo", "mo-"), ("DYZJ", "dyzj"), ("Haru", "haru"),
-    ("Inside", "inside"), ("Vue", "vue"), ("Xy", "xy"),
+    ("Claude-like", "claude-like"),
+    ("Novel Tex", "novel-tex-"),
+    ("Animal Island", "animal-island"),
+    ("Esther Inspired", "esther-inspired-"),
+    ("Neil JetBrains Mono", "neil-jetbrains-mono"),
+    ("Middle East", "middle-east-"),
+    ("Bit Clean", "bit-clean"),
+    ("Blue Topaz", "blue-topaz"),
+    ("Eyes Green", "eyes-green"),
+    ("Konayuki", "konayuki-"),
+    ("See-Yue", "see-yue-"),
+    ("Themeable", "themeable"),
+    ("Autumnus", "autumnus"),
+    ("Everforest", "everforest"),
+    ("Paperglow", "paperglow"),
+    ("Redefine", "redefine"),
+    ("Solarized", "solarized"),
+    ("Lightmind", "lightmind"),
+    ("Lostkeys", "lostkeys"),
+    ("Monospace", "monospace"),
+    ("Neumorphism", "neumorphism"),
+    ("Happysimple", "happysimple"),
+    ("Gruvbox", "gruvbox"),
+    ("Inkwell", "inkwell"),
+    ("Ladder", "ladder"),
+    ("Lapis", "lapis"),
+    ("Liquid", "liquid"),
+    ("MDMDT", "mdmdt"),
+    ("MLike", "mlike"),
+    ("Onigiri", "onigiri"),
+    ("Scrolls", "scrolls"),
+    ("Sonnet", "sonnet"),
+    ("Tailwind", "tailwind"),
+    ("Terminal", "terminal"),
+    ("Vintage", "vintage"),
+    ("Virgo", "virgo"),
+    ("Bloom", "bloom-"),
+    ("Nexmoe", "nexmoe-"),
+    ("Paradox", "paradox-"),
+    ("Quartz", "quartz-"),
+    ("Riwaq", "riwaq-"),
+    ("Dogs", "dogs-"),
+    ("I-W", "i-w-"),
+    ("Pink", "pink-"),
+    ("Crisp", "crisp-"),
+    ("Clean", "clean-"),
+    ("Compact", "compact"),
+    ("Fluent", "fluent"),
+    ("Folio", "folio"),
+    ("Jinxiu", "jinxiu"),
+    ("Ceylon", "ceylon"),
+    ("Cement", "cement"),
+    ("Amatriz", "amatriz"),
+    ("Bluetex", "bluetex"),
+    ("Alto", "alto"),
+    ("iA Typora", "ia-typora"),
+    ("One Dark", "onedark"),
+    ("One Light", "onelight"),
+    ("GitHub", "github"),
+    ("Notion", "notion"),
+    ("Purple", "purple-"),
+    ("Phycat", "phycat-"),
+    ("Drake", "drake"),
+    ("vlook", "vlook-"),
+    ("Seniva", "seniva"),
+    ("Next", "next"),
+    ("Ravel", "ravel"),
+    ("Pie", "pie"),
+    ("Print", "print"),
+    ("Claude", "claude"),
+    ("Mint", "mint"),
+    ("Mo", "mo-"),
+    ("DYZJ", "dyzj"),
+    ("Haru", "haru"),
+    ("Inside", "inside"),
+    ("Vue", "vue"),
+    ("Xy", "xy"),
 ]
 
 # 下拉模型角色：组头行存分组显示名
@@ -191,6 +341,7 @@ def _typora_group_key(stem: str) -> str | None:
         if stem.lower().startswith(prefix):
             return name
     return None
+
 
 _SAMPLE_PREVIEW_HTML = """<!DOCTYPE html>
 <html lang="zh">
@@ -289,14 +440,19 @@ def _get_style_css(style_name: str, tmgr: TemplateManager) -> str:
         css_stem = style_name[7:]
         try:
             from md_sync.plugins.typora.paths import get_typora_themes_dir
+
             td = get_typora_themes_dir()
             if td:
                 css_path = td / f"{css_stem}.css"
                 if css_path.exists():
                     import re
-                    return re.sub(r'@font-face\s*\{[^}]*\}', '',
-                                  css_path.read_text(encoding="utf-8"),
-                                  flags=re.DOTALL)
+
+                    return re.sub(
+                        r"@font-face\s*\{[^}]*\}",
+                        "",
+                        css_path.read_text(encoding="utf-8"),
+                        flags=re.DOTALL,
+                    )
         except Exception:
             pass
         return ""
@@ -305,9 +461,10 @@ def _get_style_css(style_name: str, tmgr: TemplateManager) -> str:
         css_path = tpl_dir / "style.css"
         if css_path.exists():
             import re
-            return re.sub(r'@font-face\s*\{[^}]*\}', '',
-                          css_path.read_text(encoding="utf-8"),
-                          flags=re.DOTALL)
+
+            return re.sub(
+                r"@font-face\s*\{[^}]*\}", "", css_path.read_text(encoding="utf-8"), flags=re.DOTALL
+            )
     except Exception:
         pass
     return ""
@@ -384,10 +541,20 @@ def _get_or_create_preview(style_name: str, tmgr: TemplateManager) -> QPixmap | 
             _PREVIEW_CACHE[style_name] = None
             return None
         try:
-            subprocess.run([chromium, "--headless", "--no-sandbox", "--disable-gpu",
-                            f"--screenshot={cache_path}", "--window-size=420,540",
-                            f"file://{html_path}"],
-                           capture_output=True, text=True, timeout=15)
+            subprocess.run(
+                [
+                    chromium,
+                    "--headless",
+                    "--no-sandbox",
+                    "--disable-gpu",
+                    f"--screenshot={cache_path}",
+                    "--window-size=420,540",
+                    f"file://{html_path}",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
         except Exception:
             _PREVIEW_CACHE[style_name] = None
             return None
@@ -405,11 +572,12 @@ def _get_or_create_preview(style_name: str, tmgr: TemplateManager) -> QPixmap | 
         _PREVIEW_CACHE[style_name] = None
         return None
 
+
 # ── status colors (shadcn-ish) ──
-C_SYNCED = "#22c55e"     # 已同步（绿）
-C_PENDING = "#f59e0b"    # 待同步（黄）
-C_MISSING = "#ef4444"    # 文件不存在（红）
-C_RUNNING = "#3b82f6"    # 同步中（蓝，动态闪烁）
+C_SYNCED = "#22c55e"  # 已同步（绿）
+C_PENDING = "#f59e0b"  # 待同步（黄）
+C_MISSING = "#ef4444"  # 文件不存在（红）
+C_RUNNING = "#3b82f6"  # 同步中（蓝，动态闪烁）
 
 EDGE_MARGIN = 6
 
@@ -453,9 +621,7 @@ class StatusTag(QWidget):
         c = QColor(self._color)
         c.setAlphaF(self._alpha)
         self.dot.setStyleSheet(
-            f"background:{c.name(QColor.HexRgb)};"
-            f"border-radius:5px;"
-            f"opacity:{self._alpha};"
+            f"background:{c.name(QColor.HexRgb)};border-radius:5px;opacity:{self._alpha};"
         )
 
 
@@ -543,8 +709,7 @@ class TitleBar(QWidget):
         # 全局状态指示器（红/黄/绿/蓝，可闪烁）
         self.status_pill = StatusTag(C_SYNCED, "未开始")
         # 紧凑显示，避免占位拉伸把窗口标题挤掉/截断
-        self.status_pill.setSizePolicy(
-            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        self.status_pill.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
         layout.addWidget(self.status_pill)
         layout.addStretch(1)
 
@@ -595,6 +760,7 @@ class TitleBar(QWidget):
 
 class FloatingPreview(QWidget):
     """浮动预览窗口：下拉选项悬停/导航时在 combobox 右侧弹出真实截图预览。"""
+
     MARGIN = 8
     SS_W, SS_H = 360, 460
     NAME_H, GAP, SHADOW = 24, 10, 3
@@ -623,7 +789,7 @@ class FloatingPreview(QWidget):
         super().paintEvent(event)
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-        w, h = self.TOTAL_W, self.TOTAL_H
+        w = self.TOTAL_W
         sx, sy = self.MARGIN, self.MARGIN
         if self._pixmap:
             # 等比缩放：按原截图比例适配预览框（不拉伸变形），居中留边。
@@ -647,16 +813,22 @@ class FloatingPreview(QWidget):
             p.setBrush(QBrush(QColor("#f5f5f5")))
             p.drawRoundedRect(sx, sy, self.SS_W, self.SS_H, 4, 4)
             p.setPen(QColor("#aaaaaa"))
-            nf = QFont(); nf.setPointSize(11); p.setFont(nf)
+            nf = QFont()
+            nf.setPointSize(11)
+            p.setFont(nf)
             p.drawText(sx, sy, self.SS_W, self.SS_H, Qt.AlignCenter, "加载中…")
         p.setPen(QColor("#444444"))
-        nf = QFont(); nf.setPointSize(11); nf.setBold(True); p.setFont(nf)
+        nf = QFont()
+        nf.setPointSize(11)
+        nf.setBold(True)
+        p.setFont(nf)
         p.drawText(0, sy + self.SS_H + self.GAP, w, self.NAME_H, Qt.AlignCenter, self._name)
         p.end()
 
 
 class SyncWorker(QThread):
     """Run the conversion in a background thread (pipeline is blocking)."""
+
     log = Signal(str)
     sync_finished = Signal(bool, str, list)  # (success, message, files)
 
@@ -681,7 +853,7 @@ class SyncWorker(QThread):
             if errors:
                 for err in errors:
                     self.log.emit(f"  ❌ {err}")
-                msg = f"同步失败（{time.time()-t0:.1f}s）：管道报告了 {len(errors)} 个错误"
+                msg = f"同步失败（{time.time() - t0:.1f}s）：管道报告了 {len(errors)} 个错误"
                 self.log.emit(msg)
                 self.sync_finished.emit(False, msg, [])
                 return
@@ -716,16 +888,100 @@ class SyncWorker(QThread):
 
 class FontInstallWorker(QThread):
     """后台下载并安装 Fandol 公文字体集（不阻塞主界面）。"""
+
     done = Signal(bool, str)  # (ok, message)
 
     def run(self):
         try:
             from md_sync.plugins.gongwen.fonts import install_fonts
+
             installed = install_fonts()
             self.done.emit(True, f"已安装 {len(installed)} 个字体文件")
         except Exception as e:
             self.done.emit(False, f"字体安装失败：{e}")
 
+
+class TypographyDialog(QDialog):
+    """「文档标准配置」— 中英文排版规则开关，对齐 TypographyConfig 全部字段。"""
+
+    # (字段名, 展示文案) — 字段顺序与 typography.py 默认值定义保持一致。
+    ZH_RULES = [
+        ("cjk_latin_space", "中英文之间加空格（支持ChatGPT → 支持 ChatGPT）"),
+        ("cjk_digit_space", "中文与数字之间加空格（花100元 → 花 100 元）"),
+        ("number_unit_space", "数字与单位之间加空格（20Gbps → 20 Gbps；90°、15% 除外）"),
+        ("fullwidth_punct_no_space", "全角标点旁不加空格（iPhone ，好用 → iPhone，好用）"),
+    ]
+    EN_RULES = [
+        ("en_no_space_before_punct", "标点前不加空格（Hello ,world → Hello,world）"),
+        ("en_space_after_punct", "标点后加空格（Hello,world → Hello, world；1,000、10:30 除外）"),
+        ("en_collapse_spaces", "合并连续空格（Hello   world → Hello world，保留缩进与换行）"),
+    ]
+
+    def __init__(self, cfg: TypographyConfig, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setWindowTitle("📐 文档标准配置")
+        self.setMinimumWidth(600)
+        self._boxes: dict[str, QCheckBox] = {}
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 18, 20, 16)
+        layout.setSpacing(10)
+
+        tip = QLabel(
+            "中英文混排规范（参照 W3C CLReq / CY/T 154-2017）与英文标点间距规范。"
+            "作用于生成产物与「✂ 规范化源文档」；源文件不会被自动修改。"
+            "代码块、行内代码与网址链接始终不受影响。"
+        )
+        tip.setWordWrap(True)
+        tip.setStyleSheet("color:#71717a;font-size:12px;")
+        layout.addWidget(tip)
+
+        def _add_group(title: str, rules: list[tuple[str, str]]) -> None:
+            group = QGroupBox(title)
+            group.setStyleSheet(
+                "QGroupBox{font-size:12px;font-weight:600;color:#333;margin-top:4px;}"
+                "QGroupBox::title{subcontrol-origin:margin;left:8px;padding:0 4px;}"
+            )
+            v = QVBoxLayout(group)
+            v.setSpacing(6)
+            for key, label in rules:
+                cb = QCheckBox(label)
+                cb.setStyleSheet("font-size:12px;color:#444;")
+                self._boxes[key] = cb
+                v.addWidget(cb)
+            layout.addWidget(group)
+
+        _add_group("中英文混排规则（作用于中文产物）", self.ZH_RULES)
+        _add_group("英文排版规则（作用于英文产物）", self.EN_RULES)
+
+        self._enabled = QCheckBox("启用文档排版规范")
+        self._enabled.setStyleSheet("font-size:12px;color:#333;font-weight:600;")
+        layout.addWidget(self._enabled)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch(1)
+        cancel_btn = QPushButton("取消")
+        cancel_btn.setObjectName("secondary")
+        cancel_btn.clicked.connect(self.reject)
+        ok_btn = QPushButton("保存")
+        ok_btn.setObjectName("primary")
+        ok_btn.clicked.connect(self.accept)
+        buttons.addWidget(cancel_btn)
+        buttons.addWidget(ok_btn)
+        layout.addLayout(buttons)
+
+        self._load(cfg)
+
+    def _load(self, cfg: TypographyConfig) -> None:
+        self._enabled.setChecked(cfg.enabled)
+        for key, cb in self._boxes.items():
+            cb.setChecked(bool(getattr(cfg, key)))
+
+    def config(self) -> TypographyConfig:
+        return TypographyConfig(
+            enabled=self._enabled.isChecked(),
+            **{key: cb.isChecked() for key, cb in self._boxes.items()},
+        )
 
 
 class MainWindow(QWidget):
@@ -739,6 +995,7 @@ class MainWindow(QWidget):
         self.tmgr = TemplateManager()
         self._plugin_registry = PluginRegistry()
         self._last_out_dir: str | None = None
+        self._typo_cfg = TypographyConfig()
         self.cfg: ProjectConfig | None = None
         self.worker: SyncWorker | None = None
         self.watcher: FileWatcher | None = None
@@ -747,7 +1004,7 @@ class MainWindow(QWidget):
         self._resizing = None
         self._pending_sync = False
         self._hidden_paths: set = set()  # 仅作 PDF 中间产物的 html，不在列表显示
-        self._syncing = False            # 是否正在同步（用于闪烁状态）
+        self._syncing = False  # 是否正在同步（用于闪烁状态）
 
         # 状态闪烁动画：定时切换透明度，表现“动态持续过程”
         self._status_tags: list[StatusTag] = []
@@ -763,7 +1020,7 @@ class MainWindow(QWidget):
         self._pregen_timer.timeout.connect(self._pregen_step)
 
         # 渲染主题下拉：两级分组（组头可折叠）
-        self._style_base: list = []               # 非 typora- 前缀的模板（置顶）
+        self._style_base: list = []  # 非 typora- 前缀的模板（置顶）
         self._style_groups: list[tuple[str, list]] = []  # [(组名, [TemplateInfo])]
         self._collapsed_groups: set[str] | None = None  # 折叠的组名；None=未初始化（首次全部折叠）
 
@@ -786,11 +1043,11 @@ class MainWindow(QWidget):
         cw = QVBoxLayout(content)
         cw.setContentsMargins(16, 12, 16, 14)
         cw.setSpacing(8)
-        self._build_plugin_card(cw)     # Card 1: 插件管理
-        self._build_output_card(cw)     # Card 2: 输出设置
+        self._build_plugin_card(cw)  # Card 1: 插件管理
+        self._build_output_card(cw)  # Card 2: 输出设置
         self._build_actions(cw)
-        self._build_file_list(cw)       # Card 3: 输出文件
-        self._build_log(cw)             # Card 4: 同步日志
+        self._build_file_list(cw)  # Card 3: 输出文件
+        self._build_log(cw)  # Card 4: 同步日志
 
         root.addWidget(content, 1)
 
@@ -835,10 +1092,14 @@ class MainWindow(QWidget):
         self._detail_name.setStyleSheet("font-size:13px;font-weight:700;color:#222;")
         top_row.addWidget(self._detail_name)
         self._detail_schema = QLabel()
-        self._detail_schema.setStyleSheet("font-size:10px;color:#1a56db;background:#e8f0fe;padding:1px 6px;border-radius:2px;")
+        self._detail_schema.setStyleSheet(
+            "font-size:10px;color:#1a56db;background:#e8f0fe;padding:1px 6px;border-radius:2px;"
+        )
         top_row.addWidget(self._detail_schema)
         self._detail_version = QLabel()
-        self._detail_version.setStyleSheet("font-size:10px;color:#999;background:#f5f5f5;padding:1px 6px;border-radius:2px;")
+        self._detail_version.setStyleSheet(
+            "font-size:10px;color:#999;background:#f5f5f5;padding:1px 6px;border-radius:2px;"
+        )
         top_row.addWidget(self._detail_version)
         top_row.addStretch(1)
         self._detail_templates = QLabel()
@@ -922,8 +1183,8 @@ class MainWindow(QWidget):
         # 保存对话框
         default_name = f"{plugin.name}-template.md"
         save_path, _ = QFileDialog.getSaveFileName(
-            self, "保存模板文件", default_name,
-            "Markdown (*.md);;All files (*)")
+            self, "保存模板文件", default_name, "Markdown (*.md);;All files (*)"
+        )
         if not save_path:
             return
 
@@ -939,8 +1200,8 @@ class MainWindow(QWidget):
         self._source_row.setVisible(True)
 
         self._append_log(
-            f"✓ 模板已保存 → {save_path}\n"
-            f"  请编辑文件，然后配置输出并点击「启动多格式同步输出」")
+            f"✓ 模板已保存 → {save_path}\n  请编辑文件，然后配置输出并点击「启动多格式同步输出」"
+        )
 
         # 打开编辑器
         QDesktopServices.openUrl(QUrl.fromLocalFile(save_path))
@@ -963,13 +1224,14 @@ class MainWindow(QWidget):
         if ok:
             try:
                 from md_sync.plugins.gongwen.fonts import missing_fonts
+
                 missing = missing_fonts()
             except Exception:
                 missing = []
             if missing:
                 self._font_warn.setText(
-                    "⚠ 已安装字体，但仍有缺失：" + "、".join(missing) +
-                    "（可能需重启应用后生效）")
+                    "⚠ 已安装字体，但仍有缺失：" + "、".join(missing) + "（可能需重启应用后生效）"
+                )
                 self._font_btn.setText("⬇ 重新下载并安装公文字体（免费）")
             else:
                 self._font_warn.setText("✓ 公文标准字体已就绪（Fandol 仿宋/黑体/楷体/宋体）")
@@ -1005,8 +1267,16 @@ class MainWindow(QWidget):
         src_btn = QPushButton("选择文件…")
         src_btn.setObjectName("primary")
         src_btn.clicked.connect(self._browse_source)
+        norm_btn = QPushButton("✂ 规范化源文档")
+        norm_btn.setToolTip("按当前排版规范生成规范化副本作为源文件（原始文件不被修改），并自动勾选 md 输出")
+        norm_btn.setStyleSheet(
+            "background:#f59e0b;color:#ffffff;border:none;border-radius:6px;"
+            "padding:0 10px;font-size:12px;"
+        )
+        norm_btn.clicked.connect(self._normalize_source)
         src_h.addWidget(self.source_edit, 1)
         src_h.addWidget(src_btn)
+        src_h.addWidget(norm_btn)
         cv.addWidget(src_row_w)
 
         # ── 输出目录（固定高度行） ──
@@ -1055,19 +1325,28 @@ class MainWindow(QWidget):
         cv.addWidget(self._style_row_w)
         # ── 浮动预览窗口（紧贴 combobox 右侧，随下拉导航更新） ──
         self._floating_preview = FloatingPreview()
-        zv = self.tpl_zh.view(); zv.setMouseTracking(True)
-        ev = self.tpl_en.view(); ev.setMouseTracking(True)
+        zv = self.tpl_zh.view()
+        zv.setMouseTracking(True)
+        ev = self.tpl_en.view()
+        ev.setMouseTracking(True)
         zv.entered.connect(lambda i: self._on_combo_preview(self.tpl_zh, i))
         ev.entered.connect(lambda i: self._on_combo_preview(self.tpl_en, i))
-        zv.selectionModel().currentChanged.connect(lambda c, p: self._on_combo_preview(self.tpl_zh, c))
-        ev.selectionModel().currentChanged.connect(lambda c, p: self._on_combo_preview(self.tpl_en, c))
-        zv.installEventFilter(self); ev.installEventFilter(self)
+        zv.selectionModel().currentChanged.connect(
+            lambda c, p: self._on_combo_preview(self.tpl_zh, c)
+        )
+        ev.selectionModel().currentChanged.connect(
+            lambda c, p: self._on_combo_preview(self.tpl_en, c)
+        )
+        zv.installEventFilter(self)
+        ev.installEventFilter(self)
         # 组头点击必须在 viewport 层拦截（见 eventFilter）：QComboBox 的弹层
         # 容器在 viewport 上也装了事件过滤器，鼠标释放落在任意 enabled 项上都会
         # hidePopup；组头是 enabled 但不可选中，若让释放事件传到内部过滤器，
         # 弹层会被关闭。我们在 viewport 上先消费掉组头点击，弹层保持打开。
-        zvv = zv.viewport(); evv = ev.viewport()
-        zvv.installEventFilter(self); evv.installEventFilter(self)
+        zvv = zv.viewport()
+        evv = ev.viewport()
+        zvv.installEventFilter(self)
+        evv.installEventFilter(self)
         self.tpl_zh.activated.connect(self._floating_preview.hide)
         self.tpl_en.activated.connect(self._floating_preview.hide)
         # 兜底：若 viewport 过滤器因平台差异未命中，clicked 信号仍可触发折叠
@@ -1083,13 +1362,32 @@ class MainWindow(QWidget):
             combo.setMaxVisibleItems(14)
 
         # ── 输出格式（每个格式一个组，组内堆叠「格式卡片」+「专属控制项」） ──
+        fmt_head = QWidget()
+        fmt_head.setStyleSheet("background:transparent;")
+        fmt_head_lay = QHBoxLayout(fmt_head)
+        fmt_head_lay.setContentsMargins(0, 0, 0, 0)
+        fmt_head_lay.setSpacing(8)
         fmt_label = QLabel("输出格式")
         fmt_label.setStyleSheet("font-size:11px;color:#555;font-weight:600;margin-top:2px;")
-        cv.addWidget(fmt_label)
+        fmt_head_lay.addWidget(fmt_label)
+        fmt_head_lay.addStretch(1)
+        self.typo_btn = QPushButton("📐 文档标准配置")
+        self.typo_btn.setObjectName("typo_btn")
+        self.typo_btn.setToolTip(
+            "中英文排版规则（对齐 W3C CLReq / CY/T 154-2017）——影响生成产物与「规范化源文档」，不改源文件"
+        )
+        self.typo_btn.clicked.connect(self._open_typography)
+        fmt_head_lay.addWidget(self.typo_btn)
+        cv.addWidget(fmt_head)
 
         self.fmt_checks: dict[tuple[str, str], QCheckBox] = {}
-        formats = [("html", "HTML"), ("md", "Markdown"), ("pdf", "PDF"),
-                   ("docx", "DOCX"), ("epub", "EPUB")]
+        formats = [
+            ("html", "HTML"),
+            ("md", "Markdown"),
+            ("pdf", "PDF"),
+            ("docx", "DOCX"),
+            ("epub", "EPUB"),
+        ]
         fmt_row = QHBoxLayout()
         fmt_row.setContentsMargins(0, 0, 0, 0)
         fmt_row.setSpacing(6)
@@ -1226,7 +1524,8 @@ class MainWindow(QWidget):
         self.file_tbl = QTableWidget(0, 6)
         self.file_tbl.setObjectName("file_table")
         self.file_tbl.setHorizontalHeaderLabels(
-            ["状态", "格式", "语言", "文件", "最后更新时间", "操作"])
+            ["状态", "格式", "语言", "文件", "最后更新时间", "操作"]
+        )
         self.file_tbl.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.file_tbl.setSelectionMode(QAbstractItemView.SingleSelection)
         self.file_tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -1317,11 +1616,11 @@ class MainWindow(QWidget):
         # Typora 插件：若本机未安装 Typora（主题目录不存在），提示用户
         if plugin.name == "typora":
             from md_sync.plugins.typora.paths import is_typora_installed
+
             if not is_typora_installed():
                 self._detail_desc.setText(
-                    (plugin.description or "")
-                    + "\n\n⚠ 未检测到本机已安装 Typora，暂无可用主题。"
-                      "请先安装 Typora，其主题会自动出现在「渲染主题」下拉框中。"
+                    (plugin.description or "") + "\n\n⚠ 未检测到本机已安装 Typora，暂无可用主题。"
+                    "请先安装 Typora，其主题会自动出现在「渲染主题」下拉框中。"
                 )
 
         # ── 公文字体检测：gongwen 插件缺字体时提示安装（免费 Fandol） ──
@@ -1330,6 +1629,7 @@ class MainWindow(QWidget):
         if plugin.name == "gongwen":
             try:
                 from md_sync.plugins.gongwen.fonts import missing_fonts
+
                 missing = missing_fonts()
             except Exception:
                 missing = []
@@ -1349,8 +1649,7 @@ class MainWindow(QWidget):
             self._template_btn.setVisible(True)
             self._template_warn.setVisible(True)
             self._template_warn.setText(
-                "⚠ 必须使用生成的模板：请点击「生成模板」获取规定的源文件格式，"
-                "否则无法正确解析。"
+                "⚠ 必须使用生成的模板：请点击「生成模板」获取规定的源文件格式，否则无法正确解析。"
             )
         else:
             self._template_btn.setVisible(False)
@@ -1380,12 +1679,12 @@ class MainWindow(QWidget):
         self.naming_ts.setVisible(True)
         self.naming_overwrite.setVisible(True)
         naming = getattr(self.cfg, "output_naming", "timestamp") or "timestamp"
-        (self.naming_overwrite if naming == "overwrite"
-         else self.naming_ts).setChecked(True)
+        (self.naming_overwrite if naming == "overwrite" else self.naming_ts).setChecked(True)
 
         self._append_log(
             f"已选择插件包「{plugin.name}」schema={schema}，"
-            f"风格：{', '.join(t.name for t in infos) if infos else '系统内置'}")
+            f"风格：{', '.join(t.name for t in infos) if infos else '系统内置'}"
+        )
 
     def _apply_lang_policy(self):
         """公文（gongwen）仅支持中文：禁用英文输出选项与英文模板选择。"""
@@ -1440,13 +1739,20 @@ class MainWindow(QWidget):
         # 在弹层关闭后（如 _reload_style_combos 调用 setCurrentIndex）也会触发，
         # 此时弹层不可见，预览必须隐藏而不是重新弹出。
         if not combo.view().isVisible():
-            self._floating_preview.hide(); return
+            self._floating_preview.hide()
+            return
         if not index.isValid():
-            self._floating_preview.hide(); return
+            self._floating_preview.hide()
+            return
         style_name = combo.itemData(index.row()) or ""
         if not style_name:
-            self._floating_preview.hide(); return
-        display_name = style_name[7:].replace("-", " ").title() if style_name.startswith("typora-") else style_name
+            self._floating_preview.hide()
+            return
+        display_name = (
+            style_name[7:].replace("-", " ").title()
+            if style_name.startswith("typora-")
+            else style_name
+        )
 
         # Step 1: 优先从缓存获取（即时）
         cached_pix = _PREVIEW_CACHE.get(style_name)
@@ -1454,7 +1760,8 @@ class MainWindow(QWidget):
             self._floating_preview.set_preview(cached_pix, display_name)
             gp = combo.mapToGlobal(combo.rect().topRight())
             self._floating_preview.move(gp.x(), gp.y())
-            self._floating_preview.show(); self._floating_preview.raise_()
+            self._floating_preview.show()
+            self._floating_preview.raise_()
             return
 
         # Step 2: 缓存未命中 → 先显示「加载中…」，强制刷新，再生成
@@ -1473,12 +1780,12 @@ class MainWindow(QWidget):
         # 此 PySide6 版本 QComboBox 弹层忽略 maxVisibleItems，359 项能撑出 800px
         # 弹层；限制容器高度后其余滚动（竖向滚动条 ScrollBarAsNeeded）。
         if event.type() == QEvent.Show:
-            for combo in (getattr(self, 'tpl_zh', None), getattr(self, 'tpl_en', None)):
+            for combo in (getattr(self, "tpl_zh", None), getattr(self, "tpl_en", None)):
                 if combo is not None and obj is combo.view():
                     QTimer.singleShot(0, lambda c=combo: self._cap_popup_height(c))
                     break
-        if event.type() == QEvent.Hide and hasattr(self, '_floating_preview'):
-            for combo in (getattr(self, 'tpl_zh', None), getattr(self, 'tpl_en', None)):
+        if event.type() == QEvent.Hide and hasattr(self, "_floating_preview"):
+            for combo in (getattr(self, "tpl_zh", None), getattr(self, "tpl_en", None)):
                 if combo is not None and obj is combo.view():
                     self._floating_preview.hide()
                     break
@@ -1488,7 +1795,7 @@ class MainWindow(QWidget):
         # 但不可选中，若不拦截，弹层会被内部过滤器关闭。返回 True 后事件不再
         # 传给容器，弹层保留，同时视图不产生 clicked（不会重复触发）。
         if event.type() == QEvent.MouseButtonRelease:
-            for combo in (getattr(self, 'tpl_zh', None), getattr(self, 'tpl_en', None)):
+            for combo in (getattr(self, "tpl_zh", None), getattr(self, "tpl_en", None)):
                 if combo is not None and obj is combo.view().viewport():
                     idx = combo.view().indexAt(event.position().toPoint())
                     if idx.isValid():
@@ -1496,8 +1803,9 @@ class MainWindow(QWidget):
                         if gname:
                             # 延迟一帧重建：先让本次点击事件完整结束，再改模型，
                             # 弹层容器在 modelReset 后按新行数自适应高度。
-                            QTimer.singleShot(0, lambda g=gname, c=combo:
-                                              self._toggle_style_group(g, c))
+                            QTimer.singleShot(
+                                0, lambda g=gname, c=combo: self._toggle_style_group(g, c)
+                            )
                             return True
                     break
         return super().eventFilter(obj, event)
@@ -1524,7 +1832,8 @@ class MainWindow(QWidget):
         if infos:
             self._style_base = [t for t in infos if not t.name.startswith("typora-")]
             self._style_groups = self._group_typora_infos(
-                [t for t in infos if t.name.startswith("typora-")])
+                [t for t in infos if t.name.startswith("typora-")]
+            )
             # 默认全部折叠，减少选项；保留用户展开过的组不变。
             # 仅在首次遇到非空分组列表时初始化（None 哨兵）：resume 等无分组
             # 插件会把集合置空，切回 typora 时若再判断空集就会错误地全部重折叠。
@@ -1542,7 +1851,7 @@ class MainWindow(QWidget):
         """模板显示名：去掉 "Typora " 前缀。"""
         disp = t.label
         if disp.lower().startswith("typora "):
-            disp = disp[len("Typora "):]
+            disp = disp[len("Typora ") :]
         return disp
 
     def _group_typora_infos(self, infos: list) -> list[tuple[str, list]]:
@@ -1550,7 +1859,7 @@ class MainWindow(QWidget):
         groups: dict[str, list] = {}
         others: list = []
         for t in infos:
-            stem = t.name[len("typora-"):]
+            stem = t.name[len("typora-") :]
             key = _typora_group_key(stem)
             if key:
                 groups.setdefault(key, []).append(t)
@@ -1733,6 +2042,20 @@ class MainWindow(QWidget):
         }
         QPushButton#primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
         QPushButton#primary:disabled { background:#93c5fd; border-color:#93c5fd; }
+        QPushButton#secondary {
+            background: #ffffff; border: 1px solid #e5e7eb; color: #3f3f46;
+        }
+        QPushButton#secondary:hover { background: #f4f4f5; }
+        QPushButton#typo_btn {
+            background: #ffffff;
+            border: 1px solid #d8deea;
+            border-radius: 7px;
+            padding: 3px 10px;
+            color: #4f46e5;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        QPushButton#typo_btn:hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
         QTextEdit {
             background: #ffffff;
             border: 1px solid #e5e7eb;
@@ -1838,12 +2161,70 @@ class MainWindow(QWidget):
     # ── Dialogs ────────────────────────────────────────────────────────
     def _browse_source(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "选择 Markdown 文件", "", "Markdown (*.md);;All files (*)")
+            self, "选择 Markdown 文件", "", "Markdown (*.md);;All files (*)"
+        )
         if path:
             self.source_edit.setText(path)
             if not self.out_edit.text().strip():
                 self.out_edit.setText(str(Path(path).parent))
             self._validate_form()
+
+    def _open_typography(self):
+        """打开「文档标准配置」对话框；保存后若正在监听则立即用新规则重跑输出。"""
+        dlg = TypographyDialog(self._typo_cfg, self)
+        if dlg.exec():
+            self._typo_cfg = dlg.config()
+            self._append_log("· 排版规范已更新（文档标准配置）")
+            if self.watching:
+                self._run_sync()
+
+    def _normalize_source(self):
+        """生成规范化源文档副本并设为源文件（原始文件不被修改）。
+
+        - 按当前排版规范（默认全开，可在「文档标准配置」调整）规范化源文本
+        - 写到 <stem>_normalized.md（源已是 *_normalized 则原地重生成）
+        - 将「源文件」输入框指向新文件，并自动勾选 md/<源语言> 输出
+        """
+        src_txt = self.source_edit.text().strip()
+        if not src_txt:
+            QMessageBox.warning(self, "缺少源文件", "请先选择 Markdown 源文件。")
+            return
+        src = Path(src_txt).expanduser()
+        if not src.exists():
+            QMessageBox.warning(self, "文件不存在", f"源文件不存在：\n{src}")
+            return
+        try:
+            text = src.read_text(encoding="utf-8")
+            # 语言跟随源文件：与解析器一致的判定（zh 字符数 > 100 → 中文）
+            zh_chars = sum(1 for c in text if "\u4e00" <= c <= "\u9fff")
+            lang = "zh" if zh_chars > 100 else "en"
+            normalized = normalize_for_lang(text, self._typo_cfg, lang)
+            if normalized == text:
+                QMessageBox.information(
+                    self,
+                    "规范化源文档",
+                    f"源文档已符合排版规范，无需修改（{LANG_LABELS.get(lang, lang)}）。",
+                )
+                return
+
+            stem = src.stem
+            target = src if stem.endswith("_normalized") else src.with_name(f"{stem}_normalized.md")
+            target.write_text(normalized, encoding="utf-8")
+            self.source_edit.setText(str(target))
+            if not self.out_edit.text().strip():
+                self.out_edit.setText(str(target.parent))
+            self.fmt_checks[("md", lang)].setChecked(True)
+            self._validate_form()
+            QMessageBox.information(
+                self,
+                "规范化源文档",
+                f"✓ 已生成规范化源文档（{LANG_LABELS.get(lang, lang)}，"
+                f"{len(normalized)}/{len(text)} 字符）\n\n"
+                f"新源文件：{target}\n\n"
+                f"原始文件未被修改，并已自动勾选 md/{lang} 输出。",
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "规范化失败", f"规范化失败：\n{e}")
 
     def _browse_out(self):
         d = QFileDialog.getExistingDirectory(self, "选择输出目录")
@@ -1878,11 +2259,9 @@ class MainWindow(QWidget):
 
         sel = {key: cb.isChecked() for key, cb in self.fmt_checks.items()}
         all_formats = ["html", "md", "pdf", "docx", "epub"]
-        langs = [l for l in ("zh", "en")
-                 if any(sel[(f, l)] for f in all_formats)]
+        langs = [l for l in ("zh", "en") if any(sel[(f, l)] for f in all_formats)]
         if not langs:
-            QMessageBox.warning(
-                self, "缺少输出", "请至少为一种格式勾选一种语言。")
+            QMessageBox.warning(self, "缺少输出", "请至少为一种格式勾选一种语言。")
             return None
 
         zh_style = self.tpl_zh.currentData()
@@ -1906,38 +2285,54 @@ class MainWindow(QWidget):
                 html_path = derive_output_path(root, "html", lang, name_map, stem)
                 pdf_path = (
                     derive_output_path(root, "html", lang, name_map, stem, pdf=True)
-                    if want_pdf else None
+                    if want_pdf
+                    else None
                 )
-                outputs.append(OutputConfig(
-                    format="html", lang=lang, path=html_path,
-                    pdf=want_pdf, pdf_path=pdf_path, style=style,
-                    page_size=self.page_size_combo.currentData(),
-                    page_margin=self.margin_combo.currentData()))
+                outputs.append(
+                    OutputConfig(
+                        format="html",
+                        lang=lang,
+                        path=html_path,
+                        pdf=want_pdf,
+                        pdf_path=pdf_path,
+                        style=style,
+                        page_size=self.page_size_combo.currentData(),
+                        page_margin=self.margin_combo.currentData(),
+                    )
+                )
                 if not want_html:
                     self._hidden_paths.add(html_path)
             if want_md:
                 md_path = derive_output_path(root, "md", lang, name_map, stem)
-                outputs.append(OutputConfig(
-                    format="md", lang=lang, path=md_path, style=style))
+                outputs.append(OutputConfig(format="md", lang=lang, path=md_path, style=style))
             if want_docx:
                 docx_path = derive_output_path(root, "docx", lang, name_map, stem)
-                outputs.append(OutputConfig(
-                    format="docx", lang=lang, path=docx_path, style=style,
-                    page_size=self.page_size_combo.currentData()))
+                outputs.append(
+                    OutputConfig(
+                        format="docx",
+                        lang=lang,
+                        path=docx_path,
+                        style=style,
+                        page_size=self.page_size_combo.currentData(),
+                    )
+                )
             if want_epub:
                 epub_path = derive_output_path(root, "epub", lang, name_map, stem)
-                outputs.append(OutputConfig(
-                    format="epub", lang=lang, path=epub_path, style=style))
+                outputs.append(OutputConfig(format="epub", lang=lang, path=epub_path, style=style))
 
         cfg = ProjectConfig(
-            project=stem, source=str(src_path),
+            project=stem,
+            source=str(src_path),
             schema=self._current_schema(),
-            outputs=outputs, output_root=str(root), source_lang="zh",
-            name_map=name_map)
+            outputs=outputs,
+            output_root=str(root),
+            source_lang="zh",
+            name_map=name_map,
+            typography=self._typo_cfg,
+        )
         cfg.source_path = src_path.resolve()
         # 重名处理策略：来自设置面板的「重名处理」单选（默认时间戳）
-        cfg.output_naming = (
-            "overwrite" if self.naming_overwrite.isChecked() else "timestamp")
+        cfg.output_naming = "overwrite" if self.naming_overwrite.isChecked() else "timestamp"
         self._last_out_dir = str(root)
         return cfg
 
@@ -1961,12 +2356,14 @@ class MainWindow(QWidget):
         self._refresh_src_info()
         self._run_sync()
         self.watcher = FileWatcher(
-            cfg.source_path, self._on_source_changed, debounce=1.5,
-            output_root=cfg.output_root)
+            cfg.source_path, self._on_source_changed, debounce=1.5, output_root=cfg.output_root
+        )
         self.watcher.start()
         self.watching = True
         self.watch_btn.setText("重启输出")
-        self.watch_btn.setStyleSheet("background:#ef4444;border:1px solid #ef4444;color:#fff;font-weight:500;")
+        self.watch_btn.setStyleSheet(
+            "background:#ef4444;border:1px solid #ef4444;color:#fff;font-weight:500;"
+        )
         self.open_btn.setEnabled(True)
         self._update_status_pill()
         self._append_log(f"─ 已启动多格式同步输出：{cfg.source_path.name}（改动即自动同步）")
@@ -2149,8 +2546,7 @@ class MainWindow(QWidget):
             name_lbl.setObjectName("file_name")
             name_lbl.setToolTip(path)
             name_lbl.setWordWrap(True)
-            meta_lbl = QLabel(
-                f"{size}" if exists else "— 尚未生成")
+            meta_lbl = QLabel(f"{size}" if exists else "— 尚未生成")
             meta_lbl.setObjectName("file_meta")
             fc.addWidget(name_lbl)
             fc.addWidget(meta_lbl)
@@ -2210,13 +2606,18 @@ class MainWindow(QWidget):
             out_langs = sorted({o.lang for o in self.cfg.outputs})
             tl_txt = "、".join(LANG_LABELS.get(l, l) for l in out_langs) or "未配置"
             pend = info.get("pending_translations", [])
-            pend_txt = "、".join(
-                f"{LANG_LABELS.get(p.get('lang'), p.get('lang'))} 待译 {p.get('missing')} 条"
-                for p in pend) or "无"
+            pend_txt = (
+                "、".join(
+                    f"{LANG_LABELS.get(p.get('lang'), p.get('lang'))} 待译 {p.get('missing')} 条"
+                    for p in pend
+                )
+                or "无"
+            )
             secs = len(info.get("sections", []))
             self.src_info.setText(
                 f"源语言：{LANG_LABELS.get(sl, sl)} ｜ 目标：{tl_txt} ｜ "
-                f"章节 {secs} ｜ {pend_txt} ｜ 文件：{self.cfg.source_path.name}")
+                f"章节 {secs} ｜ {pend_txt} ｜ 文件：{self.cfg.source_path.name}"
+            )
             self.src_info.setVisible(True)
         except Exception as e:
             self.src_info.setText(f"源语言检测失败：{e}")
@@ -2235,9 +2636,12 @@ class MainWindow(QWidget):
             self._refresh_file_list()
             return
         ret = QMessageBox.question(
-            self, "删除文件",
+            self,
+            "删除文件",
             f"确定要删除「{name}」吗？\n{path}",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
         if ret != QMessageBox.Yes:
             return
         try:
@@ -2282,9 +2686,12 @@ class MainWindow(QWidget):
 
         names = "\n".join(Path(p).name for p in unique)
         ret = QMessageBox.question(
-            self, "清除全部输出文件",
+            self,
+            "清除全部输出文件",
             f"确定要删除以下 {len(unique)} 个文件吗？\n\n{names}",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
         if ret != QMessageBox.Yes:
             return
 
@@ -2308,13 +2715,13 @@ class MainWindow(QWidget):
     def _on_open_clicked(self):
         """Slot for the 打开 button in the output file table."""
         btn = self.sender()
-        path = getattr(btn, '_file_path', None) if btn else None
+        path = getattr(btn, "_file_path", None) if btn else None
         self._open_file(path)
 
     def _on_delete_clicked(self):
         """Slot for the 删除 button in the output file table."""
         btn = self.sender()
-        path = getattr(btn, '_file_path', None) if btn else None
+        path = getattr(btn, "_file_path", None) if btn else None
         self._delete_output_file(path)
 
     def _open_file(self, path):
@@ -2438,6 +2845,7 @@ def main():
     if "QT_STYLE_OVERRIDE" in os.environ:
         try:
             from PySide6.QtWidgets import QStyleFactory
+
             if os.environ["QT_STYLE_OVERRIDE"] not in QStyleFactory.keys():
                 os.environ.pop("QT_STYLE_OVERRIDE")
         except Exception:

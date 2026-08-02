@@ -9,6 +9,7 @@ Flow:
      d. If PDF → export via Chromium
   3. Save translation cache
 """
+
 from __future__ import annotations
 
 import logging
@@ -32,6 +33,7 @@ from md_sync.template.manager import TemplateManager
 from md_sync.translate.fallback import _detect_provider
 from md_sync.translate.manager import TranslationManager
 from md_sync.translate.service import translate_document
+from md_sync.typography import normalize_for_lang
 
 # ── Typora dark-theme detection ────────────────────────────────────────
 # The template injects concrete (not var-derived) table colors so dark
@@ -47,11 +49,15 @@ _TYPORA_TEXT_RX = re.compile(r"--(?:text|text-color)\s*:\s*([^;]+);")
 _VLOOK_DK_RX = re.compile(r"--db-dk\s*:\s*([^;]+);")
 _HEX_RX = re.compile(r"#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
 _RGB_RX = re.compile(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)")
-_HSL_RX = re.compile(r"hsla?\(\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)%\s*[, ]\s*(\d+(?:\.\d+)?)%")
+_HSL_RX = re.compile(
+    r"hsla?\(\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)%\s*[, ]\s*(\d+(?:\.\d+)?)%"
+)
 _DIRECT_BG_RX = re.compile(
     r"(?:html|body)\s*\{[^}]*background(?:-color)?\s*:\s*([#a-fA-F0-9]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\))"
 )
-_DIRECT_TEXT_RX = re.compile(r"#write\s*\{[^}]*color\s*:\s*([#a-fA-F0-9]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\))")
+_DIRECT_TEXT_RX = re.compile(
+    r"#write\s*\{[^}]*color\s*:\s*([#a-fA-F0-9]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\))"
+)
 
 
 def _css_luminance(value: str) -> float | None:
@@ -67,7 +73,7 @@ def _css_luminance(value: str) -> float | None:
         h = m.group(1)
         if len(h) == 3:
             h = "".join(c * 2 for c in h)
-        r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+        r, g, b = (int(h[i : i + 2], 16) / 255 for i in (0, 2, 4))
         return 0.2126 * r + 0.7152 * g + 0.0722 * b
     m = _RGB_RX.search(v)
     if m:
@@ -81,6 +87,7 @@ def _css_luminance(value: str) -> float | None:
         if s == 0:
             r = g = b = l
         else:
+
             def _hue(p, q, t):
                 if t < 0:
                     t += 1
@@ -93,6 +100,7 @@ def _css_luminance(value: str) -> float | None:
                 if t < 2 / 3:
                     return p + (q - p) * (2 / 3 - t) * 6
                 return p
+
             q = l * (1 + s) if l < 0.5 else l + s - l * s
             p = 2 * l - q
             r = _hue(p, q, h + 1 / 3)
@@ -180,6 +188,9 @@ class SyncPipeline:
         self._stats["source"] = str(source)
         logger.info("[sync] ✓ Parsed: %s (%d sections)", source.name, len(doc.sections))
 
+        # 中英文混排规范：仅对内存中的产物文本做规范化，绝不写回用户源文件。
+        self._apply_typography(doc)
+
         # 2. Process each output
         for out_cfg in self._config.outputs:
             result = self._process_output(doc, out_cfg)
@@ -211,11 +222,13 @@ class SyncPipeline:
             "pending_translations": [],
         }
         for sec in doc.sections:
-            info["sections"].append({
-                "id": sec.id,
-                "title": sec.title,
-                "items": len(sec.items),
-            })
+            info["sections"].append(
+                {
+                    "id": sec.id,
+                    "title": sec.title,
+                    "items": len(sec.items),
+                }
+            )
 
         # Count missing translations per target language.
         targets = {o.lang for o in self._config.outputs if o.lang != doc.source_lang}
@@ -244,6 +257,32 @@ class SyncPipeline:
             return "gongwen"
         return "bwx"
 
+    def _apply_typography(self, doc: Document) -> None:
+        """Normalize ``doc.source_raw`` in memory for 中英文混排 / 英文排版.
+
+        Only affects derived outputs (raw-layout HTML/PDF and the source-language
+        markdown copy). The user's source file is never modified. Structured
+        sections are left untouched — raw-layout documents are the ones that
+        consume ``source_raw``.
+        """
+        cfg = self._config.typography
+        if not cfg.enabled:
+            return
+        lang = doc.source_lang
+        if lang not in ("zh", "en"):
+            return
+        if not doc.source_raw:
+            return
+        normalized = normalize_for_lang(doc.source_raw, cfg, lang)
+        if normalized != doc.source_raw:
+            logger.info(
+                "[typography] %s 排版规范已应用（%d → %d 字符）",
+                "中英文混排" if lang == "zh" else "英文排版",
+                len(doc.source_raw),
+                len(normalized),
+            )
+            doc.source_raw = normalized
+
     def _process_output(self, doc: Document, out_cfg: OutputConfig) -> dict:
         result = {"format": out_cfg.format, "lang": out_cfg.lang, "path": out_cfg.path, "ok": False}
         # 公文（gongwen）仅支持中文：英文输出直接跳过（不报错，配置里写了也忽略）。
@@ -251,7 +290,9 @@ class SyncPipeline:
             result["skipped"] = "gongwen-zh-only"
             result["ok"] = True
             result["reason"] = "公文仅支持中文输出"
-            logger.info("  – %s/%s: 公文（gongwen）仅支持中文输出，跳过", out_cfg.format, out_cfg.lang)
+            logger.info(
+                "  – %s/%s: 公文（gongwen）仅支持中文输出，跳过", out_cfg.format, out_cfg.lang
+            )
             return result
         style_name = out_cfg.style or out_cfg.theme or self._default_style_for(self._config.schema)
         # Normalize typora-* to just the sub-name for display
@@ -279,10 +320,20 @@ class SyncPipeline:
                 return result
             try:
                 out_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src, out_path)
-                result["ok"] = True
-                result["copied"] = True
-                logger.info("  ✓ %s (源文件副本, %d KB)", out_path.name, out_path.stat().st_size // 1024)
+                if self._config.typography.enabled:
+                    # 中英文混排规范：md 产物写规范化文本（源文件仍保持原样）。
+                    out_path.write_text(doc.source_raw, encoding="utf-8")
+                    result["ok"] = True
+                    result["copied"] = True
+                    result["normalized"] = True
+                    logger.info("  ✓ %s (源文件副本 + 混排规范, %d chars)", out_path.name, len(doc.source_raw))
+                else:
+                    shutil.copy2(src, out_path)
+                    result["ok"] = True
+                    result["copied"] = True
+                    logger.info(
+                        "  ✓ %s (源文件副本, %d KB)", out_path.name, out_path.stat().st_size // 1024
+                    )
             except Exception as e:
                 result["error"] = f"复制源文件失败: {e}"
                 logger.warning("复制源文件失败: %s", e)
@@ -298,7 +349,9 @@ class SyncPipeline:
             result["reason"] = "输出路径未配置"
             logger.info(
                 "  – %s/%s: 输出路径未配置，跳过（请在界面「📦 输出文件」卡片填写路径）",
-                out_cfg.format, out_cfg.lang)
+                out_cfg.format,
+                out_cfg.lang,
+            )
             return result
 
         # Translate if this output is a non-source language. Translation is
@@ -338,17 +391,24 @@ class SyncPipeline:
                             translator=self._translator,
                         )
                     except Exception as e:
-                        logger.warning("Plugin DOCX exporter failed (%s), falling back: %s", exporter.name, e)
+                        logger.warning(
+                            "Plugin DOCX exporter failed (%s), falling back: %s", exporter.name, e
+                        )
                         docx_ok = False
                     if not docx_ok:
                         # 插件导出失败（或返回 False）→ 回退基础 pandoc 路径，
                         # 与 PDF 分支行为一致。
-                        logger.warning("Plugin DOCX export produced no file for %s, falling back to pandoc", out_path.name)
+                        logger.warning(
+                            "Plugin DOCX export produced no file for %s, falling back to pandoc",
+                            out_path.name,
+                        )
                         self._export_docx_via_pandoc(doc, out_cfg, target_lang, style_name, result)
                         return result
                     result["ok"] = True
                     size_kb = out_path.stat().st_size // 1024 if out_path.exists() else 0
-                    logger.info("  ✓ %s (%d KB, plugin docx) [%s]", out_path.name, size_kb, style_name)
+                    logger.info(
+                        "  ✓ %s (%d KB, plugin docx) [%s]", out_path.name, size_kb, style_name
+                    )
                     # ② 插件机制：转换产物写出后触发 after_render hook
                     self._plugin_registry.emit_after_render(
                         out_path,
@@ -395,7 +455,11 @@ class SyncPipeline:
                                 style_name=style_name,
                             )
                         except Exception as e:
-                            logger.warning("Plugin PDF exporter failed (%s), falling back: %s", exporter.name, e)
+                            logger.warning(
+                                "Plugin PDF exporter failed (%s), falling back: %s",
+                                exporter.name,
+                                e,
+                            )
                             pdf_ok = _export_pdf(
                                 html_path=out_path,
                                 pdf_path=out_cfg.pdf_path,
@@ -419,6 +483,8 @@ class SyncPipeline:
                     )
             elif out_cfg.format == "md":
                 content = self._render_md(doc, target_lang)
+                if self._config.typography.enabled:
+                    content = normalize_for_lang(content, self._config.typography, target_lang)
                 out_path = Path(out_cfg.path)
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(content, encoding="utf-8")
@@ -441,7 +507,9 @@ class SyncPipeline:
         (style > theme > schema default, ``typora-*`` normalised to the shared
         ``typora`` base). Falls back to ``bwx`` when the template is missing.
         """
-        template_name = out_cfg.style or out_cfg.theme or self._default_style_for(self._config.schema)
+        template_name = (
+            out_cfg.style or out_cfg.theme or self._default_style_for(self._config.schema)
+        )
         if template_name.startswith("typora-"):
             template_name = "typora"
         try:
@@ -498,8 +566,11 @@ class SyncPipeline:
             return False
 
         # Cleanup temp HTML unless user also wants HTML output
-        html_cfg = [o for o in self._config.outputs
-                    if o.format == "html" and o.lang == out_cfg.lang and o.path]
+        html_cfg = [
+            o
+            for o in self._config.outputs
+            if o.format == "html" and o.lang == out_cfg.lang and o.path
+        ]
         if not html_cfg:
             html_tmp.unlink(missing_ok=True)
         return True
@@ -513,7 +584,9 @@ class SyncPipeline:
         default ``style.css``.
         """
         # Determine template name: style > theme (legacy) > default
-        template_name = out_cfg.style or out_cfg.theme or self._default_style_for(self._config.schema)
+        template_name = (
+            out_cfg.style or out_cfg.theme or self._default_style_for(self._config.schema)
+        )
 
         # Typora theme handling
         typora_css = None
@@ -523,18 +596,16 @@ class SyncPipeline:
             if typora_css_path.exists():
                 css_raw = typora_css_path.read_text(encoding="utf-8")
                 # Strip Typora-specific @include-when-export directive
-                css_raw = re.sub(
-                    r"@include-when-export\s+url\([^)]+\)\s*;?",
-                    "", css_raw
-                )
+                css_raw = re.sub(r"@include-when-export\s+url\([^)]+\)\s*;?", "", css_raw)
                 # Convert relative font/image URLs to absolute file:// paths
                 # e.g. url("./bloom/fonts/MiSans-Regular.ttf") →
                 #      url("file:///home/user/.config/Typora/themes/bloom/fonts/MiSans-Regular.ttf")
                 typora_themes_dir = str(typora_css_path.parent) + "/"
+
                 def _resolve_url(m: re.Match) -> str:
                     content = m.group(1).strip()
                     # Strip surrounding quotes if present
-                    raw = content.strip('"\'')
+                    raw = content.strip("\"'")
                     # Leave absolute URLs, data URIs, and fragment identifiers as-is
                     if any(raw.startswith(p) for p in ("http://", "https://", "data:", "#", "%23")):
                         return m.group(0)
@@ -543,6 +614,7 @@ class SyncPipeline:
                     rel = raw.lstrip("./").lstrip("/")
                     abs_path = typora_themes_dir + rel
                     return f'url("{abs_path}")'
+
                 css_raw = re.sub(r"url\(\s*([^)]+?)\s*\)", _resolve_url, css_raw)
                 typora_css = css_raw
             # Use the typora Jinja2 template (shared by all typora-* themes)
@@ -589,6 +661,11 @@ class SyncPipeline:
             )
             else "structured"
         )
+        # 中英文混排 / 英文排版：结构化渲染（resume 等）经模板 t() 钩子对输出文本规范化。
+        # 原始文本仍是翻译缓存 key，规范化仅作用于展示值，源文件不受影响。
+        if self._config.typography.enabled:
+            typo_cfg = self._config.typography
+            kwargs["normalize"] = lambda s, lang: normalize_for_lang(s, typo_cfg, lang)
         return renderer.render(
             doc,
             sections_meta=catalog.sections,
@@ -617,14 +694,22 @@ class SyncPipeline:
     def ensure_translations_for(self, doc: Document, target_lang: str) -> dict:
         """Fill in missing translations of ``doc`` into ``target_lang`` only."""
         if target_lang == doc.source_lang:
-            return {"source_lang": doc.source_lang, "target_lang": target_lang,
-                    "provider": _detect_provider(), "total": 0,
-                    "translated": 0, "cached": 0, "failed": 0}
+            return {
+                "source_lang": doc.source_lang,
+                "target_lang": target_lang,
+                "provider": _detect_provider(),
+                "total": 0,
+                "translated": 0,
+                "cached": 0,
+                "failed": 0,
+            }
         self._log(f"🌐 翻译中… ({target_lang})")
+
         # Progress callback that logs to the pipeline's log callback
         def _on_progress(done: int, total: int, text: str, status: str):
             pct = int(done / max(total, 1) * 100)
             self._log(f"  翻译进度: {done}/{total} ({pct}%) … {status}")
+
         res = translate_document(
             doc,
             target_lang=target_lang,
@@ -633,8 +718,10 @@ class SyncPipeline:
             progress_callback=_on_progress,
         )
         self._translator.save()
-        self._log(f"  ✓ 翻译完成: {res.get('translated', 0)} 条新译, "
-                  f"{res.get('cached', 0)} 条缓存, {res.get('failed', 0)} 条失败")
+        self._log(
+            f"  ✓ 翻译完成: {res.get('translated', 0)} 条新译, "
+            f"{res.get('cached', 0)} 条缓存, {res.get('failed', 0)} 条失败"
+        )
         return res
 
     def ensure_translations(self, doc: Document) -> dict:
@@ -667,7 +754,7 @@ class SyncPipeline:
 
     def _ensure_translations(self, doc: Document) -> None:
         """Translate only once per non-source language, then flag done."""
-        if getattr(self, '_translated_langs', None) is None:
+        if getattr(self, "_translated_langs", None) is None:
             self._translated_langs = set()
         for out_cfg in self._config.outputs:
             target = out_cfg.lang

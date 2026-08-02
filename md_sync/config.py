@@ -2,6 +2,7 @@
 
 Reads ``md-sync.yaml`` from the project directory.
 """
+
 from __future__ import annotations
 
 import time as _time_module
@@ -10,6 +11,8 @@ from datetime import datetime
 from pathlib import Path
 
 import yaml
+
+from md_sync.typography import TypographyConfig
 
 
 def _timestamp() -> str:
@@ -20,10 +23,7 @@ def _timestamp() -> str:
     """
     t = _time_module.time()
     ms = int((t - int(t)) * 1000)
-    return (
-        datetime.fromtimestamp(t).strftime("%Y%m%d_%H%M%S")
-        + f"_{ms:03d}"
-    )
+    return datetime.fromtimestamp(t).strftime("%Y%m%d_%H%M%S") + f"_{ms:03d}"
 
 
 def derive_output_path(
@@ -73,15 +73,16 @@ def derive_output_path(
 @dataclass
 class OutputConfig:
     """A single output target."""
-    format: str              # "md" | "html" | "docx" | "epub"
-    lang: str                # "zh" | "en" | …
-    path: str = ""           # output file path (derived from source name if empty)
-    theme: str | None = None   # legacy theme name (backward compat)
-    style: str | None = None   # template style name (e.g. "bwx", "modern")
+
+    format: str  # "md" | "html" | "docx" | "epub"
+    lang: str  # "zh" | "en" | …
+    path: str = ""  # output file path (derived from source name if empty)
+    theme: str | None = None  # legacy theme name (backward compat)
+    style: str | None = None  # template style name (e.g. "bwx", "modern")
     pdf: bool = False
     pdf_path: str | None = None
-    page_size: str = "A4"      # PDF/DOCX page size, e.g. "A4", "Letter", "A5"
-    page_margin: str = ""      # override margin; empty => standard margin for page_size
+    page_size: str = "A4"  # PDF/DOCX page size, e.g. "A4", "Letter", "A5"
+    page_margin: str = ""  # override margin; empty => standard margin for page_size
 
 
 @dataclass
@@ -104,22 +105,18 @@ class TranslationConfig:
 
 
 @dataclass
-class WebUIConfig:
-    enabled: bool = True
-    host: str = "127.0.0.1"
-    port: int = 8580
-
-
-@dataclass
 class ProjectConfig:
     """Top-level project configuration."""
+
     project: str
-    source: str                     # path to source MD file
-    schema: str = "resume"          # parsing schema
+    source: str  # path to source MD file
+    schema: str = "resume"  # parsing schema
     outputs: list[OutputConfig] = field(default_factory=list)
     watch: WatchConfig = field(default_factory=WatchConfig)
     translation: TranslationConfig = field(default_factory=TranslationConfig)
-    web_ui: WebUIConfig = field(default_factory=WebUIConfig)
+    # Global Chinese mixed-script typesetting rules (中英文混排规范). Applied to
+    # derived outputs (md/html/pdf) in memory — the source file is never touched.
+    typography: TypographyConfig = field(default_factory=TypographyConfig)
     # lang code -> output base filename (no extension).
     # zh defaults to the source stem; en needs a "simple translation"
     # (manual mapping) since content/name translation is not automated yet.
@@ -137,7 +134,7 @@ class ProjectConfig:
     source_lang: str = "zh"
 
     # Derived (set after load)
-    config_path: Path = field(default_factory=Path)   # original YAML file path
+    config_path: Path = field(default_factory=Path)  # original YAML file path
     project_dir: Path = field(default_factory=Path)
     source_path: Path = field(default_factory=Path)
 
@@ -154,7 +151,7 @@ class ProjectConfig:
             outputs=[OutputConfig(**o) for o in raw.get("outputs", [])],
             watch=WatchConfig(**(raw.get("watch", {}))),
             translation=cls._parse_translation(raw.get("translation", {})),
-            web_ui=WebUIConfig(**(raw.get("web_ui", {}))),
+            typography=TypographyConfig.parse(raw.get("typography")),
             name_map=raw.get("name_map", {}),
             output_root=raw.get("output_root", ""),
             output_naming=raw.get("output_naming", "timestamp"),
@@ -240,7 +237,9 @@ class ProjectConfig:
         """Output base name (no extension) for a language."""
         return self.name_map.get(lang) or self.source_path.stem
 
-    def output_path(self, format: str, lang: str, *, pdf: bool = False, naming: str | None = None) -> str:
+    def output_path(
+        self, format: str, lang: str, *, pdf: bool = False, naming: str | None = None
+    ) -> str:
         """Derive a single output path for (format, lang) from output_root.
 
         Returns "" when no output root is configured (i.e. unconfigured).
@@ -250,4 +249,6 @@ class ProjectConfig:
             return ""
         if naming is None:
             naming = self.output_naming
-        return derive_output_path(root, format, lang, self.name_map, self.source_path.stem, pdf=pdf, naming=naming)
+        return derive_output_path(
+            root, format, lang, self.name_map, self.source_path.stem, pdf=pdf, naming=naming
+        )

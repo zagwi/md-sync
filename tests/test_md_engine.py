@@ -8,6 +8,7 @@ Run::
 
     python -m pytest tests/test_md_engine.py -v
 """
+
 from __future__ import annotations
 
 import re
@@ -16,15 +17,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
-from md_sync.core.document import Document, Item, Section
+from md_sync.core.document import Document
 from md_sync.core.md_engine import (
+    _MD,
     _blockquote_is_complex,
     _collect_blockquote,
     _collect_bullets,
     _find_matching,
     _has_nested_list,
-    _MD,
     _slice_raw,
     _table_to_md,
     parse_document,
@@ -84,10 +84,24 @@ def _assert_balanced_html(html: str, label: str = "") -> None:
     assert not b.errors, f"{prefix}Tag mismatch: {b.errors}"
 
 
-_VOID_ELEMENTS = frozenset({
-    "area", "base", "br", "col", "embed", "hr", "img", "input",
-    "link", "meta", "param", "source", "track", "wbr",
-})
+_VOID_ELEMENTS = frozenset(
+    {
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
+    }
+)
 
 
 def _body_only(html: str) -> str:
@@ -575,14 +589,7 @@ class TestRegressions:
     @pytest.mark.parametrize("theme", list(_THEMES))
     def test_md_items_balanced(self, theme: str) -> None:
         """Every ``md``-type item renders balanced HTML."""
-        src = (
-            "- 嵌套\n"
-            "  - 子项\n"
-            "  - 子项2\n\n"
-            "> 多段。\n"
-            ">\n"
-            "> 第二段。\n"
-        )
+        src = "- 嵌套\n  - 子项\n  - 子项2\n\n> 多段。\n>\n> 第二段。\n"
         doc = parse_document(src)
         html = _render_doc(doc, theme)
         _assert_balanced_html(html, f"{theme}/md-items")

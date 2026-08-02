@@ -39,11 +39,11 @@ logger = logging.getLogger(__name__)
 
 # ── GB/T 9704-2012 版式常量 ──────────────────────────────────────────────
 _TOP_MM, _BOTTOM_MM, _LEFT_MM, _RIGHT_MM = 37.0, 35.0, 28.0, 26.0
-_BODY_FONT_PT = 16.0          # 三号
-_TITLE_FONT_PT = 22.0         # 二号
-_PAGE_NO_FONT_PT = 14.0       # 四号
-_LINE_EXACT_PT = 28.8         # 固定行距（每面 22 行撑满 225mm 版心）
-_BODY_INDENT_PT = 2 * _BODY_FONT_PT   # 首行缩进 2 字符 = 32pt
+_BODY_FONT_PT = 16.0  # 三号
+_TITLE_FONT_PT = 22.0  # 二号
+_PAGE_NO_FONT_PT = 14.0  # 四号
+_LINE_EXACT_PT = 28.8  # 固定行距（每面 22 行撑满 225mm 版心）
+_BODY_INDENT_PT = 2 * _BODY_FONT_PT  # 首行缩进 2 字符 = 32pt
 _RED = "E60012"
 
 # 字体：正文仿宋、一级黑体、二级楷体、标题/版头小标宋、页码宋体
@@ -55,17 +55,36 @@ _ST = "宋体"
 _LATIN = "Times New Roman"
 
 _P_BDR_SUCCESSORS = (
-    "w:shd", "w:tabs", "w:suppressAutoHyphens", "w:kinsoku", "w:wordWrap",
-    "w:overflowPunct", "w:topLinePunct", "w:autoSpaceDE", "w:autoSpaceDN",
-    "w:bidi", "w:adjustRightInd", "w:snapToGrid", "w:spacing", "w:ind",
-    "w:contextualSpacing", "w:mirrorIndents", "w:suppressOverlap", "w:jc",
-    "w:textDirection", "w:textAlignment", "w:textboxTightWrap", "w:outlineLvl",
-    "w:divId", "w:cnfStyle", "w:rPr", "w:sectPr", "w:pPrChange",
+    "w:shd",
+    "w:tabs",
+    "w:suppressAutoHyphens",
+    "w:kinsoku",
+    "w:wordWrap",
+    "w:overflowPunct",
+    "w:topLinePunct",
+    "w:autoSpaceDE",
+    "w:autoSpaceDN",
+    "w:bidi",
+    "w:adjustRightInd",
+    "w:snapToGrid",
+    "w:spacing",
+    "w:ind",
+    "w:contextualSpacing",
+    "w:mirrorIndents",
+    "w:suppressOverlap",
+    "w:jc",
+    "w:textDirection",
+    "w:textAlignment",
+    "w:textboxTightWrap",
+    "w:outlineLvl",
+    "w:divId",
+    "w:cnfStyle",
+    "w:rPr",
+    "w:sectPr",
+    "w:pPrChange",
 )
 
-_SIGN_DATE_RE = re.compile(
-    r"^(?:\d{4}年\d{1,2}月\d{1,2}日|（这里是成文日期[^）]*）)$"
-)
+_SIGN_DATE_RE = re.compile(r"^(?:\d{4}年\d{1,2}月\d{1,2}日|（这里是成文日期[^）]*）)$")
 _ZHU_SONG_RE = re.compile(r"[：:]\s*$")
 _ATTACH_RE = re.compile(r"^附件[：:]")
 _NOTE_FULL_PAREN_RE = re.compile(r"^（[^（）]+）\s*$")
@@ -74,8 +93,15 @@ _NOTE_FULL_PAREN_RE = re.compile(r"^（[^（）]+）\s*$")
 # ── 底层格式化工具 ───────────────────────────────────────────────────────
 
 
-def _font(run, east_asia: str, size_pt: float, *, bold: bool = False,
-          color: str | None = None, latin: str = _LATIN) -> None:
+def _font(
+    run,
+    east_asia: str,
+    size_pt: float,
+    *,
+    bold: bool = False,
+    color: str | None = None,
+    latin: str = _LATIN,
+) -> None:
     """Set a run's font: Latin (Times New Roman) + CJK (eastAsia) + size/color."""
     run.font.name = latin
     run.font.size = Pt(size_pt)
@@ -135,7 +161,7 @@ def _fmt(
         for side, sz, color in borders:
             b = OxmlElement(f"w:{side}")
             b.set(qn("w:val"), "single")
-            b.set(qn("w:sz"), str(sz))          # 八分之一磅
+            b.set(qn("w:sz"), str(sz))  # 八分之一磅
             b.set(qn("w:space"), "1")
             b.set(qn("w:color"), color)
             p_bdr.append(b)
@@ -239,9 +265,7 @@ def _iter_blocks(source_raw: str):
         elif tt == "blockquote_open":
             j = _find_matching(tokens, i, "blockquote_open", "blockquote_close")
             parts = [
-                tokens[k].content.strip()
-                for k in range(i, j + 1)
-                if tokens[k].type == "inline"
+                tokens[k].content.strip() for k in range(i, j + 1) if tokens[k].type == "inline"
             ]
             content = " ".join(parts).strip()
             if content:
@@ -270,7 +294,8 @@ def _classify(blocks: list[tuple]) -> list[str]:
     )
     # 版记区域：最后一个 hr 之后的段落
     last_hr = next(
-        (i for i in range(n - 1, -1, -1) if blocks[i][0] == "hr"), None,
+        (i for i in range(n - 1, -1, -1) if blocks[i][0] == "hr"),
+        None,
     )
     banji_start = (last_hr + 1) if last_hr is not None else n
 
@@ -290,8 +315,7 @@ def _classify(blocks: list[tuple]) -> list[str]:
                 roles[pre[-1]] = "no"
         # 标题后第一个以全角/半角冒号结尾的段落 → 主送机关（顶格）
         zhusong = next(
-            (i for i in range(title_idx + 1, n)
-             if blocks[i][0] == "para" and roles[i] != "banji"),
+            (i for i in range(title_idx + 1, n) if blocks[i][0] == "para" and roles[i] != "banji"),
             None,
         )
         if zhusong is not None and _ZHU_SONG_RE.search(blocks[zhusong][1]):
@@ -300,19 +324,28 @@ def _classify(blocks: list[tuple]) -> list[str]:
     # 落款：正文区（版记之前）最后一段成文日期 + 其上一段署名
     end_scan = last_hr if last_hr is not None else n
     date_idx = next(
-        (i for i in range(end_scan - 1, -1, -1)
-         if blocks[i][0] == "para" and _SIGN_DATE_RE.match(blocks[i][1])),
+        (
+            i
+            for i in range(end_scan - 1, -1, -1)
+            if blocks[i][0] == "para" and _SIGN_DATE_RE.match(blocks[i][1])
+        ),
         None,
     )
     if date_idx is not None:
         roles[date_idx] = "sign-date"
-        if date_idx - 1 >= 0 and blocks[date_idx - 1][0] == "para" \
-                and roles[date_idx - 1] in ("body",):
+        if (
+            date_idx - 1 >= 0
+            and blocks[date_idx - 1][0] == "para"
+            and roles[date_idx - 1] in ("body",)
+        ):
             roles[date_idx - 1] = "sign"
         # 成文日期之后的圆括号段落 → 附注（左空二字）
         for j in range(date_idx + 1, end_scan):
-            if blocks[j][0] == "para" and roles[j] == "body" \
-                    and _NOTE_FULL_PAREN_RE.match(blocks[j][1]):
+            if (
+                blocks[j][0] == "para"
+                and roles[j] == "body"
+                and _NOTE_FULL_PAREN_RE.match(blocks[j][1])
+            ):
                 roles[j] = "note"
 
     # 附件：正文下空一行、左空二字
@@ -329,50 +362,93 @@ def _classify(blocks: list[tuple]) -> list[str]:
 def _add_body_para(doc, text: str, role: str, t_fn) -> None:
     p = doc.add_paragraph()
     if role == "org":
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.CENTER, line=_TITLE_FONT_PT + 12,
-             space_before=28.8, space_after=4)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.CENTER,
+            line=_TITLE_FONT_PT + 12,
+            space_before=28.8,
+            space_after=4,
+        )
         _font(p.add_run(t_fn(text)), _XBS, _TITLE_FONT_PT, color=_RED)
     elif role == "no":
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.CENTER, line=_LINE_EXACT_PT,
-             borders=[("bottom", 12, _RED)])
+        _fmt(
+            p, align=WD_ALIGN_PARAGRAPH.CENTER, line=_LINE_EXACT_PT, borders=[("bottom", 12, _RED)]
+        )
         _font(p.add_run(t_fn(text)), _FS, _BODY_FONT_PT)
     elif role == "title":
         # 标题：红色分隔线下空二行（前一“发文字号”段后补一空行，加上本段
         # space_before 各一行，兼顾 Word 相加 / LibreOffice 取大的差异）
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.CENTER, line=_TITLE_FONT_PT + 12,
-             space_before=_LINE_EXACT_PT, space_after=_LINE_EXACT_PT,
-             keep_with_next=True)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.CENTER,
+            line=_TITLE_FONT_PT + 12,
+            space_before=_LINE_EXACT_PT,
+            space_after=_LINE_EXACT_PT,
+            keep_with_next=True,
+        )
         _font(p.add_run(t_fn(text)), _XBS, _TITLE_FONT_PT)
     elif role == "zhusong":
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT,
-             keep_with_next=True)
+        _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT, keep_with_next=True)
         _font(p.add_run(t_fn(text)), _FS, _BODY_FONT_PT)
     elif role == "attach":
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT,
-             left_chars=2, left_pt=_BODY_INDENT_PT, space_before=28.8)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+            line=_LINE_EXACT_PT,
+            left_chars=2,
+            left_pt=_BODY_INDENT_PT,
+            space_before=28.8,
+        )
         _font(p.add_run(t_fn(text)), _FS, _BODY_FONT_PT)
     elif role == "sign":
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.RIGHT, line=_LINE_EXACT_PT,
-             right_chars=2, right_pt=2 * _BODY_FONT_PT, space_before=28.8)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.RIGHT,
+            line=_LINE_EXACT_PT,
+            right_chars=2,
+            right_pt=2 * _BODY_FONT_PT,
+            space_before=28.8,
+        )
         _font(p.add_run(t_fn(text)), _FS, _BODY_FONT_PT)
     elif role == "sign-date":
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.RIGHT, line=_LINE_EXACT_PT,
-             right_chars=4, right_pt=4 * _BODY_FONT_PT)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.RIGHT,
+            line=_LINE_EXACT_PT,
+            right_chars=4,
+            right_pt=4 * _BODY_FONT_PT,
+        )
         _font(p.add_run(t_fn(text)), _FS, _BODY_FONT_PT)
     elif role == "note":
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT,
-             left_chars=2, left_pt=_BODY_INDENT_PT)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+            line=_LINE_EXACT_PT,
+            left_chars=2,
+            left_pt=_BODY_INDENT_PT,
+        )
         _font(p.add_run(t_fn(text)), _FS, _BODY_FONT_PT)
     elif role == "banji":
         borders = []
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT,
-             left_chars=1, left_pt=_PAGE_NO_FONT_PT,
-             right_chars=1, right_pt=_PAGE_NO_FONT_PT,
-             borders=borders)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+            line=_LINE_EXACT_PT,
+            left_chars=1,
+            left_pt=_PAGE_NO_FONT_PT,
+            right_chars=1,
+            right_pt=_PAGE_NO_FONT_PT,
+            borders=borders,
+        )
         _font(p.add_run(t_fn(text)), _FS, _PAGE_NO_FONT_PT)
     else:  # body
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT,
-             first_chars=2, first_pt=_BODY_INDENT_PT)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+            line=_LINE_EXACT_PT,
+            first_chars=2,
+            first_pt=_BODY_INDENT_PT,
+        )
         _font(p.add_run(t_fn(text)), _FS, _BODY_FONT_PT)
 
 
@@ -380,20 +456,37 @@ def _add_heading(doc, text: str, level: int, t_fn) -> None:
     p = doc.add_paragraph()
     if level <= 2:
         # 一级标题：黑体，顶格
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT,
-             space_before=14, keep_with_next=True)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+            line=_LINE_EXACT_PT,
+            space_before=14,
+            keep_with_next=True,
+        )
         _font(p.add_run(t_fn(text)), _HT, _BODY_FONT_PT)
     elif level == 3:
         # 二级标题：楷体，缩进 2 字符
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT,
-             first_chars=2, first_pt=_BODY_INDENT_PT,
-             space_before=14, keep_with_next=True)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+            line=_LINE_EXACT_PT,
+            first_chars=2,
+            first_pt=_BODY_INDENT_PT,
+            space_before=14,
+            keep_with_next=True,
+        )
         _font(p.add_run(t_fn(text)), _KT, _BODY_FONT_PT)
     else:
         # 三级及以下：仿宋，缩进 2 字符
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT,
-             first_chars=2, first_pt=_BODY_INDENT_PT,
-             space_before=14, keep_with_next=True)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+            line=_LINE_EXACT_PT,
+            first_chars=2,
+            first_pt=_BODY_INDENT_PT,
+            space_before=14,
+            keep_with_next=True,
+        )
         _font(p.add_run(t_fn(text)), _FS, _BODY_FONT_PT)
 
 
@@ -401,8 +494,13 @@ def _add_list(doc, ordered: bool, items: list[str], t_fn) -> None:
     for idx, item in enumerate(items, start=1):
         prefix = f"{idx}. " if ordered else "• "
         p = doc.add_paragraph()
-        _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT,
-             first_chars=2, first_pt=_BODY_INDENT_PT)
+        _fmt(
+            p,
+            align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+            line=_LINE_EXACT_PT,
+            first_chars=2,
+            first_pt=_BODY_INDENT_PT,
+        )
         _font(p.add_run(prefix + t_fn(item)), _FS, _BODY_FONT_PT)
 
 
@@ -433,10 +531,19 @@ def _add_table(doc, rows: list[list[str]], t_fn) -> None:
 
 def _add_code(doc, text: str) -> None:
     p = doc.add_paragraph()
-    _fmt(p, align=WD_ALIGN_PARAGRAPH.LEFT, line=None,
-         space_before=7, space_after=7,
-         borders=[("top", 8, "D5D5D5"), ("left", 8, "D5D5D5"),
-                  ("bottom", 8, "D5D5D5"), ("right", 8, "D5D5D5")])
+    _fmt(
+        p,
+        align=WD_ALIGN_PARAGRAPH.LEFT,
+        line=None,
+        space_before=7,
+        space_after=7,
+        borders=[
+            ("top", 8, "D5D5D5"),
+            ("left", 8, "D5D5D5"),
+            ("bottom", 8, "D5D5D5"),
+            ("right", 8, "D5D5D5"),
+        ],
+    )
     _font(p.add_run(text), "Courier New", 12, latin="Courier New")
 
 
@@ -445,8 +552,7 @@ def _add_hr(doc, role: str) -> None:
     if role == "banji-hr":
         # 版记顶部分隔线由首条版记行的上边框承担，这里省略
         return
-    _fmt(p, align=WD_ALIGN_PARAGRAPH.LEFT, line=14,
-         borders=[("top", 8, "000000")])
+    _fmt(p, align=WD_ALIGN_PARAGRAPH.LEFT, line=14, borders=[("top", 8, "000000")])
 
 
 # ── 页码（奇偶页脚 + PAGE 域）─────────────────────────────────────────────
@@ -488,13 +594,15 @@ def _fill_footer(footer, side: str) -> None:
     p = footer.paragraphs[0]
     for r in list(p.runs):
         r._element.getparent().remove(r._element)
-    _fmt(p, align=(WD_ALIGN_PARAGRAPH.RIGHT if side == "right"
-                   else WD_ALIGN_PARAGRAPH.LEFT),
-         line=None,
-         left_chars=(1 if side == "left" else 0),
-         left_pt=(_PAGE_NO_FONT_PT if side == "left" else 0.0),
-         right_chars=(1 if side == "right" else 0),
-         right_pt=(_PAGE_NO_FONT_PT if side == "right" else 0.0))
+    _fmt(
+        p,
+        align=(WD_ALIGN_PARAGRAPH.RIGHT if side == "right" else WD_ALIGN_PARAGRAPH.LEFT),
+        line=None,
+        left_chars=(1 if side == "left" else 0),
+        left_pt=(_PAGE_NO_FONT_PT if side == "left" else 0.0),
+        right_chars=(1 if side == "right" else 0),
+        right_pt=(_PAGE_NO_FONT_PT if side == "right" else 0.0),
+    )
     _font(p.add_run("— "), _ST, _PAGE_NO_FONT_PT)
     _add_page_field(p)
     _font(p.add_run(" —"), _ST, _PAGE_NO_FONT_PT)
@@ -576,10 +684,16 @@ def _build_document(doc, source_raw: str, lang: str, translator):
                     borders.append(("top", 8, "000000"))
                 # 末条用粗线（0.35mm≈sz8），中间用细线（0.25mm≈sz6）
                 borders.append(("bottom", 8 if last else 6, "000000"))
-                _fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY, line=_LINE_EXACT_PT,
-                     left_chars=1, left_pt=_PAGE_NO_FONT_PT,
-                     right_chars=1, right_pt=_PAGE_NO_FONT_PT,
-                     borders=borders)
+                _fmt(
+                    p,
+                    align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+                    line=_LINE_EXACT_PT,
+                    left_chars=1,
+                    left_pt=_PAGE_NO_FONT_PT,
+                    right_chars=1,
+                    right_pt=_PAGE_NO_FONT_PT,
+                    borders=borders,
+                )
                 _font(p.add_run(t_fn(block[1])), _FS, _PAGE_NO_FONT_PT)
             else:
                 _add_body_para(document, block[1], role, t_fn)

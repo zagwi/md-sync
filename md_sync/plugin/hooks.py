@@ -11,6 +11,7 @@ Hooks are emitted at key points in the sync pipeline:
   - ``before_sync``      Before full sync cycle
   - ``after_sync``       After full sync cycle
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -24,6 +25,7 @@ HookHandler = Callable[..., None]
 @dataclass
 class HookEvent:
     """Data passed to hook handlers."""
+
     name: str
     doc: Any | None = None
     config: dict | None = None

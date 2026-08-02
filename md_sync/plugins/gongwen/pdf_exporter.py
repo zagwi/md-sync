@@ -80,9 +80,8 @@ def stamp_gongwen_page_numbers(pdf_path: Path) -> bool:
         logger.warning("[gongwen-pdf] 无法打开 PDF 叠加页码: %s", e)
         return False
 
-    page_w = doc[0].rect.width if doc.page_count else 0
-    right_edge = (_PAGE_W_MM - _RIGHT_MARGIN_MM) * _MM      # 版心右缘 (pt)
-    left_edge = _LEFT_MARGIN_MM * _MM                       # 版心左缘 (pt)
+    right_edge = (_PAGE_W_MM - _RIGHT_MARGIN_MM) * _MM  # 版心右缘 (pt)
+    left_edge = _LEFT_MARGIN_MM * _MM  # 版心左缘 (pt)
     baseline_y = (_PAGE_H_MM - _BOTTOM_MARGIN_MM + _PAGE_NO_GAP_MM) * _MM
 
     font_path = _song_font_path()
@@ -102,12 +101,9 @@ def stamp_gongwen_page_numbers(pdf_path: Path) -> bool:
             tw = font.text_length(text, fontsize=_FONT_SIZE_PT)
         else:
             tw = fitz.get_text_length(text, fontname, fontsize=_FONT_SIZE_PT)
-        if n % 2 == 1:
-            # 单页码：右缘对齐版心右缘空一字 → 起点 = 版心右缘 − 一字 − 文字宽
-            x = right_edge - _CHAR_PT - tw
-        else:
-            # 双页码：左缘对齐版心左缘空一字
-            x = left_edge + _CHAR_PT
+        # 单页码：右缘对齐版心右缘空一字 → 起点 = 版心右缘 − 一字 − 文字宽
+        # 双页码：左缘对齐版心左缘空一字
+        x = (right_edge - _CHAR_PT - tw) if n % 2 == 1 else (left_edge + _CHAR_PT)
         page.insert_text(
             (x, baseline_y),
             text,

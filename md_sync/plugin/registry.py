@@ -10,6 +10,7 @@ Parser resolution:
   schema name. The MdParser dispatcher tries plugin parsers first, then
   built-in parsers, and finally falls back to generic markdown parsing.
 """
+
 from __future__ import annotations
 
 import logging
@@ -228,6 +229,7 @@ class PluginRegistry:
         dest.mkdir(parents=True, exist_ok=True)
 
         import shutil
+
         for item in source.iterdir():
             s_dst = dest / item.name
             if item.is_dir():
@@ -254,6 +256,7 @@ class PluginRegistry:
         for p in paths:
             if p.exists():
                 import shutil
+
                 shutil.rmtree(p)
                 removed = True
         return removed
@@ -299,10 +302,11 @@ class PluginRegistry:
                 self._parsers[manifest.parser_schema] = parser
                 logger.info(
                     "[plugin] ✓ Registered parser '%s' from '%s'",
-                    manifest.parser_schema, manifest.name)
+                    manifest.parser_schema,
+                    manifest.name,
+                )
         except Exception as e:
-            logger.warning(
-                "[plugin] Failed to load parser for '%s': %s", manifest.name, e)
+            logger.warning("[plugin] Failed to load parser for '%s': %s", manifest.name, e)
 
     def _register_pdf_exporter(self, plugin: DirectoryPlugin) -> None:
         """Register a plugin's PDF exporter override (if any).
@@ -321,12 +325,9 @@ class PluginRegistry:
             exporter = plugin.load_pdf_exporter()
             if exporter:
                 self._pdf_exporters[key] = exporter
-                logger.info(
-                    "[plugin] ✓ Registered PDF exporter '%s' from '%s'",
-                    key, manifest.name)
+                logger.info("[plugin] ✓ Registered PDF exporter '%s' from '%s'", key, manifest.name)
         except Exception as e:
-            logger.warning(
-                "[plugin] Failed to load PDF exporter for '%s': %s", manifest.name, e)
+            logger.warning("[plugin] Failed to load PDF exporter for '%s': %s", manifest.name, e)
 
     def _register_docx_exporter(self, plugin: DirectoryPlugin) -> None:
         """Register a plugin's DOCX exporter override (if any).
@@ -346,11 +347,10 @@ class PluginRegistry:
             if exporter:
                 self._docx_exporters[key] = exporter
                 logger.info(
-                    "[plugin] ✓ Registered DOCX exporter '%s' from '%s'",
-                    key, manifest.name)
+                    "[plugin] ✓ Registered DOCX exporter '%s' from '%s'", key, manifest.name
+                )
         except Exception as e:
-            logger.warning(
-                "[plugin] Failed to load DOCX exporter for '%s': %s", manifest.name, e)
+            logger.warning("[plugin] Failed to load DOCX exporter for '%s': %s", manifest.name, e)
 
     def _discovery_paths(self) -> list[Path]:
         """Discovery paths for plugins (later paths override earlier ones).
@@ -371,6 +371,7 @@ class PluginRegistry:
     def _builtin_plugins_dir() -> Path:
         """Return the path to built-in plugin packs shipped with md-sync."""
         import md_sync
+
         return Path(md_sync.__file__).resolve().parent / "plugins"
 
     @staticmethod
@@ -378,6 +379,7 @@ class PluginRegistry:
         """Discover plugins registered via setuptools entry points."""
         try:
             from importlib.metadata import entry_points
+
             eps = entry_points(group="md_sync.plugins")
             for ep in eps:
                 try:

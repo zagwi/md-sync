@@ -1,7 +1,7 @@
 """Translation fallback.
 
 When a mapping miss occurs, this module can call a public translation
-service to generate a first-pass translation. Two categories of
+service to generate a first-pass translation. Three categories of
 providers are supported:
 
   * Key-based LLM APIs (OpenAI-compatible) — require ``OPENAI_API_KEY``.
@@ -10,12 +10,14 @@ providers are supported:
     change at any time; they are used as a best-effort fallback and any
     failure simply returns ``None`` so the caller can fall back to the
     original text.
+  * Free translation memory API (MyMemory) — no API key required,
+    no proxy needed, reliable for Chinese-English.
 
 Provider selection (``auto`` by default):
 
   1. ``OPENAI_API_KEY`` set  → ``openai``
-  2. ``TRANSLATE_PROVIDER`` env (google|bing|openai|none) → that
-  3. otherwise                → ``google`` (free, no key)
+  2. ``TRANSLATE_PROVIDER`` env (google|bing|openai|mymemory|none) → that
+  3. otherwise                → ``mymemory`` (free, no key, no proxy)
 """
 from __future__ import annotations
 
@@ -42,11 +44,12 @@ def translate_via_api(
     """Translate ``text`` from ``source_lang`` to ``target_lang``.
 
     Supported providers (``provider``):
-        auto     → auto-detect from env / defaults (see above)
-        openai   → OpenAI-compatible LLM API (needs OPENAI_API_KEY)
-        google   → Google web translate endpoint (free, no key)
-        bing     → Bing web translate endpoint (free, no key)
-        none     → skip, return None
+        auto       → auto-detect from env / defaults (see above)
+        openai     → OpenAI-compatible LLM API (needs OPENAI_API_KEY)
+        google     → Google web translate endpoint (free, no key)
+        bing       → Bing web translate endpoint (free, no key)
+        mymemory   → MyMemory translation memory (free, no key, no proxy)
+        none       → skip, return None
 
     Returns the translated text, or None on failure.
     """
@@ -65,6 +68,8 @@ def translate_via_api(
         return _call_google(text, source_lang=source_lang, target_lang=target_lang)
     if provider == "bing":
         return _call_bing(text, source_lang=source_lang, target_lang=target_lang)
+    if provider == "mymemory":
+        return _call_mymemory(text, source_lang=source_lang, target_lang=target_lang)
 
     return None
 
@@ -79,10 +84,10 @@ def _detect_provider() -> str:
     if os.environ.get("OPENAI_API_KEY"):
         return "openai"
     env_provider = (os.environ.get("TRANSLATE_PROVIDER") or "").lower()
-    if env_provider in ("google", "bing", "openai", "none"):
+    if env_provider in ("google", "bing", "openai", "mymemory", "none"):
         return env_provider
-    # Free, no-key public endpoint is the default fallback.
-    return "google"
+    # Free, no-key, no-proxy public endpoint is the default.
+    return "mymemory"
 
 
 def _normalize_google_lang(code: str) -> str:
@@ -110,6 +115,16 @@ def _get_proxy() -> str | None:
             return val
     # Default: common local proxy (Clash, V2Ray, etc.)
     return "http://127.0.0.1:1080"
+
+
+def _request_without_proxy(method: str, url: str, **kwargs):
+    """Make an httpx request ignoring all system proxy settings.
+
+    This is needed because environments often have SOCKS proxies set that
+    prevent direct HTTPS connection to translation APIs.
+    """
+    import httpx as _httpx
+    return _httpx.request(method, url, trust_env=False, **kwargs)
 
 
 def _call_google(
@@ -240,6 +255,62 @@ def _call_openai(
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"].strip()
+    except Exception:
+        logger.debug("provider fallback failed", exc_info=True)
+        return None
+
+
+def _normalize_mymemory_lang(code: str) -> str:
+    """Normalize language codes for MyMemory API.
+
+    MyMemory expects 2-letter codes (e.g., ``zh``, ``en``).  We collapse
+    common variants so callers can pass ``zh-cn``, ``chinese``, etc.
+    """
+    code = (code or "").lower()
+    if code in ("zh", "zh-cn", "zh_cn", "chinese", "cmn"):
+        return "zh"
+    if code in ("en", "english"):
+        return "en"
+    return code
+
+
+def _call_mymemory(
+    text: str,
+    source_lang: str = "zh",
+    target_lang: str = "en",
+) -> str | None:
+    """Free MyMemory translation memory endpoint.
+
+    - No API key required.
+    - No proxy required (direct HTTPS).
+    - Daily free limit ~100 000 characters.
+    - On any failure returns ``None`` so the caller can fall back.
+    """
+    sl = _normalize_mymemory_lang(source_lang)
+    tl = _normalize_mymemory_lang(target_lang)
+    try:
+        params = {
+            "q": text,
+            "langpair": f"{sl}|{tl}",
+            "de": "md-sync@users.noreply.github.com",
+        }
+        resp = _request_without_proxy(
+            "GET",
+            "https://api.mymemory.translated.net/get",
+            params=params,
+            timeout=15,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("responseStatus") == 200:
+            return data["responseData"]["translatedText"]
+        else:
+            logger.debug(
+                "MyMemory error: %s",
+                data.get("responseDetails", "unknown"),
+            )
+            return None
     except Exception:
         logger.debug("provider fallback failed", exc_info=True)
         return None

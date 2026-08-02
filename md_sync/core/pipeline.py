@@ -434,8 +434,6 @@ class SyncPipeline:
             self._stats["errors"].append(result["error"])
         return result
 
-        return result
-
     def _template_catalog(self, out_cfg: OutputConfig):
         """Resolve the TemplateCatalog for an output config.
 
@@ -606,13 +604,13 @@ class SyncPipeline:
     def _translation_possible(self) -> bool:
         """Whether a translation provider is available (no API key needed).
 
-        Free public providers (google/bing) and OpenAI all count. We no
+        Free public providers (google/bing/mymemory) and OpenAI all count. We no
         longer require a pre-existing translation in the mapping, because
         translation is now an explicit, independent step (see
         ``translate_document``). Pending/empty entries are fine — the
         provider will fill them on demand.
         """
-        return _detect_provider() in ("openai", "google", "bing")
+        return _detect_provider() in ("openai", "google", "bing", "mymemory")
 
     # ── Translation helpers ─────────────────────────────────────────────
 

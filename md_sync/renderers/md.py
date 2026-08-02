@@ -21,7 +21,7 @@ class MdRenderer:
         If ``lang`` equals doc.source_lang, the original source text is
         returned verbatim (no re-serialization, so nothing is lost or
         reformatted). Otherwise, attempts translation lookup for each
-        item's content.
+        textual field.
         """
         if lang == doc.source_lang and getattr(doc, "source_raw", ""):
             return doc.source_raw.strip() + "\n"
@@ -30,8 +30,10 @@ class MdRenderer:
 
         # ── Header ─────────────────────────────────────────────────────
         if doc.name:
-            sep = " — " if doc.title else ""
-            lines.append(f"# {doc.name}{sep}{doc.title}")
+            name = self._maybe_translate(doc.name, lang, doc.source_lang)
+            title = self._maybe_translate(doc.title, lang, doc.source_lang) if doc.title else ""
+            sep = " — " if title else ""
+            lines.append(f"# {name}{sep}{title}")
             lines.append("")
 
         # Contacts
@@ -43,7 +45,8 @@ class MdRenderer:
 
         # ── Sections ───────────────────────────────────────────────────
         for section in doc.sections:
-            lines.append(f"{'#' * section.level} {section.title}")
+            section_title = self._maybe_translate(section.title, lang, doc.source_lang)
+            lines.append(f"{'#' * section.level} {section_title}")
             lines.append("")
 
             for item in section.items:
@@ -70,18 +73,19 @@ class MdRenderer:
 
         # text / fallback
         if item.content:
-            return item.content
+            return self._maybe_translate(item.content, lang, source_lang)
 
         return None
 
     def _render_entry(self, item, lang: str, source_lang: str = "zh") -> str:
         """Render a work experience or education entry."""
         parts = []
-        if item.period:
-            parts.append(f"**{item.period}")
+        period = self._maybe_translate(item.period, lang, source_lang) if item.period else ""
+        if period:
+            parts.append(f"**{period}")
 
-        name = item.title or ""
-        subtitle = item.subtitle or ""
+        name = self._maybe_translate(item.title, lang, source_lang) if item.title else ""
+        subtitle = self._maybe_translate(item.subtitle, lang, source_lang) if item.subtitle else ""
 
         if item.type == "entry" and subtitle:
             parts.append(f"{name}（{subtitle}）")
@@ -98,19 +102,21 @@ class MdRenderer:
         return line
 
     def _render_open_source(self, item, lang: str, source_lang: str = "zh") -> str:
-        title = item.title or ""
+        title = self._maybe_translate(item.title, lang, source_lang) if item.title else ""
         lines = []
         desc = self._maybe_translate(item.content, lang, source_lang) if item.content else ""
         if desc:
             lines.append(f"- **{title}**：{desc}" if lang == "zh" else f"- **{title}**: {desc}")
         if item.features:
             for feat in item.features:
-                lines.append(f"  - {feat}")
+                lines.append(f"  - {self._maybe_translate(feat, lang, source_lang)}")
         if item.url:
-            lines.append(f"  开源地址：{item.url}" if lang == "zh" else f"  Open source: {item.url}")
+            url = self._maybe_translate(item.url, lang, source_lang)
+            lines.append(f"  开源地址：{url}" if lang == "zh" else f"  Open source: {url}")
         if item.tags:
             prefix = "涉及技术：" if lang == "zh" else "Tech Stack: "
-            lines.append(f"  **{prefix}**{'、'.join(item.tags)}")
+            translated_tags = [self._maybe_translate(t, lang, source_lang) for t in item.tags]
+            lines.append(f"  **{prefix}**{'、'.join(translated_tags)}")
         return "\n".join(lines)
 
     def _maybe_translate(self, text: str, lang: str, source_lang: str = "zh") -> str:

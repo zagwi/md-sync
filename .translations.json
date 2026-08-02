@@ -1,325 +1,317 @@
 {
-  "a3ca570d3e31": {
-    "en": "[en]20年企业级软件架构设计经验，主导从0到1的微服务架构落地与持续演进。擅长在复杂业务场景下进行技术选型与架构权衡，在可扩展性、成本与交付效率之间取得平衡。对领域驱动设计、事件驱动架构有深入实践。[/en]",
-    "status": "pending"
-  },
-  "873c2a8c5eff": {
-    "en": "[en]精通Java技术栈（Spring Boot/Cloud/MyBatis/JPA）、微服务架构（Spring Cloud）、分布式系统核心技术及云原生技术（K8s）应用。具备高并发（峰值QPS 10K+）、高可用（99.9%+）及容灾系统架构能力，具备从需求分析、架构设计到部署运维的全链路架构把控能力。熟练使用AI编程工具加速开发过程。[/en]",
-    "status": "pending"
-  },
-  "c84a7f3a76af": {
-    "en": "[en]具备较强的业务理解能力，能够将业务需求转化为可落地的技术架构方案。在平安智慧城统筹100+项目IT技术架构评审，制定统一技术标准与治理规范，累计覆盖金额10亿+。[/en]",
-    "status": "pending"
-  },
-  "9219291740fc": {
-    "en": "[en]具备25人以上软件研发团队及项目管理经验，涵盖技术团队搭建、KPI考核、跨部门协调及大型项目交付。通过Code Review、技术分享与架构评审推动团队技术能力建设。具备丰富的技术投标、向上汇报以及扎实的文档编写能力。[/en]",
-    "status": "pending"
-  },
-  "672cc3b2f01f": {
-    "en": "[en]**2003.09-2006.06 吉林大学（985）（计算机软件专业 · 硕士）**\n**1996.09-2000.06 重庆大学（985）（通信工程专业 · 学士）**[/en]",
-    "status": "pending"
-  },
-  "e3f1334b0580": {
-    "en": "[en]**2023.08-2024.01 深圳市华昊信息技术有限公司（架构顾问）** 负责系统架构调研与优化咨询，主导研发规范化体系建设（Code Review、问题单管理、发布管理等）。\n**2019.11-2022.06 平安智慧城市（系统管理部平台组负责人）** 负责企业数字化平台、技术中台及官网的架构设计与研发落地。统筹智慧城市100+项目IT技术架构评审，制定统一技术标准与治理规范，累计覆盖金额10亿+。\n**2013.01-2019.07 大连翼峰软件有限公司（架构师及项目经理）** 作为华为合作方技术负责人，主导多个产品线（通信能源/供应链/财经云）的Java/Spring架构设计与技术选型。管理25人研发团队（开发/测试/UI），全流程管控项目进度、成本与质量。主导技术投标与方案设计。\n**2006.06-2012.08 华为技术有限公司（系统工程师）** 从核心网信令处理开发起步，逐步转向系统架构设计。主导了OSS数据配置子系统和SingleCloud云管理平台的架构设计与优化，积累了大型分布式系统从需求分析、架构设计到现网运维的全链路经验。\n**2000.06-2002.12 迈普通信技术股份有限公司（技术主管）** 负责浙江全省客户技术支持团队管理，负责客户网络架构规划、实施及维护，主导售前方案宣讲与工程实施。培养了客户沟通与团队管理基础能力，为后续技术管理工作奠定基础。[/en]",
-    "status": "pending"
-  },
-  "1fa4c5ca4ae6": {
-    "en": "[en]**2023.08-2024.01 深圳市建筑公务署信息处高质量服务项目 架构顾问** 深入调研多套业务系统，完成架构评估与痛点识别（技术债、性能瓶颈、系统耦合度等）。主导提出基于 **Spring Cloud** 微服务架构的优化方案，制定服务拆分策略与演进路线。建立Code Review、问题单管理、发布管理等研发规范体系。\n**涉及技术：** Spring Cloud 微服务架构、Code Review 规范、项目管理流程\n**2019.11-2022.06 平安智慧城数字化经营平台、技术中台、内外门户 技术负责人** 在业务快速增长、多项目并行、技术栈碎片化的背景下，主导技术中台架构规划，决策采用 **Spring Cloud** 微服务治理体系，统一网关/配置中心/注册中心/熔断降级方案，解决跨团队技术栈不统一与重复建设问题。治理体系支撑3000+用户、日活1000+，压测峰值QPS 10K+，P99<300ms，可用性99.9%+。设计Clickhouse实时数据仓库（ODS/DWD/DWS/ADS）架构，集成Flink流批一体引擎，搭建Metabase及自研BI平台驱动实时数据决策。\n**涉及技术：** Spring Cloud 微服务治理、Clickhouse 实时数仓、Flink 流批一体、Metabase BI\n**2017.11-2019.07 通信能源数字化解决方案套件（VisualConfig） 架构师兼项目经理** 主导华为通信能源解决方案（多产品/多组件/成套关系）配置系统架构设计。采用 **Spring Boot + Electron** 混合架构，引入Groovy脚本引擎实现规则热插拔与动态编排，选型3D渲染引擎，设计WebGL 3D预加载机制。将配置效率提升5倍，差错率锐减98%。\n**涉及技术：** Spring Boot、Electron 桌面框架、Groovy 脚本引擎、Three.js WebGL 3D渲染\n**2016.11-2017.11 供应链公共SaaS平台（Keystone） 后端架构师兼项目经理** 评估单体应用向微服务架构的演进路径，选择渐进式拆分策略（优先剥离高变更模块），决策采用 **Spring Cloud** 体系（Eureka/Ribbon/Hystrix）解决服务发现与容错问题。主导UI构建器后端核心架构开发，基于FreeMarker设计可视化组件动态渲染引擎，页面生成速度提升40%+。\n**涉及技术：** Spring MVC演进微服务、Spring Cloud（Eureka/Ribbon/Hystrix）、FreeMarker 模板引擎\n**2016.01-2016.11 财经云规则引擎平台（PFM2.0 Rule Engine） 架构师兼项目经理** 主导分布式规则引擎架构设计与核心开发，基于Zookeeper构建规则缓存与动态负载均衡机制；主导优化Drools Rete算法网络，响应时间降低60%+，内存减少35%。主导研发在线可视化诊断工具（断点调试/轨迹回放/冲突检测），规则上线效率提升1倍。承载1000+业务规则。\n**涉及技术：** Zookeeper 分布式协调、Drools 规则引擎、在线诊断工具、可视化编排\n**2013.01-2015.11 供应链流通加工项目 中台架构师** 制定中台服务分层规范，抽象服务引擎层实现多业务复用与解耦。主导关键模块的架构设计与code review，指导15人团队交付。建立质量门禁与自动化API测试体系。\n**涉及技术：** Spring MVC、MyBatis、Bootstrap前端\n**2006.06-2012.08 华为技术有限公司 系统工程师** 参与核心网合法监听系统（XI）、承担OSS配置快车（CCE）、SingleCloud云管理底座配置系统等多个系统的架构设计及核心开发。涉及C++信令协议处理、Python数据ETL管道、Visual C++/Qt图形编程、Thrift RPC通信等技术栈。积累了运营商级高可用、高可靠系统架构与现网运维经验。\n**涉及技术：** C++、Python、Visual C++/Qt、Thrift RPC、ETL数据管道[/en]",
-    "status": "pending"
-  },
-  "aa80d66c6d46": {
-    "en": "[en]基于 **Spring Cloud** 构建的完整微服务架构平台，涵盖注册中心、配置中心、网关、熔断降级等核心治理组件。集成分布式事务、消息队列、缓存等企业级能力。项目特点：1.完善的云平台分布式微服务架构。2.提供本地、Docker及K8s三种部署形态。3.提供Web console可视化和CLI一键部署能力。4.提供服务压测功能。 开源地址：https://github.com/zagwi/cloud-platform\n**涉及技术：** Spring Cloud、Docker、K8s、Grafana **涉及技术：**Spring Cloud、Docker、K8s、Grafana[/en]",
-    "status": "pending"
-  },
-  "ccf7185fa382": {
-    "zh": "[zh]Led the architecture of a distributed system.[/zh]",
-    "status": "auto"
-  },
-  "9181f21a25c6": {
-    "zh": "[zh]Built microservices with Spring Cloud.[/zh]",
-    "status": "auto"
-  },
-  "239f5e042c3a": {
-    "en": "",
-    "status": "pending"
-  },
-  "7792a8a49341": {
-    "en": "",
-    "status": "pending"
-  },
-  "59248d3ecdfa": {
-    "en": "",
-    "status": "pending"
-  },
-  "62d5ae57ac2b": {
-    "en": "",
-    "status": "pending"
-  },
-  "0676850efa33": {
-    "en": "",
-    "status": "pending"
-  },
-  "e58311d03985": {
-    "en": "",
-    "status": "pending"
-  },
-  "c2a07da7fdb7": {
-    "en": "",
-    "status": "pending"
-  },
-  "e53ca146d472": {
-    "en": "",
-    "status": "pending"
-  },
-  "68a0d137b298": {
-    "en": "",
-    "status": "pending"
-  },
-  "f47f4a5e821d": {
-    "en": "",
-    "status": "pending"
-  },
-  "a57e2fc41e67": {
-    "en": "",
-    "status": "pending"
-  },
-  "cbfca36826a6": {
-    "en": "",
-    "status": "pending"
-  },
-  "8063e810c383": {
-    "en": "",
-    "status": "pending"
-  },
-  "3c0b1ce5a718": {
-    "en": "",
-    "status": "pending"
-  },
-  "a23ee791f36c": {
-    "en": "",
-    "status": "pending"
-  },
-  "e0ed1bac3423": {
-    "en": "",
-    "status": "pending"
-  },
-  "97610d712de0": {
-    "en": "",
-    "status": "pending"
-  },
-  "383a8b0c7508": {
-    "en": "",
-    "status": "pending"
-  },
-  "5f03d8255d35": {
-    "en": "",
-    "status": "pending"
-  },
-  "edbb57d3798d": {
-    "en": "",
-    "status": "pending"
-  },
-  "6217a60c10ab": {
-    "en": "",
-    "status": "pending"
-  },
-  "8c7674dfafbd": {
-    "en": "",
-    "status": "pending"
-  },
-  "b73f835b3c47": {
-    "en": "",
-    "status": "pending"
-  },
-  "56bdb7877a3f": {
-    "en": "",
-    "status": "pending"
-  },
-  "f9206d3a63c0": {
-    "en": "",
-    "status": "pending"
-  },
-  "656dbc026633": {
-    "en": "",
-    "status": "pending"
-  },
-  "2f8f5ff57760": {
-    "en": "",
-    "status": "pending"
-  },
-  "136761fbf350": {
-    "en": "",
-    "status": "pending"
-  },
-  "71ebc5521420": {
-    "en": "",
-    "status": "pending"
-  },
-  "7ffc51dd7ae3": {
-    "en": "",
-    "status": "pending"
-  },
-  "c9db620b3bff": {
-    "en": "",
-    "status": "pending"
-  },
-  "a8605da5a913": {
-    "en": "",
-    "status": "pending"
-  },
-  "4194aa08d455": {
-    "en": "",
-    "status": "pending"
-  },
-  "906eb616f7cd": {
-    "en": "",
-    "status": "pending"
-  },
-  "a4d3272e04a3": {
-    "en": "",
-    "status": "pending"
-  },
-  "baa578f519d0": {
-    "en": "",
-    "status": "pending"
-  },
-  "8d2ee3751459": {
-    "en": "",
-    "status": "pending"
-  },
-  "7edd940adcfe": {
-    "en": "",
-    "status": "pending"
-  },
-  "bad6377d54aa": {
-    "en": "",
-    "status": "pending"
-  },
-  "317c24ea6892": {
-    "en": "",
-    "status": "pending"
-  },
-  "ff2fc139907b": {
-    "en": "",
-    "status": "pending"
-  },
-  "a722c61a472c": {
-    "en": "",
-    "status": "pending"
-  },
-  "eee7fc9e18e3": {
-    "en": "",
-    "status": "pending"
-  },
-  "db5df440d004": {
-    "en": "",
-    "status": "pending"
-  },
-  "c688a93e2018": {
-    "en": "",
-    "status": "pending"
-  },
-  "1271d3359a19": {
-    "en": "",
-    "status": "pending"
-  },
-  "105f01803fe1": {
-    "en": "",
-    "status": "pending"
-  },
-  "75da4cfdfaf3": {
-    "en": "",
-    "status": "pending"
-  },
-  "a8e441e3daad": {
-    "en": "",
-    "status": "pending"
-  },
   "3bd72f7e9081": {
-    "en": "",
-    "status": "pending"
-  },
-  "a26610960e41": {
-    "en": "",
-    "status": "pending"
+    "en": "→ Automatic resynchronization of source files changed (with anti-shake/debounce)",
+    "status": "auto"
   },
   "0f4e851cf303": {
-    "en": "",
-    "status": "pending"
+    "en": "Comes with web-style UI and native desktop GUI",
+    "status": "auto"
   },
-  "f62d47765f39": {
-    "en": "",
-    "status": "pending"
+  "daf0ac20c826": {
+    "en": "Why is md-sync needed?",
+    "status": "auto"
+  },
+  "a26610960e41": {
+    "en": "Translation away * * cache first * *: the existing translation is directly reused, and the deletion is only reverted back to AI",
+    "status": "auto"
+  },
+  "a8e441e3daad": {
+    "en": "One source → multiple products: `html/zh`, `html/en`, `pdf/zh`, `pdf/en`, `md/zh`, `md/en`, …",
+    "status": "auto"
+  },
+  "983af3d170d6": {
+    "en": "Give \"repetitive, tedious, error-prone physical work\" to md-sync and you focus on the content itself. AI tools do translate documents and convert formats - but that solves a “one-time” need.",
+    "status": "auto"
   },
   "05eb17a28c5a": {
-    "en": "",
-    "status": "pending"
+    "en": "What is really cumbersome is the scenario of * * frequent modification of the source file * *: every time you change a word, you have to go through it manually.",
+    "status": "auto"
+  },
+  "1e12a5416453": {
+    "en": "If you write a Markdown source file in * * Chinese or English * *, md-sync will * * automatically translate it into another language * * and generate it at the same time",
+    "status": "auto"
+  },
+  "87bc3885833a": {
+    "en": "Output in multiple formats (HTML/PDF/Markdown, etc.); all products are automatically regenerated once the source file is changed. Efficiency artifacts for document workers.",
+    "status": "auto"
+  },
+  "4750ce136f04": {
+    "en": "md-sync",
+    "status": "auto"
   },
   "15440078c137": {
-    "en": "",
-    "status": "pending"
+    "en": "* * Modify → → translation formats * * is the whole link, and it is often necessary to maintain products in multiple languages and formats at the same time.",
+    "status": "auto"
+  },
+  "bdb5d89a3188": {
+    "en": "Use processes",
+    "status": "auto"
   },
   "96357ec713a8": {
-    "en": "",
-    "status": "pending"
+    "en": "Manual repetitive operation is not only time-consuming, but also easier to overturn, overturn, and uneven versions.",
+    "status": "auto"
   },
   "ae341a1da0ea": {
-    "en": "",
-    "status": "pending"
+    "en": "* * md-sync was born for this scenario: you just change the source file and leave the rest to the tool. * *",
+    "status": "auto"
   },
-  "844791959e89": {
-    "en": "",
-    "status": "pending"
-  },
-  "1b1eb63cafcc": {
-    "en": "",
-    "status": "pending"
+  "885e9f71a086": {
+    "en": "md-sync is only responsible for \"turning the manuscript into a publication\", * * the manuscript is still written using your best Markdown editor * *:",
+    "status": "auto"
   },
   "683c068f9d82": {
+    "en": "* * Not prone to errors * *: Translations and formats are handled uniformly by the tool to avoid missing translations, omissions, and mistakes caused by manual copy and paste.",
+    "status": "auto"
+  },
+  "844791959e89": {
+    "en": "* * What's changed is what you get * *: Based on file monitoring, once the source file is saved, the products in all languages/formats are automatically regenerated within seconds.",
+    "status": "auto"
+  },
+  "0e4e16f4eec0": {
+    "en": "1. * * Write in your favorite MD editor * *: For example, [Typora] (https://typora.io/), Obsidian, VS Code, etc., write the `.md` source file according to your habits.",
+    "status": "auto"
+  },
+  "1b1eb63cafcc": {
+    "en": "* * One-time configuration, long-term benefits * *: Translation cache + multiple output configuration only needs to be set once, and there are zero additional operations per subsequent modification.",
+    "status": "auto"
+  },
+  "12924a3f9869": {
+    "en": "2. * * Give to md-sync to automatically generate and publish documents * *: Give the source file to md-sync, it will automatically synchronize the products in multiple formats (HTML/PDF/Markdown/DOCX/EPUB) and multiple languages (Chinese/English) as configured, and automatically regenerate when the source file changes.",
+    "status": "auto"
+  },
+  "2e6b7ef5bcad": {
+    "en": "Why write with Markdown (instead of docx)",
+    "status": "auto"
+  },
+  "75dd6dfe74cf": {
+    "en": "> In a nutshell: * * You just write it in the editor, and md-sync is responsible for turning it into a nice-looking release. * *",
+    "status": "auto"
+  },
+  "7a28ae7cc0bb": {
+    "en": "3. * * Use Typora themes to produce beautiful documents * *: md-sync can directly use the rich theme resources (such as bloom-mist, night, claude-like, etc.) under the Typora theme directory on your computer to render HTML/PDF documents in a unified style, without having to rewrite them yourself. * * Provided you have [Typora] (https://typora.io/) installed natively * * - the theme CSS is stored in Typora's configuration directory, otherwise it will not appear in the Render Style drop-down box.",
+    "status": "auto"
+  },
+  "443c51445b5a": {
+    "en": "* * Automation * *: Text can be parsed by scripts, processed in batches, and automatically checked and published by CI.",
+    "status": "auto"
+  },
+  "69bb02687f59": {
+    "en": "* * Version management * *: Manage documents with version control systems such as` git `- submit history, branch, rollback, multiplayer collaboration merge are all available;",
+    "status": "auto"
+  },
+  "8284e5c5dc39": {
+    "en": "* * Comparison of differences * *: use `diff` or any code comparison tool to directly see the addition, deletion and modification, and compare line by line at a glance;",
+    "status": "auto"
+  },
+  "5bbdb7919d58": {
+    "en": "* * Markdown is plain text * *: basically no binary formatting control, essentially an enhanced version of `.txt`. So it naturally connects to text workflows that programmers have already validated:",
+    "status": "auto"
+  },
+  "797801861f5b": {
+    "en": "* * docx/pdf/epub, etc. are in binary format * *: the content is packed into a proprietary container, the ordinary text tool can not read the differences, can not do `diff`, and it is difficult to make meaningful version comparisons in git (each time the entire file changes, the history is bloated and unreadable).",
+    "status": "auto"
+  },
+  "fa50a555734e": {
+    "en": "The core value of a document workflow is “comparable, traceable, and collaborative”, and the file format directly determines whether you can do this with a mature toolchain:",
+    "status": "auto"
+  },
+  "706199e8a0e2": {
+    "en": "> Conclusion: * * Markdown is only used as a \"source format\" for editing and collaboration, and binary formats such as docx/pdf/epub should only be used as an \"output format\" * * --automatically generated by md-sync from the same Markdown source, and should not be used in turn as an editing format. In this way, you can enjoy the publishing compatibility of binary format while retaining the difference comparison and version management capabilities of plain text.",
+    "status": "auto"
+  },
+  "f36b1cf8dcd9": {
+    "en": "Typora theme compatible with PDF export",
+    "status": "auto"
+  },
+  "b7927136b75c": {
+    "en": "* * Windows * *: `% APPDATA %\\ Typora\\ themes`",
+    "status": "auto"
+  },
+  "07b2fb27882e": {
+    "en": "| Ability | Description |\n|------|------|\n| * * Multi-format output * * | `html` `md` `pdf` with plugin extension `docx`/`epub` (PDF generated by Chromium) |\n| * * Multilingual output * * | `en`/`en`, translation based on `.translations.json` cache, missing fallback AI (provider `auto`) |\n| * * File Snooping * * | Based on `watchdog` snooping source files, `debounce` defaults to 1.5s, change and sync |\n| * * Templates/themes * * | Built-in styles such as` bwx `,` modern `, etc.; and directly select themes under the Typora theme directory (` ~/.config/Typora/themes/`) (` typora-bloom-mist `,` typora-night `,` typora-claude-like `, etc.), automatically compatible with backgrounds, dark/light and code blocks (` md-sync template `/` md-sync plugin `) |\n| * * Translation cache * * | `strategy: mapping` + `mapping_file`, translations only update the cache dictionary, do not directly exit the file, access it when rendering |\n| * * Web Dashboard * * | Configure source files in your browser, view parsing information, start/stop listening, sync manually, view sync events and history items |\n| * * Desktop GUI (Qt native) * * | PySide6 native interface, calling the core pipeline directly, continuously listening for synchronization, zero HTTP servers |\n| * * Standard document (gongwen) * * | Built-in document plugin: Write Markdown by template and export redhead document `docx`/'pdf` (redhead, layout, page number automatic typography) in accordance with GB/T 9704-2012 with one click |",
+    "status": "auto"
+  },
+  "79ab1dc87f4d": {
+    "en": "md-sync will automatically discover the topics in the native Typora theme directory and",
+    "status": "auto"
+  },
+  "1c617d22463d": {
+    "en": "Format selection of 'typora-` (e.g. `typora-bloom-mist`/`typora-bloom-mist-dark`/",
+    "status": "auto"
+  },
+  "1d58daf6ab6d": {
+    "en": "`typora-night`/`typora-claude-like`, etc.). * * Requires Typora to be installed on the machine * *; the subject directory for different systems is:",
+    "status": "auto"
+  },
+  "b98d533df9bd": {
+    "en": "* * macOS * *: `~/Library/Application Support/abnerworks.Typora/themes`",
+    "status": "auto"
+  },
+  "79aea9cdeed5": {
+    "en": "* * Linux * *: `~/.config/Typora/themes`",
+    "status": "auto"
+  },
+  "3e3d01e7e97a": {
+    "en": "Feature Overview",
+    "status": "auto"
+  },
+  "c35d5e231e62": {
+    "en": "<https://github.com/zagwi/typora-themes-util> Access all community themes recommended by Typora's website that can be downloaded and installed at once.",
+    "status": "auto"
+  },
+  "b2fcda7323a4": {
+    "en": "Render layer for Typora Editor Theme vs.",
+    "status": "auto"
+  },
+  "f1c668a9f24f": {
+    "en": "When the above directory is not detected, the Typora theme will not appear in the \"Render Style\" drop-down box, and the GUI will prompt \"No Typora installed on this machine is detected\".",
+    "status": "auto"
+  },
+  "56543225a344": {
+    "en": "The card has a solid color base and is universal with light/dark.",
+    "status": "auto"
+  },
+  "994c4ab28847": {
+    "en": "And md-sync only generates`<body><div id=\"write\"> `Single layer, so the background color is derived from the` --bg `variable of the theme",
+    "status": "auto"
+  },
+  "ad0836cfa551": {
+    "en": "* * Background and card appearance * *: Typora themes often rely on a \"dark shell + white card (`# write`)\" double layer structure;",
+    "status": "auto"
+  },
+  "d82c8df76f12": {
+    "en": "The differences in \"single file HTML/PDF\" are compatible to ensure that these themes can also be correctly rendered under md-sync:",
+    "status": "auto"
+  },
+  "03c998a83036": {
+    "en": "* * Title/body color * *: use variable fallback chain (`--text`/`--text-color'), legacy theme",
+    "status": "auto"
+  },
+  "61f92f4076a9": {
+    "en": "(such as night) will not be mistakenly washed into a light color, nor will the dark theme be output as light.",
+    "status": "auto"
+  },
+  "e82528a344af": {
+    "en": "* * Code block * *: The `pre` rule of the Typora theme qualifies the `.md-fences` class, whereas the md-sync output is",
+    "status": "auto"
+  },
+  "342b59f9f581": {
+    "en": "`<pre class=\"language-*\">`, so complement the generic code block style and be compatible with bloom (`--code-bg`),",
+    "status": "auto"
+  },
+  "84ff67faa78f": {
+    "en": "night (`--bg-color`), claude (`--code-bg-color`), and more.",
+    "status": "auto"
+  },
+  "d8053793857f": {
+    "en": "The PDF export (Chromium engine) has been optimized for a \"professional look\":",
+    "status": "auto"
+  },
+  "2e21f326a46a": {
+    "en": "`@ page {margin: 0}` with `padding` for `# write`",
+    "status": "auto"
+  },
+  "a1d9b4810cbc": {
+    "en": "Suppresses header footer (date/URL/page number) and is compatible with `--no-pdf-header-footer`",
+    "status": "auto"
+  },
+  "525de48b3f8a": {
+    "en": "`--no-print-header-footer` two-parameter writing (one for each Chromium version/distribution);",
+    "status": "auto"
+  },
+  "61cec9f38b7e": {
+    "en": "Force `print-color-adjust: exact`, keep the theme background color for the whole page (no longer whitening the whole page);",
+    "status": "auto"
+  },
+  "99c53404884d": {
+    "en": "(`box-sizing: border-box` + `box-decoration-break: clone`) to make each page",
+    "status": "auto"
+  },
+  "06dd4e426fce": {
+    "en": "Gongwen Plugin: Standard Gongwen Export",
+    "status": "auto"
+  },
+  "d12cd993d491": {
+    "en": "The margins (including the last page) are consistent and have no glaring white borders.",
+    "status": "auto"
+  },
+  "3b713e3548ca": {
     "en": "",
     "status": "pending"
   },
-  "ff3baa664ae8": {
+  "cf17c9ff1188": {
+    "en": "`gongwen` is a built-in * * standard doc plugin * * for md-sync: just press the template to write a copy of Markdown and export with one click * * fully compliant",
+    "status": "auto"
+  },
+  "7f92e8a78921": {
+    "en": "md-sync plugin template gongwen -o notification .md # Generate source document template",
+    "status": "auto"
+  },
+  "c222403a4c91": {
     "en": "",
     "status": "pending"
   },
-  "1ac88a14d485": {
+  "8317785629c7": {
+    "en": "* * One source manuscript → standard document * *:",
+    "status": "auto"
+  },
+  "548bb1de1479": {
+    "en": "source: Notification.md\nschema: gongwen # Enable doc plugin\noutputs:\n  - format: docx # standard official docx\n    lang: zh\n    path: out/Notification.docx\n  -format: html\n    lang: zh\n    style: gongwen # Document rendering style (independent of Typora)\n    pdf: true\n    pdf_path: out/Notifications.pdf # Standard Document pdf",
+    "status": "auto"
+  },
+  "a07c46f21133": {
     "en": "",
     "status": "pending"
   },
-  "6096bbe737fc": {
+  "15fb9901bbcd": {
+    "en": "body/attachment/signature/date of writing/note/notation) corresponds to one of the following official formats:",
+    "status": "auto"
+  },
+  "be9a466be65c": {
+    "en": "GB/T 9704-2012 \"Official Document Format of Party and Government Organs\" * * Official Documents` docx `and` pdf `—— Redhead, layout, payment, page number are all automatically typed without manual set.",
+    "status": "auto"
+  },
+  "f861f19b5b8a": {
+    "en": "* * Source manuscript format * *: Fill in the blank according to the template, and each position segment (issuing authority logo/issuing text number/sending authority/title/",
+    "status": "auto"
+  },
+  "d8020cd53383": {
     "en": "",
     "status": "pending"
   },
-  "1c989320c9b6": {
+  "1489f8f73c13": {
     "en": "",
     "status": "pending"
   },
-  "fb0a3e9dc03a": {
+  "c215fb99b45b": {
     "en": "",
     "status": "pending"
   },
-  "8ba522dccd5b": {
+  "91a7a702a7fd": {
     "en": "",
     "status": "pending"
   },
-  "55d90891120b": {
+  "5a04045a3034": {
     "en": "",
     "status": "pending"
   },
-  "d2223a7fce5a": {
+  "e655a410ff21": {
     "en": "",
     "status": "pending"
   },
-  "800e062adeba": {
-    "en": "",
-    "status": "pending"
-  },
-  "426ba3d2710b": {
+  "d01cda1f1047": {
     "en": "",
     "status": "pending"
   },
   "5b27c0028372": {
+    "en": "",
+    "status": "pending"
+  },
+  "3b1428931aec": {
+    "en": "",
+    "status": "pending"
+  },
+  "32016a20b0f2": {
     "en": "",
     "status": "pending"
   },
@@ -331,6 +323,46 @@
     "en": "",
     "status": "pending"
   },
+  "1133c5f3f5a0": {
+    "en": "",
+    "status": "pending"
+  },
+  "657b69ef3aef": {
+    "en": "",
+    "status": "pending"
+  },
+  "a3a919512c2d": {
+    "en": "",
+    "status": "pending"
+  },
+  "19f1e5bbdec4": {
+    "en": "",
+    "status": "pending"
+  },
+  "0e96a4ede0b9": {
+    "en": "",
+    "status": "pending"
+  },
+  "1bafefbef6dc": {
+    "en": "",
+    "status": "pending"
+  },
+  "02a849ba67ef": {
+    "en": "",
+    "status": "pending"
+  },
+  "a653042e0f6e": {
+    "en": "",
+    "status": "pending"
+  },
+  "21d80bd7819e": {
+    "en": "",
+    "status": "pending"
+  },
+  "a2c6056bf817": {
+    "en": "",
+    "status": "pending"
+  },
   "edc8ad8c49ce": {
     "en": "",
     "status": "pending"
@@ -339,11 +371,7 @@
     "en": "",
     "status": "pending"
   },
-  "b220c22ff5ca": {
-    "en": "",
-    "status": "pending"
-  },
-  "499eed0cba5c": {
+  "f85a670897bc": {
     "en": "",
     "status": "pending"
   },
@@ -351,11 +379,11 @@
     "en": "",
     "status": "pending"
   },
-  "d1ad7f3c4c72": {
+  "499eed0cba5c": {
     "en": "",
     "status": "pending"
   },
-  "cece13851ceb": {
+  "672ed1cc4efe": {
     "en": "",
     "status": "pending"
   },
@@ -363,7 +391,11 @@
     "en": "",
     "status": "pending"
   },
-  "6e3e28c57f3c": {
+  "d1ad7f3c4c72": {
+    "en": "",
+    "status": "pending"
+  },
+  "72ce52708f73": {
     "en": "",
     "status": "pending"
   },
@@ -375,7 +407,11 @@
     "en": "",
     "status": "pending"
   },
-  "0d5369f87394": {
+  "509dfa334fe8": {
+    "en": "",
+    "status": "pending"
+  },
+  "68998a96d1e5": {
     "en": "",
     "status": "pending"
   },
@@ -411,11 +447,119 @@
     "en": "",
     "status": "pending"
   },
+  "20a95c020456": {
+    "en": "",
+    "status": "pending"
+  },
+  "4344700a3bc3": {
+    "en": "",
+    "status": "pending"
+  },
+  "68c5af2d577d": {
+    "en": "",
+    "status": "pending"
+  },
   "add578c0264f": {
     "en": "",
     "status": "pending"
   },
-  "39c5df00793b": {
+  "4f6400cf8cee": {
+    "en": "",
+    "status": "pending"
+  },
+  "dca955a495e8": {
+    "en": "",
+    "status": "pending"
+  },
+  "eba97992adb0": {
+    "en": "",
+    "status": "pending"
+  },
+  "47e73fc06409": {
+    "en": "",
+    "status": "pending"
+  },
+  "b2e95ae6dd94": {
+    "en": "",
+    "status": "pending"
+  },
+  "8f8a95e4aa53": {
+    "en": "",
+    "status": "pending"
+  },
+  "84a553e76c98": {
+    "en": "",
+    "status": "pending"
+  },
+  "4d7dcfd3e8bc": {
+    "en": "",
+    "status": "pending"
+  },
+  "3c096b7e5685": {
+    "en": "",
+    "status": "pending"
+  },
+  "63e8d5811438": {
+    "en": "",
+    "status": "pending"
+  },
+  "f63ffa674d87": {
+    "en": "",
+    "status": "pending"
+  },
+  "5c58c6565dd7": {
+    "en": "",
+    "status": "pending"
+  },
+  "152be8029aa2": {
+    "en": "",
+    "status": "pending"
+  },
+  "93fafdef40b7": {
+    "en": "",
+    "status": "pending"
+  },
+  "3f01c19eee96": {
+    "en": "",
+    "status": "pending"
+  },
+  "815e15888aa1": {
+    "en": "",
+    "status": "pending"
+  },
+  "006a750d4281": {
+    "en": "",
+    "status": "pending"
+  },
+  "70ef1e5b5d03": {
+    "en": "",
+    "status": "pending"
+  },
+  "84e8553348d2": {
+    "en": "",
+    "status": "pending"
+  },
+  "5ee2e8d13320": {
+    "en": "",
+    "status": "pending"
+  },
+  "03e532a0b37f": {
+    "en": "",
+    "status": "pending"
+  },
+  "c70ed2afec6a": {
+    "en": "",
+    "status": "pending"
+  },
+  "a09685156685": {
+    "en": "",
+    "status": "pending"
+  },
+  "509f0b7799fd": {
+    "en": "",
+    "status": "pending"
+  },
+  "13aaebbd8c0a": {
     "en": "",
     "status": "pending"
   },
@@ -431,6 +575,14 @@
     "en": "",
     "status": "pending"
   },
+  "4858043960de": {
+    "en": "",
+    "status": "pending"
+  },
+  "5a9f36a77173": {
+    "en": "",
+    "status": "pending"
+  },
   "f6e0f4488474": {
     "en": "",
     "status": "pending"
@@ -443,11 +595,15 @@
     "en": "",
     "status": "pending"
   },
-  "cc74b23a8ed8": {
+  "63b54daf3ad0": {
     "en": "",
     "status": "pending"
   },
-  "d8b91742a9a1": {
+  "d580eca4d4fc": {
+    "en": "",
+    "status": "pending"
+  },
+  "fe7481ea5cfe": {
     "en": "",
     "status": "pending"
   },
@@ -455,7 +611,7 @@
     "en": "",
     "status": "pending"
   },
-  "4bf77eff004c": {
+  "03c65a2cd034": {
     "en": "",
     "status": "pending"
   },
@@ -463,7 +619,7 @@
     "en": "",
     "status": "pending"
   },
-  "03c65a2cd034": {
+  "4bf77eff004c": {
     "en": "",
     "status": "pending"
   },
@@ -471,11 +627,11 @@
     "en": "",
     "status": "pending"
   },
-  "6b0ed38f5fb3": {
+  "ec0182c99d9b": {
     "en": "",
     "status": "pending"
   },
-  "ec0182c99d9b": {
+  "6b0ed38f5fb3": {
     "en": "",
     "status": "pending"
   },
@@ -491,11 +647,15 @@
     "en": "",
     "status": "pending"
   },
-  "be4380d3053a": {
+  "4c289bac3442": {
     "en": "",
     "status": "pending"
   },
   "eeb402eb95a5": {
+    "en": "",
+    "status": "pending"
+  },
+  "d10f2d413a8d": {
     "en": "",
     "status": "pending"
   },
@@ -507,15 +667,23 @@
     "en": "",
     "status": "pending"
   },
+  "50d52dd929a7": {
+    "en": "",
+    "status": "pending"
+  },
   "0eb8560eb6f4": {
     "en": "",
     "status": "pending"
   },
-  "a6a4d150b247": {
+  "c0f07efc095f": {
     "en": "",
     "status": "pending"
   },
   "898af9e85a9b": {
+    "en": "",
+    "status": "pending"
+  },
+  "20a28457a522": {
     "en": "",
     "status": "pending"
   },
@@ -527,104 +695,104 @@
     "en": "",
     "status": "pending"
   },
-  "a59d95c6a31c": {
-    "zh": "",
+  "9f1a36f3c45d": {
+    "en": "",
     "status": "pending"
   },
-  "0e84e815c331": {
-    "zh": "",
+  "c3a4d709d389": {
+    "en": "",
     "status": "pending"
   },
-  "4a066d1ca70e": {
-    "zh": "",
+  "a3e8087d7dfc": {
+    "en": "",
     "status": "pending"
   },
-  "1a60d543b495": {
-    "zh": "",
+  "c932dd2ab52a": {
+    "en": "",
     "status": "pending"
   },
-  "99364581593f": {
-    "zh": "",
+  "f6674104ff7a": {
+    "en": "",
     "status": "pending"
   },
-  "da91ba9bb971": {
-    "zh": "",
+  "3ecacf69b0a9": {
+    "en": "",
     "status": "pending"
   },
-  "d41a5047aacd": {
-    "zh": "",
+  "5769060dded3": {
+    "en": "",
     "status": "pending"
   },
-  "ab7f28a4ed1f": {
-    "zh": "",
+  "8bd77341ca05": {
+    "en": "",
     "status": "pending"
   },
-  "c3a3f4c55bfe": {
-    "zh": "",
+  "5412a00427f8": {
+    "en": "",
     "status": "pending"
   },
-  "c39bc6d241d2": {
-    "zh": "",
+  "cd91d535779c": {
+    "en": "",
     "status": "pending"
   },
-  "2e9b672473d6": {
-    "zh": "",
+  "2669e9493dd3": {
+    "en": "",
     "status": "pending"
   },
-  "e59b29195400": {
-    "zh": "",
+  "d99f05c92543": {
+    "en": "",
     "status": "pending"
   },
-  "2b417815dc5f": {
-    "zh": "",
+  "948b52d06e97": {
+    "en": "",
     "status": "pending"
   },
-  "502d9548d7f8": {
-    "zh": "",
+  "b6194265e7bd": {
+    "en": "",
     "status": "pending"
   },
-  "ad96032e8a54": {
-    "zh": "",
+  "b73771e39dcd": {
+    "en": "",
     "status": "pending"
   },
-  "6c1e76523cb5": {
-    "zh": "",
+  "344e85413c0e": {
+    "en": "",
     "status": "pending"
   },
-  "b605472cbaa2": {
-    "zh": "",
+  "503447f536a2": {
+    "en": "",
     "status": "pending"
   },
-  "f10ca96b437b": {
-    "zh": "",
+  "0bea73cbf33f": {
+    "en": "",
     "status": "pending"
   },
-  "057168236d8c": {
-    "zh": "",
+  "6130744fa880": {
+    "en": "",
     "status": "pending"
   },
-  "83b303de1488": {
-    "zh": "",
+  "fad08a4de966": {
+    "en": "",
     "status": "pending"
   },
-  "28a7033236ed": {
-    "zh": "",
+  "8fcda49e5577": {
+    "en": "",
     "status": "pending"
   },
-  "1d33ca493b63": {
-    "zh": "",
+  "9d05c050701a": {
+    "en": "",
     "status": "pending"
   },
-  "f24e8e83a935": {
-    "zh": "",
+  "74d7d71170d0": {
+    "en": "",
     "status": "pending"
   },
-  "b28b736b9a74": {
-    "zh": "",
+  "6f84ab21b653": {
+    "en": "",
     "status": "pending"
   },
-  "157900e59c5e": {
-    "zh": "",
+  "c5c1a37777db": {
+    "en": "",
     "status": "pending"
   }
 }

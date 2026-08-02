@@ -29,14 +29,60 @@ _TRANSLATE_WORKERS = 10
 
 
 def _distinct_contents(doc: Document) -> list[str]:
+    """Extract all translatable text fields from a Document.
+
+    Beyond ``item.content``, this collects Section titles, the document
+    name/title, bullet list items (including those nested in ``md`` items
+    that were stored as raw markdown blocks), and structured fields like
+    entry titles/subtitles, project roles, open-source titles/features.
+    """
     out: list[str] = []
     seen = set()
+
+    def _add(text: str | None) -> None:
+        text = (text or "").strip()
+        if text and text not in seen:
+            seen.add(text)
+            out.append(text)
+
+    # Document-level metadata
+    _add(doc.name)
+    _add(doc.title)
+
+    # Contact values
+    if doc.contacts:
+        for val in doc.contacts.values():
+            _add(val)
+
     for section in doc.sections:
+        _add(section.title)
+
         for item in section.items:
-            text = (item.content or "").strip()
-            if text and text not in seen:
-                seen.add(text)
-                out.append(text)
+            # Always translate content
+            _add(item.content)
+
+            # Structured / resume-style fields
+            _add(item.title)
+            _add(item.subtitle)
+            _add(item.period)
+            _add(item.role)
+            _add(item.people)
+            if item.url:
+                _add(item.url)
+
+            # Lists of strings
+            for feat in item.features:
+                _add(feat)
+            for tag in item.tags:
+                _add(tag)
+
+            # Metrics
+            for metric in item.metrics:
+                _add(metric.value)
+                _add(metric.context)
+
+            # For table-type items, translate each cell (content already
+            # contains the full markdown table, so just translate that).
     return out
 
 

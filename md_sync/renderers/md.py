@@ -81,6 +81,9 @@ class MdRenderer:
         if item.type == "open_source":
             return self._render_open_source(item, lang, source_lang)
 
+        if item.type == "table":
+            return self._render_table(item.content, lang, source_lang)
+
         # Code blocks are NEVER translated and keep their fenced syntax
         # verbatim — translating them would corrupt the code/config content.
         if item.type == "code":
@@ -93,6 +96,30 @@ class MdRenderer:
             return self._maybe_translate(item.content, lang, source_lang)
 
         return None
+
+    def _render_table(self, table_md: str, lang: str, source_lang: str = "zh") -> str:
+        """Render a GFM table, translating each cell individually.
+
+        Looking up each cell (rather than the whole block) matches how the
+        translation cache is populated (per cell) and keeps the pipe/delimiter
+        structure intact even when individual cell translations are missing.
+        """
+        if lang == source_lang or not self._translator:
+            return table_md
+        lines: list[str] = []
+        for row in table_md.split("\n"):
+            row = row.strip()
+            if not row.startswith("|"):
+                lines.append(row)
+                continue
+            if row.startswith("|---") or row.startswith("|:--"):
+                lines.append(row)  # delimiter row — nothing to translate
+                continue
+            parts = []
+            for cell in row.strip("|").split("|"):
+                parts.append(self._maybe_translate(cell.strip(), lang, source_lang))
+            lines.append("| " + " | ".join(parts) + " |")
+        return "\n".join(lines)
 
     def _render_entry(self, item, lang: str, source_lang: str = "zh") -> str:
         """Render a work experience or education entry."""

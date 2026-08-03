@@ -1,5 +1,5 @@
 <div class="section">
-  <div class="section-title">{{ section.title }}</div>
+  <div class="section-title">{{ t(section.title) }}</div>
   {% for item in section.items %}
   {% if item.type == "table" %}
   {% include '_table.html.j2' %}

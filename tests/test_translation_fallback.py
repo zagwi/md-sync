@@ -9,11 +9,13 @@ Run::
 from __future__ import annotations
 
 import pytest
+from md_sync.core.md_engine import translate_md_leaves
 from md_sync.translate.fallback import (
     _call_mymemory,
     _detect_provider,
     _normalize_mymemory_lang,
     _protect_code_and_urls,
+    _repair_emphasis_spacing,
     _restore_code_and_urls,
     translate_via_api,
 )
@@ -234,3 +236,113 @@ class TestProtectAndRestore:
         protected, p_map = _protect_code_and_urls(text)
         restored = _restore_code_and_urls(protected, p_map)
         assert "@page { margin: 0 }" in restored
+
+    def test_emphasis_markers_are_protected(self) -> None:
+        """``**X**`` delimiters are placeholder-protected like code/URLs."""
+        text = "**多格式输出**"
+        protected, p_map = _protect_code_and_urls(text)
+        assert "**" not in protected
+        assert p_map["ZXQWPZLP0"] == "**"
+        assert p_map["ZXQWPZLP1"] == "**"
+        assert _restore_code_and_urls(protected, p_map) == text
+
+
+# ── Markdown leaf translation (the engine never sees syntax) ─────────
+
+
+class TestTranslateMdLeaves:
+    def test_emphasis_keeps_markers(self) -> None:
+        """Only the inner text is translated; ``**`` is preserved."""
+        result = translate_md_leaves("**多格式输出**", lambda s: "EN[" + s + "]")
+        assert result == "**EN[多格式输出]**"
+
+    def test_plain_text_translated_whole(self) -> None:
+        """A leaf with no markdown is handed to translate as-is."""
+        result = translate_md_leaves("纯文本 一段", lambda s: "EN[" + s + "]")
+        assert result == "EN[纯文本 一段]"
+
+    def test_mixed_inline_syntax_preserved(self) -> None:
+        """Strong/em/link/code all keep their exact syntax."""
+        src = "支持 **HTML**、*MD* 和 [PDF](https://x.com) `代码`"
+        result = translate_md_leaves(src, lambda s: "EN[" + s + "]")
+        assert "**EN[HTML]**" in result
+        assert "*EN[MD]*" in result
+        assert "[EN[PDF]](https://x.com)" in result
+        assert "`代码`" in result  # code is never translated
+
+    def test_table_cells_translated(self) -> None:
+        """Table structure and pipes survive; each cell is leaf-translated."""
+        src = "| A | B |\n|---|---|\n| **多格式输出** | 支持 **HTML** |"
+        result = translate_md_leaves(src, lambda s: "EN[" + s + "]")
+        assert result == (
+            "| EN[A] | EN[B] |\n"
+            "|---|---|\n"
+            "| **EN[多格式输出]** | EN[支持 ]**EN[HTML]** |"
+        )
+
+    def test_heading_and_fence(self) -> None:
+        """Headings keep ``#`` markers; fenced code is never translated."""
+        result = translate_md_leaves("## 标题\n\n```py\nx=1\n```", lambda s: "EN[" + s + "]")
+        assert result == "## EN[标题]\n\n```py\nx=1\n```"
+
+    def test_link_href_and_title_preserved(self) -> None:
+        """Link URL/title and image src are byte-for-byte preserved."""
+        result = translate_md_leaves(
+            '见 [官网](https://example.com "title") 与 ![图](img.png)',
+            lambda s: "EN[" + s + "]",
+        )
+        assert "[EN[官网]](https://example.com \"title\")" in result
+        assert "![EN[图]](img.png)" in result
+
+    def test_returns_none_for_unsupported_blocks(self) -> None:
+        """Nested lists can't be round-tripped → returns None, no corruption."""
+        result = translate_md_leaves("- 嵌套\n  - 列表", lambda s: "EN[" + s + "]")
+        assert result is None
+
+    def test_aborts_on_translation_failure(self) -> None:
+        """A failed leaf aborts the whole round-trip (caller keeps original)."""
+
+        def fail_if_multi(s: str) -> str | None:
+            return None if "多" in s else "EN[" + s + "]"
+
+        assert translate_md_leaves("**多格式输出** 支持 **HTML**", fail_if_multi) is None
+
+
+class TestTranslateViaApiMarkdown:
+    def test_emphasis_survives_translation(self, monkeypatch) -> None:
+        """Regression: ``**X**`` must not become ``* * X * *`` again."""
+        monkeypatch.setattr(
+            "md_sync.translate.fallback._call_mymemory",
+            lambda text, **kw: "Multi-format output",
+        )
+        result = translate_via_api(
+            "**多格式输出**",
+            provider="mymemory",
+            source_lang="zh",
+            target_lang="en",
+        )
+        assert result == "**Multi-format output**"
+
+    def test_provider_padding_does_not_break_markers(self, monkeypatch) -> None:
+        """Provider-inserted spaces around a leaf are stripped (leaf spacing wins)."""
+
+        def fake(text: str, **kw) -> str:
+            return "support " if "支持" in text else "  HTML  "
+
+        monkeypatch.setattr("md_sync.translate.fallback._call_mymemory", fake)
+        result = translate_via_api(
+            "支持 **HTML**",
+            provider="mymemory",
+            source_lang="zh",
+            target_lang="en",
+        )
+        assert "**HTML**" in result
+        assert "support" in result
+
+    def test_fallback_path_repairs_emphasis_spacing(self) -> None:
+        """Dropped/mangled marker spacing is repaired on the fallback path."""
+        assert _repair_emphasis_spacing("** Multi-format Output **") == "**Multi-format Output**"
+        assert _repair_emphasis_spacing("**X** and **Y**") == "**X** and **Y**"
+        assert _repair_emphasis_spacing("Supports **HTML**, *MD* and PDF") == (
+            "Supports **HTML**, *MD* and PDF"
+        )

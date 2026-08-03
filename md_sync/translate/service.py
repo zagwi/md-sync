@@ -29,6 +29,32 @@ from md_sync.translate.manager import TranslationManager
 _TRANSLATE_WORKERS = 10
 
 
+def _table_cells(table_md: str) -> list[str]:
+    """Split a GFM table's markdown text into individual cell texts.
+
+    The delimiter row (``|---|---|`` / ``|:---|`` / ``| ---- |``) carries no
+    content and is skipped. Each remaining row is split on ``|`` (mirroring
+    what the theme templates do) and the cells are returned stripped and
+    non-empty.
+    """
+    cells: list[str] = []
+    for row in table_md.split("\n"):
+        row = row.strip()
+        if not row.startswith("|"):
+            continue
+        body = row.strip("|")
+        # Delimiter row: every cell consists only of -, : and whitespace,
+        # with at least one dash (e.g. |---|, | ---- |, |:---:|).
+        parts = body.split("|")
+        if parts and all(set(p) <= set("-: ") for p in parts) and any("-" in p for p in parts):
+            continue
+        for cell in parts:
+            c = cell.strip()
+            if c:
+                cells.append(c)
+    return cells
+
+
 def _distinct_contents(doc: Document) -> list[str]:
     """Extract all translatable text fields from a Document.
 
@@ -65,6 +91,14 @@ def _distinct_contents(doc: Document) -> list[str]:
                 continue
             # Always translate content
             _add(item.content)
+
+            # Tables: also collect each cell individually. Theme templates
+            # look up translations per cell (``t(cell.strip())``), while the
+            # md renderer looks up the whole block — so the cache must contain
+            # both the whole-table key and every cell key.
+            if item.type == "table":
+                for cell in _table_cells(item.content):
+                    _add(cell)
 
             # Structured / resume-style fields
             _add(item.title)

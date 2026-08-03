@@ -28,6 +28,7 @@ import re
 
 import httpx
 
+from md_sync.core.md_engine import translate_md_leaves as _translate_md_leaves
 from md_sync.translate.langdetect import detect_lang
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,16 @@ def _protect_code_and_urls(text: str) -> tuple[str, dict[str, str]]:
         _sub,
         text,
     )
+    # Markdown emphasis / strikethrough delimiters (``**``, ``*``, ``__``,
+    # ``_``, ``~~``, ``***``). Unlike code/URLs we protect only the marker
+    # characters, keeping the inner text translatable — otherwise engines
+    # mangle the markers (``**X**`` → ``* * X * *``) and the emphasis no
+    # longer renders.
+    text = re.sub(
+        r"(?<!\w)([*_~]{1,3})(?=\w)|(?<=\w)([*_~]{1,3})(?!\w)",
+        _sub,
+        text,
+    )
     return text, placeholder_map
 
 
@@ -101,8 +112,39 @@ def _restore_code_and_urls(text: str, placeholder_map: dict[str, str]) -> str:
         if ph not in seen
     ]
     for _, orig in sorted(dropped):
-        result = result.rstrip() + "\n" + orig
+        # A dropped emphasis delimiter (``**``/``*``…) must NOT be re-appended
+        # to the end of the sentence — it would turn into stray markers. If the
+        # engine dropped it, the emphasis is simply lost instead.
+        if orig.strip(" *_~"):
+            result = result.rstrip() + "\n" + orig
     return result
+
+
+def _repair_emphasis_spacing(text: str) -> str:
+    """Collapse whitespace a translation engine inserted inside Markdown markers.
+
+    Engines often rewrite ``**X**`` as ``** X **`` (or ``* X *``); those spaces
+    make the emphasis stop rendering. This drops spaces directly inside an
+    opening/closing emphasis delimiter pair while leaving normal sentence
+    spacing (``**X** and Y``) untouched.
+    """
+    # Drop space(s) right after an *opening* delimiter: "** X" -> "**X".
+    # (An opening delimiter is preceded by start/whitespace/open-punctuation —
+    # a closing delimiter is preceded by content, so it is never touched here.)
+    text = re.sub(
+        r"(^|[\s([{<，。；：！？])([*_~]{1,3})[ \t]+(?=[^\s*_~])",
+        r"\1\2",
+        text,
+    )
+    # Drop space(s) right before a *closing* delimiter: "X **" -> "X**".
+    # (The delimiter must be followed by whitespace/punctuation/end — otherwise
+    # it is an opening delimiter and its preceding space is real sentence flow.)
+    text = re.sub(
+        r"(?<=[^\s*_~])[ \t]+([*_~]{1,3})(?=$|[\s)\]},.;:!?，。；：！？])",
+        r"\1",
+        text,
+    )
+    return text
 
 
 def translate_via_api(
@@ -132,35 +174,67 @@ def translate_via_api(
     if provider == "auto":
         provider = _detect_provider()
 
-    # Protect inline code, URLs, and code fences from being mangled by the
-    # translation engine, then restore them after translation. This keeps the
-    # output format strictly identical to the source (code is never translated).
-    protected, placeholder_map = _protect_code_and_urls(text)
-    try:
-        if provider == "openai":
-            result = _call_openai(
-                protected,
-                model=model,
-                api_key=api_key,
-                base_url=base_url,
-                source_lang=source_lang,
-                target_lang=target_lang,
-            )
-        elif provider == "google":
-            result = _call_google(protected, source_lang=source_lang, target_lang=target_lang)
-        elif provider == "bing":
-            result = _call_bing(protected, source_lang=source_lang, target_lang=target_lang)
-        elif provider == "mymemory":
-            result = _call_mymemory(protected, source_lang=source_lang, target_lang=target_lang)
-        else:
+    def _call(protected: str) -> str | None:
+        try:
+            if provider == "openai":
+                return _call_openai(
+                    protected,
+                    model=model,
+                    api_key=api_key,
+                    base_url=base_url,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                )
+            if provider == "google":
+                return _call_google(protected, source_lang=source_lang, target_lang=target_lang)
+            if provider == "bing":
+                return _call_bing(protected, source_lang=source_lang, target_lang=target_lang)
+            if provider == "mymemory":
+                return _call_mymemory(protected, source_lang=source_lang, target_lang=target_lang)
+        except Exception:
+            logger.debug("provider call failed", exc_info=True)
             return None
-    except Exception:
-        logger.debug("provider call failed", exc_info=True)
         return None
 
+    def _translate_leaf(leaf: str) -> str | None:
+        """Translate one plain-text leaf, keeping its surrounding whitespace."""
+        core = leaf.strip()
+        if not core:
+            return leaf
+        lead = leaf[: len(leaf) - len(leaf.lstrip())]
+        trail = leaf[len(leaf.rstrip()) :]
+        # Bare URLs / inline code inside the leaf (linkify is disabled at parse
+        # time, so a bare URL is a plain text leaf) are protected so the engine
+        # can't mangle them, then restored byte-for-byte.
+        protected, placeholder_map = _protect_code_and_urls(core)
+        result = _call(protected)
+        if not result:
+            return None
+        restored = _restore_code_and_urls(result, placeholder_map)
+        # Engines often pad a short leaf ("HTML" → " HTML "). The leaf's own
+        # source spacing (``lead``/``trail``) is authoritative — drop the
+        # engine's padding, or a neighbouring ``**``/``*`` marker stops parsing.
+        return lead + restored.strip() + trail
+
+    # Primary path: hand the engine only the unadorned text leaves, so Markdown
+    # syntax (``**``, links, code, tables…) is never exposed to it and cannot be
+    # mangled. ``translate_md_leaves`` returns ``None`` for block constructs it
+    # cannot round-trip, in which case we fall back to the whole-string path
+    # below (with markers still protected).
+    translated = _translate_md_leaves(text, _translate_leaf)
+    if translated is not None:
+        return translated
+
+    # Fallback: protect inline code, URLs, code fences, and Markdown emphasis
+    # markers from being mangled by the engine, then restore them after
+    # translation. This keeps the output format strictly identical to the
+    # source (code is never translated).
+    protected, placeholder_map = _protect_code_and_urls(text)
+    result = _call(protected)
     if not result:
         return None
-    return _restore_code_and_urls(result, placeholder_map)
+    restored = _restore_code_and_urls(result, placeholder_map)
+    return _repair_emphasis_spacing(restored)
 
 
 def auto_detect_lang(text: str) -> str:

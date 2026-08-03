@@ -4,10 +4,12 @@
 {% set rows = item.content.split(chr(10)) %}
 {% set _sep = namespace(found=false) %}
 {% for row in rows %}
-  {%- if row.startswith("|---") or row.startswith("|:--") %}
+  {%- set _body = row.strip("|") %}
+  {%- set _cleaned = _body | replace("|", "") | replace("-", "") | replace(":", "") | replace(" ", "") %}
+  {%- if _cleaned == "" and "-" in _body %}
     {% set _sep.found = true %}
   {%- else %}
-    {%- set cells = row.strip("|").split("|") %}
+    {%- set cells = _body.split("|") %}
     {%- if not _sep.found %}
     <thead><tr>
     {%- for cell in cells %}

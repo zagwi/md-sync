@@ -251,6 +251,197 @@ def _table_to_md(tokens, start: int, end: int) -> str:
     return "\n".join(lines)
 
 
+# Block token types the leaf-translation round-trip can reassemble losslessly.
+# Anything else (nested lists, blockquotes, …) makes ``translate_md_leaves``
+# bail out so translation degrades gracefully instead of corrupting a document.
+_TRANSLATABLE_BLOCK_TYPES = {
+    "inline",
+    "paragraph_open",
+    "paragraph_close",
+    "heading_open",
+    "heading_close",
+    "table_open",
+    "table_close",
+    "thead_open",
+    "thead_close",
+    "tbody_open",
+    "tbody_close",
+    "tr_open",
+    "tr_close",
+    "th_open",
+    "th_close",
+    "td_open",
+    "td_close",
+    "fence",
+    "code_block",
+    "hr",
+    "html_block",
+    "hardbreak",
+    "softbreak",
+}
+
+
+def translate_md_leaves(text: str, translate) -> str | None:
+    """Translate only the plain-text leaf nodes of a Markdown fragment.
+
+    Parses ``text`` with the same markdown-it engine used for rendering, feeds
+    each *unadorned* text leaf (never Markdown syntax — ``**``, links, code,
+    list markers, table pipes, …) to ``translate``, then reassembles the
+    original Markdown so every syntax character stays byte-for-byte identical.
+    This is what stops a translation engine from mangling Markdown markers
+    (e.g. ``**X**`` → ``* * X * *``): the engine never sees them.
+
+    ``translate`` receives a leaf's full text (leading/trailing whitespace
+    preserved) and returns the translation, or ``None`` to abort. When any
+    leaf fails, or the fragment uses block constructs this module cannot
+    round-trip, ``None`` is returned so the caller keeps the original text.
+    """
+    tokens = _MD.parse(text)
+    if any(t.type not in _TRANSLATABLE_BLOCK_TYPES for t in tokens):
+        return None
+
+    # Collect the leaf texts first, then translate each unique one once.
+    leaf_map: dict[str, str] = {}
+
+    def _collect_leaves(children) -> bool:
+        for child in children:
+            if child.type == "text" and child.content.strip():
+                if child.content not in leaf_map:
+                    translated = translate(child.content)
+                    if translated is None:
+                        return False
+                    leaf_map[child.content] = translated
+            elif child.type == "image":
+                if not _collect_leaves(child.children or []):
+                    return False
+        return True
+
+    for tok in tokens:
+        if tok.type == "inline" and tok.children:
+            if not _collect_leaves(tok.children):
+                return None
+    return _emit_md(tokens, leaf_map)
+
+
+def _emit_md(tokens, leaf_map: dict[str, str]) -> str:
+    """Reassemble a markdown token stream, replacing leaf text via ``leaf_map``."""
+    out: list[str] = []
+    i = 0
+    n = len(tokens)
+    while i < n:
+        tok = tokens[i]
+        typ = tok.type
+        if typ == "inline":
+            out.append(_emit_inline(tok, leaf_map))
+        elif typ == "paragraph_close":
+            out.append("\n\n")
+        elif typ == "heading_open":
+            out.append("#" * int(tok.tag[1:]) + " ")
+        elif typ == "heading_close":
+            out.append("\n\n")
+        elif typ == "table_open":
+            table, i = _emit_table(tokens, i, leaf_map)
+            out.append(table)
+            continue
+        elif typ == "fence":
+            out.append(f"{tok.markup}{tok.info}\n{tok.content}{tok.markup}\n\n")
+        elif typ == "code_block":
+            out.append("    " + tok.content.replace("\n", "\n    ") + "\n\n")
+        elif typ == "hr":
+            out.append("---\n\n")
+        elif typ == "html_block":
+            out.append(tok.content + "\n\n")
+        elif typ == "hardbreak":
+            out.append("\\\n")
+        elif typ == "softbreak":
+            out.append("\n")
+        i += 1
+    return "".join(out).strip("\n")
+
+
+def _emit_table(tokens, start: int, leaf_map: dict[str, str]) -> tuple[str, int]:
+    """Reassemble a GFM table, leaf-translating every cell.
+
+    Returns ``(table_markdown, index_after_table_close)``.
+    """
+    header: list[str] = []
+    body: list[list[str]] = []
+    cur: list[str] | None = None
+    state: str | None = None
+    i = start
+    while i < len(tokens):
+        tk = tokens[i]
+        typ = tk.type
+        if typ == "table_close":
+            i += 1
+            break
+        if typ == "thead_open":
+            state = "header"
+            cur = []
+        elif typ == "tbody_open":
+            state = "body"
+        elif typ == "tr_open":
+            cur = []
+        elif typ == "tr_close":
+            if state == "header" and cur is not None:
+                header = cur
+            elif cur is not None:
+                body.append(cur)
+            cur = []
+        elif typ == "inline" and cur is not None:
+            cur.append(_emit_inline(tk, leaf_map))
+        i += 1
+    if not header:
+        return "", i
+    lines = [
+        "| " + " | ".join(header) + " |",
+        "|" + "|".join("---" for _ in header) + "|",
+    ]
+    for row in body:
+        lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines) + "\n", i
+
+
+def _emit_inline(tok, leaf_map: dict[str, str]) -> str:
+    """Reassemble an inline token's children into Markdown."""
+    out: list[str] = []
+    open_link = None
+    for child in tok.children or []:
+        typ = child.type
+        if typ == "text":
+            out.append(leaf_map.get(child.content, child.content))
+        elif typ in ("strong_open", "strong_close", "em_open", "em_close", "s_open", "s_close"):
+            out.append(child.markup)
+        elif typ == "code_inline":
+            out.append(child.markup + child.content + child.markup)
+        elif typ == "link_open":
+            open_link = child
+            out.append("[")
+        elif typ == "link_close":
+            attrs = (open_link.attrs or {}) if open_link else {}
+            title = f' "{attrs["title"]}"' if attrs.get("title") else ""
+            out.append(f"]({attrs.get('href', '')}{title})")
+            open_link = None
+        elif typ == "image":
+            attrs = child.attrs or {}
+            alt = "".join(
+                leaf_map.get(cc.content, cc.content)
+                for cc in (child.children or [])
+                if cc.type == "text"
+            )
+            title = f' "{attrs["title"]}"' if attrs.get("title") else ""
+            out.append(f"![{alt}]({attrs.get('src', '')}{title})")
+        elif typ in ("html_inline", "text_special"):
+            out.append(child.content)
+        elif typ == "hardbreak":
+            out.append("\\\n")
+        elif typ == "softbreak":
+            out.append("\n")
+        else:
+            out.append(child.content or "")
+    return "".join(out)
+
+
 def _collect_blockquote(tokens, start: int, end: int) -> str:
     """Flatten a blockquote token range into Markdown blockquote text."""
     parts: list[str] = []

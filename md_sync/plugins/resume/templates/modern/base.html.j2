@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ doc.name }} - {{ doc.title }}</title>
+<title>{{ t(doc.name) }} - {{ t(doc.title) }}</title>
 <style>
 {{ style_css }}
 {% if print_css %}
@@ -18,8 +18,8 @@
 <div class="page">
   {% if not body_html %}
   <div class="header">
-    <h1>{{ doc.name }}</h1>
-    <div class="title-role">{{ doc.title }}</div>
+    <h1>{{ t(doc.name) }}</h1>
+    <div class="title-role">{{ t(doc.title) }}</div>
     <div class="contact">
       {% for key, val in doc.contacts.items() %}
       <span>{{ val }}</span>

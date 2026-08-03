@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ doc.name }}{% if doc.title %} - {{ doc.title }}{% endif %}</title>
+<title>{{ t(doc.name) }}{% if doc.title %} - {{ t(doc.title) }}{% endif %}</title>
 <style>
 {{ style_css }}
 {% if print_css %}
@@ -19,10 +19,10 @@
 {% if body_html %}
 {{ body_html | safe }}
 {% else %}
-<h1>{{ doc.name }}</h1>
+{% if doc.name %}<h1>{{ t(doc.name) }}</h1>{% endif %}
 
 {% for section in doc.sections %}
-  {% if section.title %}<h{{ section.level + 1 if section.level else 2 }}>{{ section.title }}</h{{ section.level + 1 if section.level else 2 }}></h{{ section.level + 1 if section.level else 2 }}>{% endif %}
+  {% if section.title %}<h{{ section.level + 1 if section.level else 2 }}>{{ t(section.title) }}</h{{ section.level + 1 if section.level else 2 }}>{% endif %}
   {% for item in section.items %}
     {% if item.type == "bullet" %}
     <ul>
@@ -37,10 +37,12 @@
     {% set rows = item.content.split(chr(10)) %}
     {% set _sep = namespace(found=false) %}
     {% for row in rows %}
-      {%- if row.startswith("|---") or row.startswith("|:--") %}
+      {%- set _body = row.strip("|") %}
+      {%- set _cleaned = _body | replace("|", "") | replace("-", "") | replace(":", "") | replace(" ", "") %}
+      {%- if _cleaned == "" and "-" in _body %}
         {% set _sep.found = true %}
       {%- else %}
-        {%- set cells = row.strip("|").split("|") %}
+        {%- set cells = _body.split("|") %}
         {%- if not _sep.found %}
         <thead><tr>
         {%- for cell in cells %}

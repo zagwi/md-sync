@@ -581,19 +581,19 @@
   },
   "9f1a36f3c45d": {
     "status": "auto",
-    "en": "- * * Markdown is plain text * *: basically no binary formatting control, essentially an enhanced version of `.txt`.So it naturally connects to text workflows that programmers have already validated:\n  - * * Comparison of differences * *: use `diff` or any code comparison tool to directly see the addition, deletion and modification, and compare line by line at a glance;\n  - * * Version management * *: Use `git` and other version control system management documents - submit history, branch, rollback, multi-person collaboration merge are all available;\n  - * * Automation * *: Text can be parsed by scripts, processed in batches, and automatically checked and published by CI.\n- * * docx/pdf/epub, etc. are in binary format * *: the content is packed into a proprietary container, the ordinary text tool can not read the differences, can not do `diff`, and it is difficult to make meaningful version comparisons in git (each time the entire file changes, the history is bloated and unreadable)."
+    "en": "- **Markdown is plain text**: basically no binary formatting control, essentially an enhanced version of `.txt`.So it naturally connects to text workflows that programmers have already validated:\n  - **Comparison of differences**: use `diff` or any code comparison tool to directly see the addition, deletion and modification, and compare line by line at a glance;\n  - **Version management**: Use `git` and other version control system management documents - submit history, branch, rollback, multi-person collaboration merge are all available;\n  - **Automation**: Text can be parsed by scripts, processed in batches, and automatically checked and published by CI.\n- **docx/pdf/epub, etc. are in binary format**: the content is packed into a proprietary container, the ordinary text tool can not read the differences, can not do `diff`, and it is difficult to make meaningful version comparisons in git (each time the entire file changes, the history is bloated and unreadable)."
   },
   "c3a4d709d389": {
     "status": "auto",
-    "en": "* * Use a Typora theme to produce beautiful documents * *: md-sync can directly use the rich theme resources (such as bloom-mist, night, claude-like, etc.) under the Typora theme directory on your computer to render HTML/PDF documents in a unified style, without having to rewrite the style from scratch. * * Provided you have [Typora] (https://typora.io/) installed natively * * - the theme CSS is stored in Typora's configuration directory, otherwise it will not appear in the Render Style drop-down box."
+    "en": "**Use a Typora theme to produce beautiful documents**: md-sync can directly use the rich theme resources (such as bloom-mist, night, claude-like, etc.) under the Typora theme directory on your computer to render HTML/PDF documents in a unified style, without having to rewrite the style from scratch. **Provided you have [Typora](https://typora.io/) installed natively** - the theme CSS is stored in Typora's configuration directory, otherwise it will not appear in the Render Style drop-down box."
   },
   "a3e8087d7dfc": {
     "status": "auto",
-    "en": "If you write a Markdown source file in * * Chinese or English * *, md-sync will * * automatically translate it into another language * * and generate it at the same time\nOutput in multiple formats (HTML/PDF/Markdown, etc.); all products are automatically regenerated once the source file is changed.Efficiency artifacts for document workers."
+    "en": "If you write a Markdown source file in **Chinese or English**, md-sync will **automatically translate it into another language** and generate it at the same time\nOutput in multiple formats (HTML/PDF/Markdown, etc.); all products are automatically regenerated once the source file is changed.Efficiency artifacts for document workers."
   },
   "c932dd2ab52a": {
     "status": "auto",
-    "en": "Give \"repetitive, tedious, error-prone physical work\" to md-sync and you focus on the content itself.AI tools do translate documents and convert formats - but that solves a “one-time” need.\nWhat is really cumbersome is the scenario of * * frequent modification of the source file * *: every time you change a word, you have to go through it manually.\n* * Modify → → translation formats * * is the whole link, and it is often necessary to maintain products in multiple languages and formats at the same time.\nManual repetitive operation is not only time-consuming, but also easier to overturn, overturn, and uneven versions."
+    "en": "Give \"repetitive, tedious, error-prone physical work\" to md-sync and you focus on the content itself.AI tools do translate documents and convert formats - but that solves a “one-time” need.\nWhat is really cumbersome is the scenario of **frequent modification of the source file**: every time you change a word, you have to go through it manually.\n**Modify → → translation formats** is the whole link, and it is often necessary to maintain products in multiple languages and formats at the same time.\nManual repetitive operation is not only time-consuming, but also easier to overturn, overturn, and uneven versions."
   },
   "f6674104ff7a": {
     "status": "auto",
@@ -601,15 +601,15 @@
   },
   "3ecacf69b0a9": {
     "status": "auto",
-    "en": "* * Give to md-sync to automatically generate publishing documents * *: Give the source file to md-sync, it will automatically synchronize the products in multiple formats (HTML/PDF/Markdown/DOCX/EPUB) and multiple languages (Chinese/English) as configured, and automatically regenerate when the source file changes."
+    "en": "**Give to md-sync to automatically generate publishing documents**: Give the source file to md-sync, it will automatically synchronize the products in multiple formats (HTML/PDF/Markdown/DOCX/EPUB) and multiple languages (Chinese/English) as configured, and automatically regenerate when the source file changes."
   },
   "5769060dded3": {
     "status": "auto",
-    "en": "md-sync will automatically discover the topics in the native Typora theme directory and\n`typora-<主题名>` (e.g. `typora-bloom-mist`/`typora-bloom-mist-dark`/\n`typora-night`/`typora-claude-like`, etc.).* * Requires Typora to be installed on the machine * *; the subject directory for different systems is:"
+    "en": "md-sync will automatically discover the topics in the native Typora theme directory and\n`typora-<主题名>` (e.g. `typora-bloom-mist`/`typora-bloom-mist-dark`/\n`typora-night`/`typora-claude-like`, etc.).**Requires Typora to be installed on the machine**; the subject directory for different systems is:"
   },
   "8bd77341ca05": {
     "status": "auto",
-    "en": "* * Background and card appearance * *: Typora themes often rely on a \"dark shell + white card (`#write`)\" double-layer structure;\nAnd md-sync only generates `<body><div id=\"write\">` single layer, so the background color is derived from the `--bg` variable of the theme and\nThe card has a solid color base and is universal with light/dark."
+    "en": "**Background and card appearance**: Typora themes often rely on a \"dark shell + white card (`#write`)\" double-layer structure;\nAnd md-sync only generates `<body><div id=\"write\">` single layer, so the background color is derived from the `--bg` variable of the theme and\nThe card has a solid color base and is universal with light/dark."
   },
   "5412a00427f8": {
     "status": "auto",
@@ -617,11 +617,11 @@
   },
   "cd91d535779c": {
     "status": "auto",
-    "en": "`gongwen` is a built-in * * standard doc plugin * * for md-sync: just press the template to write a copy of Markdown and export with one click * * Fully compliant\nGB/T 9704-2012 \"Official Document Format of Party and Government Organs\" * * Official Documents `docx` and `pdf` - Redhead, layout, payment, page number are all automatically typed without manual set."
+    "en": "`gongwen` is a built-in **standard doc plugin** for md-sync: just press the template to write a copy of Markdown and export with one click **Fully compliant\nGB/T 9704-2012 \"Official Document Format of Party and Government Organs\"** Official Documents `docx` and `pdf` - Redhead, layout, payment, page number are all automatically typed without manual set."
   },
   "2669e9493dd3": {
     "status": "auto",
-    "en": "* * Title/body color * *: use variable fallback chain (`--text`/`--text-color`), legacy theme\n(such as night) will not be mistakenly washed into a light color, nor will the dark theme be output as light."
+    "en": "**Title/body color**: use variable fallback chain (`--text`/`--text-color`), legacy theme\n(such as night) will not be mistakenly washed into a light color, nor will the dark theme be output as light."
   },
   "d99f05c92543": {
     "status": "auto",
@@ -633,11 +633,11 @@
   },
   "b6194265e7bd": {
     "status": "auto",
-    "en": "Native PySide6 interface, * * directly calls the core pipeline, does not start any HTTP server * *.\nAfter selecting the source file, outputting the directory, and checking the required format/language, click \"Start Listening\" (both can be clicked only after filling in the button), and the source file will be automatically regenerated as soon as it is changed (Anti-Shake 1.5s).\nAnd display the status of each product (synchronized/to be synchronized/not present) in the \"output file\" list (single table, with format column and language column badge), you can double-click to open it directly."
+    "en": "Native PySide6 interface, **directly calls the core pipeline, does not start any HTTP server**.\nAfter selecting the source file, outputting the directory, and checking the required format/language, click \"Start Listening\" (both can be clicked only after filling in the button), and the source file will be automatically regenerated as soon as it is changed (Anti-Shake 1.5s).\nAnd display the status of each product (synchronized/to be synchronized/not present) in the \"output file\" list (single table, with format column and language column badge), you can double-click to open it directly."
   },
   "b73771e39dcd": {
     "status": "auto",
-    "en": "* * Write in your favorite MD editor * *: For example, [Typora] (https://typora.io/), Obsidian, VS Code, etc., write the `.md` source file according to your habits."
+    "en": "**Write in your favorite MD editor**: For example, [Typora](https://typora.io/), Obsidian, VS Code, etc., write the `.md` source file according to your habits."
   },
   "344e85413c0e": {
     "status": "auto",
@@ -653,18 +653,18 @@
   },
   "6130744fa880": {
     "status": "auto",
-    "en": "* * Code block * *: The `pre` rule of the Typora theme qualifies the `.md-fences` class, while the md-sync output is\n`<pre class=\"language-*\">`, so make up the general code block style, and compatible with bloom (`--code-bg`),\nnight (`--bg-color`), claude (`--code-bg-color`), etc."
+    "en": "**Code block**: The `pre` rule of the Typora theme qualifies the `.md-fences` class, while the md-sync output is\n`<pre class=\"language-*\">`, so make up the general code block style, and compatible with bloom (`--code-bg`),\nnight (`--bg-color`), claude (`--code-bg-color`), etc."
   },
   "fad08a4de966": {
     "status": "pending"
   },
   "8fcda49e5577": {
     "status": "auto",
-    "en": "* * Source manuscript format * *: Fill in the blank according to the template, and each position segment (issuing authority logo/issuing text number/sending authority/title/\nbody/attachment/signature/date of writing/note/notation) corresponds to one of the following official formats:"
+    "en": "**Source manuscript format**: Fill in the blank according to the template, and each position segment (issuing authority logo/issuing text number/sending authority/title/\nbody/attachment/signature/date of writing/note/notation) corresponds to one of the following official formats:"
   },
   "9d05c050701a": {
     "status": "auto",
-    "en": "* * Building Python versions is recommended with 3.12 * * (PyInstaller official stable support).Exclude `mypy` on 3.14\n(The script has defaulted to `--exclude-module mypy` because its mypyc extension is not compatible with the 3.14 CArchive compression resulting in\nexe starts and crashes `decompression resulted in return code -3`)."
+    "en": "**Building Python versions is recommended with 3.12** (PyInstaller official stable support).Exclude `mypy` on 3.14\n(The script has defaulted to `--exclude-module mypy` because its mypyc extension is not compatible with the 3.14 CArchive compression resulting in\nexe starts and crashes `decompression resulted in return code -3`)."
   },
   "6f84ab21b653": {
     "status": "auto",
@@ -770,23 +770,231 @@
     "status": "auto"
   },
   "f6058278dfee": {
-    "en": "* *📄 Source file * *: Select `.md` source file to automatically detect the source language, the number of chapters and the number of items to be translated (also as a required item of \"Start listening\"); click \"✂Normalize source document\" to generate a normalized copy of the source document (`<stem>_normalized.md`) according to the current typography specification and set it as the source file, and automatically check the language to follow the `md` output of the source file-- * * The original file will not be modified * *",
+    "en": "* *📄 Source file * *: Select `.md` source file to automatically detect the source language, the number of chapters and the number of items to be translated (also as a required item of \"Start listening\"); click \"✂Normalize source document\" to generate a normalized copy of the source document (`<stem>_normalized.md`) according to the current typography specification and set it as the source file, and automatically check the language to follow the `md` output of the source file-- **The original file will not be modified**",
     "status": "auto"
   },
   "787842174ced": {
-    "en": "* *🎯 Output settings * *: one group per format (HTML/Markdown/PDF/DOCX/EPUB, the latter two require plug-ins), Chinese and English are checked in the group; * * Neither is checked by default * *, at least one language must be checked for one format to start; the PDF group is blank with a \"Margin\" drop-down (15/20/25mm); the title bar \"📐Document Standard Configuration\" button switches the typography specification and its 7 sub-rules (works on the generated product, does not change the source file)",
+    "en": "* *🎯 Output settings * *: one group per format (HTML/Markdown/PDF/DOCX/EPUB, the latter two require plug-ins), Chinese and English are checked in the group; **Neither is checked by default**, at least one language must be checked for one format to start; the PDF group is blank with a \"Margin\" drop-down (15/20/25mm); the title bar \"📐Document Standard Configuration\" button switches the typography specification and its 7 sub-rules (works on the generated product, does not change the source file)",
     "status": "auto"
   },
   "c2aba992951c": {
-    "en": "`typography` is a document typesetting specification: Chinese mixing (refer to W3C CLReq/CY/T 154-2017) acts on Chinese products, and English punctuation spacing rules act on English products. Cover all product paths - structured layout (resume, etc.) is normalized one by one by the template `t()` hook, and raw layout (markdown/typora) is normalized for the entire body (including translated English). Only for * * generated products * * (md/html/pdf), * * never modify your source files * *; code blocks, inline code, and URL links are never affected. The \"📐Document Standard Configuration\" button in the \"Output Settings\" title bar of the Qt GUI is configurable (memory enabled); edit this segment yaml directly on the CLI side.",
+    "en": "`typography` is a document typesetting specification: Chinese mixing (refer to W3C CLReq/CY/T 154-2017) acts on Chinese products, and English punctuation spacing rules act on English products. Cover all product paths - structured layout (resume, etc.) is normalized one by one by the template `t()` hook, and raw layout (markdown/typora) is normalized for the entire body (including translated English). Only for **generated products** (md/html/pdf), **never modify your source files**; code blocks, inline code, and URL links are never affected. The \"📐Document Standard Configuration\" button in the \"Output Settings\" title bar of the Qt GUI is configurable (memory enabled); edit this segment yaml directly on the CLI side.",
     "status": "auto"
   },
   "b5541fc63941": {
-    "en": "The script automatically bundles resources such as `md_sync/templates` and `md_sync/plugins`,\nIt is parsed through `md_sync.template.manager._find_install_dir()` at runtime, and * * there is no need for the user machine to install anything * *.",
+    "en": "The script automatically bundles resources such as `md_sync/templates` and `md_sync/plugins`,\nIt is parsed through `md_sync.template.manager._find_install_dir()` at runtime, and **there is no need for the user machine to install anything**.",
     "status": "auto"
   },
   "a63b0f0a7208": {
-    "en": "* * The \"Document Standard Configuration\" has been changed in the GUI. Do you want to restart it? * * Not required - if you are listening after saving, the output will be rerun with the new rules immediately; the✂ Normalized Source Document will always use the current configuration.",
+    "en": "**The \"Document Standard Configuration\" has been changed in the GUI. Do you want to restart it?** Not required - if you are listening after saving, the output will be rerun with the new rules immediately; the✂ Normalized Source Document will always use the current configuration.",
+    "status": "auto"
+  },
+  "4ff98645762d": {
+    "en": "`zh`/`en`, translation based on `.translations.json` cache, missing fallback AI (provider `auto`)",
+    "status": "auto"
+  },
+  "dc3cb9dcf016": {
+    "en": "Native desktop GUI (Qt) + command line, zero HTTP servers",
+    "status": "auto"
+  },
+  "d888df35c2ba": {
+    "en": "`html` `md` `pdf` and plugin extensible `docx`/`epub` (PDF generated by Chromium)",
+    "status": "auto"
+  },
+  "228774dc7bfa": {
+    "en": "**Multi-format output**",
+    "status": "auto"
+  },
+  "7b1b6f8158b2": {
+    "en": "**Multilingual output**",
+    "status": "auto"
+  },
+  "f411d0f1f925": {
+    "en": "Descriptions",
+    "status": "auto"
+  },
+  "569de312b054": {
+    "en": "3. **Use Typora themes to produce beautiful documents**: md-sync can directly use the rich theme resources (such as bloom-mist, night, claude-like, etc.) under the Typora theme directory on your computer to render HTML/PDF documents in a unified style, without having to rewrite them yourself. **Provided you have [Typora](https://typora.io/) installed natively** - the theme CSS is stored in Typora's configuration directory, otherwise it will not appear in the Render Style drop-down box.",
+    "status": "auto"
+  },
+  "89acdd31eabe": {
+    "en": "Competence",
+    "status": "auto"
+  },
+  "9c82e3767ce2": {
+    "en": "**Templates/Themes**",
+    "status": "auto"
+  },
+  "a11a23def74f": {
+    "en": "One source → multiple products: `html/zh`, `html/en`, `pdf/zh`, `pdf/en`, `md/zh`, `md/en`, …",
+    "status": "auto"
+  },
+  "94b284994bb7": {
+    "en": "`bwx`, `modern` and other built-in styles; and directly select the theme under the Typora theme directory (`~/.config/Typora/themes/`) (`typora-bloom-mist`, `typora-night`, `typora-claude-like`, etc.), automatically compatible with background, dark/light and code blocks (`md-sync template`/`md-sync plugin`)",
+    "status": "auto"
+  },
+  "c3c920ae60fd": {
+    "en": "| Ability | Description |\n|------|------|\n| **Multi-format output** | `html` `md` `pdf` and plugin extensible `docx`/`epub` (PDF generated by Chromium) |\n| **Multilingual output** | `zh`/`en`, translation based on `.translations.json` cache, missing fallback AI (provider `auto`) |\n| **File Snooping** | Based on `watchdog` snooping source files, `debounce` defaults to 1.5s, change to sync |\n| **Templates/themes** | Built-in styles such as `bwx`, `modern`, etc.; themes under the Typora theme directory (`~/.config/Typora/themes/`) can be directly selected (`typora-bloom-mist`, `typora-night`, `typora-claude-like`, etc.), automatically compatible with background, dark/light and code blocks (`md-sync template`/`md-sync plugin`) |\n| **Translation cache** | `strategy: mapping` + `mapping_file`, translations only update the cache dictionary, do not directly exit the file, and then access it when rendering |\n| **Desktop GUI (Qt native)** | PySide6 native interface, calling the core pipeline directly, continuously listening for synchronization, zero HTTP servers |\n| **Standard document (gongwen)** | Built-in document plugin: Write Markdown by template and export redhead document `docx`/`pdf` (redhead, layout, page number automatic layout) in accordance with GB/T 9704-2012 with one click |",
+    "status": "auto"
+  },
+  "eab83a883dce": {
+    "en": "Based on `watchdog` monitoring source file, `debounce` defaults to 1.5s, changes are synchronized",
+    "status": "auto"
+  },
+  "92d32eaa7224": {
+    "en": "`strategy: mapping` + `mapping_file`, the translation only updates the cache dictionary, does not directly exit the file, and then accesses it when rendering",
+    "status": "auto"
+  },
+  "ccbfa6299bb9": {
+    "en": "**Desktop GUI (Qt native)**",
+    "status": "auto"
+  },
+  "22936e26cb84": {
+    "en": "**File listening**",
+    "status": "auto"
+  },
+  "cd18558aaf6c": {
+    "en": "PySide6 native interface, directly calls the core pipeline, continuously listens for synchronization, zero HTTP server",
+    "status": "auto"
+  },
+  "85422ac82038": {
+    "en": "**standard document (gongwen)**",
+    "status": "auto"
+  },
+  "c2fbe257b43a": {
+    "en": "* *🎯 Output settings * *: one group per format (HTML/Markdown/PDF/DOCX/EPUB, the latter two require plug-ins), Chinese and English are checked in the group; **Neither is checked by default**, at least one language must be checked for one format to start; the PDF group is blank with a \"page margin\" drop-down (15/20/25 mm); the title bar \"📐Document Standard Configuration\" button switches the typography specification and its 7 sub-rules (works on the generated product, does not change the source file)",
+    "status": "auto"
+  },
+  "bb7294a63baa": {
+    "en": "Built-in document plug-in: Write Markdown by template, and export redhead documents `docx`/`pdf` (redhead, layout, page number automatic typography) in accordance with GB/T 9704-2012 with one click",
+    "status": "auto"
+  },
+  "415ce7b551e9": {
+    "en": "`type`",
+    "status": "auto"
+  },
+  "226b09121843": {
+    "en": "&Genre",
+    "status": "auto"
+  },
+  "38a27fb014fd": {
+    "en": "The most common and worry-free way is to open the native desktop GUI - no browser required, no HTTP server launched:",
+    "status": "auto"
+  },
+  "4cbdda9c02c9": {
+    "en": "critical file",
+    "status": "auto"
+  },
+  "5a01cd21b385": {
+    "en": "Only new HTML/CSS styles are available",
+    "status": "auto"
+  },
+  "118a961a2999": {
+    "en": "`templates/<style>/`",
+    "status": "auto"
+  },
+  "9c5d49bda700": {
+    "en": "Application",
+    "status": "auto"
+  },
+  "65865ceaebd8": {
+    "en": "`render`",
+    "status": "auto"
+  },
+  "7a6e678de78b": {
+    "en": "Let md-sync read the source manuscript in a special format",
+    "status": "auto"
+  },
+  "1169656ff3e9": {
+    "en": "Rendering Style",
+    "status": "auto"
+  },
+  "938860893800": {
+    "en": "Custom parser",
+    "status": "auto"
+  },
+  "4858043960de": {
+    "en": "1. Python Package (wheel)",
+    "status": "auto"
+  },
+  "5dfa54d39612": {
+    "en": "`parser`",
+    "status": "auto"
+  },
+  "4981287fe504": {
+    "en": "Platform",
+    "status": "auto"
+  },
+  "4d349ea4b426": {
+    "en": "Source template + parser + style all-in-one",
+    "status": "auto"
+  },
+  "955e83d8a66e": {
+    "en": "Full Plugin Package",
+    "status": "auto"
+  },
+  "a9c9d7c9038a": {
+    "en": "`parser.py`",
+    "status": "auto"
+  },
+  "15cb7c5c6b3f": {
+    "en": "Product Path",
+    "status": "auto"
+  },
+  "edc9f0a5a5d5": {
+    "en": "Linux",
+    "status": "auto"
+  },
+  "c59c32ed61ff": {
+    "en": "All of the above",
+    "status": "auto"
+  },
+  "8b06df029592": {
+    "en": "MacOS",
+    "status": "auto"
+  },
+  "232cea8f8b93": {
+    "en": "`dist/md-sync`",
+    "status": "auto"
+  },
+  "8b28ce5f23a4": {
+    "en": "Elf executable file, running directly `./dist/md-sync --help`",
+    "status": "auto"
+  },
+  "aea23489ce3a": {
+    "en": "Windows",
+    "status": "auto"
+  },
+  "cef8c15d6b05": {
+    "en": "`pack`",
+    "status": "auto"
+  },
+  "a1a5d4050ac6": {
+    "en": "`dist/md-sync.exe`",
+    "status": "auto"
+  },
+  "fa92c714a5c3": {
+    "en": "Named after Linux and built on macOS",
+    "status": "auto"
+  },
+  "514912923bca": {
+    "en": "Need to build on Windows",
+    "status": "auto"
+  },
+  "34b6cf935758": {
+    "en": "The script automatically bundles resources such as `md_sync/templates` and `md_sync/plugins`,",
+    "status": "auto"
+  },
+  "8a7df69b8459": {
+    "en": "**Translation cache**",
+    "status": "auto"
+  },
+  "db06c78d1e24": {
+    "zh": "测试",
+    "status": "auto"
+  },
+  "616d2dc58c70": {
+    "zh": "我花100元买了 20Gbps的设备 ，支持 ChatGPT。",
     "status": "auto"
   }
 }

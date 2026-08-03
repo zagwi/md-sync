@@ -17,10 +17,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pathlib
 
 import pytest
-from PySide6.QtWidgets import QApplication
-
 from md_sync.qt_app import MainWindow, TypographyDialog
 from md_sync.typography import TypographyConfig
+from PySide6.QtWidgets import QApplication
 
 MESSY_Z = (
     "这是一个用于规范化源文档测试的项目，该项目支持从Markdown源文件自动同步为多种格式输出，"

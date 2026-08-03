@@ -622,6 +622,26 @@ class SyncPipeline:
         catalog = self._template_catalog(out_cfg)
 
         theme_dir = catalog.info.directory
+        # Safety net: a style that resolves to the bare ``typora`` base (which
+        # ships no style.css) without a matching Typora ``.css`` yields an
+        # unstyled page (e.g. a translation output whose style name differs in
+        # case/theme from the source). Fall back to the schema default so a
+        # language output never silently loses its theme.
+        if typora_css is None and not (Path(theme_dir) / "style.css").exists():
+            resolved_name = getattr(catalog.info, "name", template_name)
+            fallback = self._default_style_for(self._config.schema)
+            if fallback and fallback != resolved_name:
+                try:
+                    catalog = self._template_mgr.resolve(fallback)
+                except FileNotFoundError:
+                    pass
+                else:
+                    logger.warning(
+                        "Template '%s' has no stylesheet; falling back to '%s'",
+                        resolved_name,
+                        fallback,
+                    )
+                    theme_dir = catalog.info.directory
         if not theme_dir:
             raise FileNotFoundError(f"Template directory not found: {template_name}")
 

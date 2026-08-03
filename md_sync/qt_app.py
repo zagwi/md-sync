@@ -63,6 +63,9 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
+    QToolButton,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -244,103 +247,12 @@ _TYPORA_GALLERY_URLS = {
 _TYPORA_PROXIES = ("http://127.0.0.1:1080", "")
 
 # ── Typora 主题分组（两级下拉：仓库 → 主题） ─────────────────
-# 分组条件：同一 GitHub 仓库的所有主题为一组，它们通常共享公共前缀
-# （参考 https://theme.typora.io/ 按作者仓库分组）。前缀按「长的在前」排序，
-# 避免短前缀误吞（如 claude-like 需先于 claude）。未命中的主题归入「其他主题」。
-_TYPORA_GROUPS: list[tuple[str, str]] = [
-    ("Claude-like", "claude-like"),
-    ("Novel Tex", "novel-tex-"),
-    ("Animal Island", "animal-island"),
-    ("Esther Inspired", "esther-inspired-"),
-    ("Neil JetBrains Mono", "neil-jetbrains-mono"),
-    ("Middle East", "middle-east-"),
-    ("Bit Clean", "bit-clean"),
-    ("Blue Topaz", "blue-topaz"),
-    ("Eyes Green", "eyes-green"),
-    ("Konayuki", "konayuki-"),
-    ("See-Yue", "see-yue-"),
-    ("Themeable", "themeable"),
-    ("Autumnus", "autumnus"),
-    ("Everforest", "everforest"),
-    ("Paperglow", "paperglow"),
-    ("Redefine", "redefine"),
-    ("Solarized", "solarized"),
-    ("Lightmind", "lightmind"),
-    ("Lostkeys", "lostkeys"),
-    ("Monospace", "monospace"),
-    ("Neumorphism", "neumorphism"),
-    ("Happysimple", "happysimple"),
-    ("Gruvbox", "gruvbox"),
-    ("Inkwell", "inkwell"),
-    ("Ladder", "ladder"),
-    ("Lapis", "lapis"),
-    ("Liquid", "liquid"),
-    ("MDMDT", "mdmdt"),
-    ("MLike", "mlike"),
-    ("Onigiri", "onigiri"),
-    ("Scrolls", "scrolls"),
-    ("Sonnet", "sonnet"),
-    ("Tailwind", "tailwind"),
-    ("Terminal", "terminal"),
-    ("Vintage", "vintage"),
-    ("Virgo", "virgo"),
-    ("Bloom", "bloom-"),
-    ("Nexmoe", "nexmoe-"),
-    ("Paradox", "paradox-"),
-    ("Quartz", "quartz-"),
-    ("Riwaq", "riwaq-"),
-    ("Dogs", "dogs-"),
-    ("I-W", "i-w-"),
-    ("Pink", "pink-"),
-    ("Crisp", "crisp-"),
-    ("Clean", "clean-"),
-    ("Compact", "compact"),
-    ("Fluent", "fluent"),
-    ("Folio", "folio"),
-    ("Jinxiu", "jinxiu"),
-    ("Ceylon", "ceylon"),
-    ("Cement", "cement"),
-    ("Amatriz", "amatriz"),
-    ("Bluetex", "bluetex"),
-    ("Alto", "alto"),
-    ("iA Typora", "ia-typora"),
-    ("One Dark", "onedark"),
-    ("One Light", "onelight"),
-    ("GitHub", "github"),
-    ("Notion", "notion"),
-    ("Purple", "purple-"),
-    ("Phycat", "phycat-"),
-    ("Drake", "drake"),
-    ("vlook", "vlook-"),
-    ("Seniva", "seniva"),
-    ("Next", "next"),
-    ("Ravel", "ravel"),
-    ("Pie", "pie"),
-    ("Print", "print"),
-    ("Claude", "claude"),
-    ("Mint", "mint"),
-    ("Mo", "mo-"),
-    ("DYZJ", "dyzj"),
-    ("Haru", "haru"),
-    ("Inside", "inside"),
-    ("Vue", "vue"),
-    ("Xy", "xy"),
-]
+# 分组规则（前缀表 + key 函数）移入 md_sync.plugins.typora.groups，
+# Qt 与 Web 共用，避免 web 端依赖 PyQt。
+from md_sync.plugins.typora.groups import typora_group_key as _typora_group_key
 
 # 下拉模型角色：组头行存分组显示名
 _ROLE_GROUP = Qt.UserRole + 1
-
-
-def _typora_group_key(stem: str) -> str | None:
-    """返回 typora 主题 CSS stem 所属分组名，未命中返回 None。"""
-    # 精确匹配优先（如 "mo" 主题：前缀 "mo-" 不含裸 "mo"，但 "mo" 不能作
-    # 前缀否则会误吞 morandigarden）
-    if stem.lower() == "mo":
-        return "Mo"
-    for name, prefix in _TYPORA_GROUPS:
-        if stem.lower().startswith(prefix):
-            return name
-    return None
 
 
 _SAMPLE_PREVIEW_HTML = """<!DOCTYPE html>
@@ -577,7 +489,7 @@ def _get_or_create_preview(style_name: str, tmgr: TemplateManager) -> QPixmap | 
 C_SYNCED = "#22c55e"  # 已同步（绿）
 C_PENDING = "#f59e0b"  # 待同步（黄）
 C_MISSING = "#ef4444"  # 文件不存在（红）
-C_RUNNING = "#3b82f6"  # 同步中（蓝，动态闪烁）
+C_RUNNING = "#6366f1"  # 同步中（蓝，动态闪烁）
 
 EDGE_MARGIN = 6
 
@@ -700,7 +612,7 @@ class TitleBar(QWidget):
         layout.setSpacing(4)
 
         self.icon = QLabel("⬡")
-        self.icon.setStyleSheet("color:#2563eb;font-size:15px;")
+        self.icon.setStyleSheet("color:#6366f1;font-size:15px;")
         self.title = QLabel("md-sync · 持续同步")
         self.title.setStyleSheet("font-weight:600;font-size:13px;color:#18181b;")
         layout.addWidget(self.icon)
@@ -719,6 +631,9 @@ class TitleBar(QWidget):
         self.btn_min.setIcon(_window_icon("min"))
         self.btn_max.setIcon(_window_icon("max"))
         self.btn_close.setIcon(_window_icon("close"))
+        self.btn_min.setToolTip("最小化")
+        self.btn_max.setToolTip("最大化 / 还原")
+        self.btn_close.setToolTip("关闭")
         layout.addWidget(self.btn_min)
         layout.addWidget(self.btn_max)
         layout.addWidget(self.btn_close)
@@ -756,6 +671,260 @@ class TitleBar(QWidget):
     def mouseDoubleClickEvent(self, e):
         self._toggle_max()
         super().mouseDoubleClickEvent(e)
+
+
+class StyleTreeCombo(QWidget):
+    """渲染主题树形下拉：QToolButton 触发原生 QTreeWidget 弹层。
+
+    QComboBox 的弹层容器（QComboBoxPrivateContainer）会在任意 enabled 项上
+    释放鼠标时强制关闭弹层，导致"点击组头展开/收起分组"这类 hack（本控件
+    的前身）极不可靠：点了不折叠、不展开，甚至跳到别的节点。这里彻底改用
+    真正的树形弹层：
+
+    * 按钮是 QToolButton（带 ▾ 箭头），点击后在下方弹出 QTreeWidget。
+    * 分组是树父节点，点击组头的展开箭头（或直接点击组头行）由 QTreeWidget
+      原生处理展开/收起，不再经过 QComboBox 的弹层容器，因此不会误关弹层、
+      不会跳节点。
+    * 叶子是具体主题，点击即选中并关闭弹层。
+    * 键盘导航（上下键、左右键展开/收起、Enter 选中、Esc 关闭）全部由
+      QTreeWidget 原生支持。
+
+    对外暴露与旧 QComboBox 兼容的接口：``currentData()``、``setMaxVisibleItems``、
+    ``currentIndexChanged``/``activated`` 信号，以及 ``view()``（返回弹层树）。
+    """
+
+    currentIndexChanged = Signal(int)
+    activated = Signal(int)
+
+    # 数据角色：叶子节点存主题名，组头节点存分组名
+    _NAME_ROLE = Qt.UserRole + 1
+    _GROUP_ROLE = Qt.UserRole + 2
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._current = ""
+        self._max_visible = 14
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+
+        self._btn = QToolButton(self)
+        self._btn.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self._btn.setArrowType(Qt.DownArrow)
+        self._btn.setCursor(Qt.PointingHandCursor)
+        self._btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        lay.addWidget(self._btn)
+
+        # 弹层：真正的树形控件（Qt.Popup 窗口，点外部自动关闭）
+        self._tree = QTreeWidget()
+        self._tree.setWindowFlags(
+            Qt.Popup | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint
+        )
+        self._tree.setHeaderHidden(True)
+        self._tree.setRootIsDecorated(True)  # 显示分组展开箭头
+        self._tree.setIndentation(16)
+        self._tree.setUniformRowHeights(True)
+        self._tree.setMouseTracking(True)
+        self._tree.setSelectionMode(QAbstractItemView.SingleSelection)
+        self._tree.setFocusPolicy(Qt.StrongFocus)
+        self._tree.itemClicked.connect(self._on_item_clicked)
+        self._tree.itemActivated.connect(self._on_item_activated)
+        self._tree.installEventFilter(self)
+
+        self._btn.clicked.connect(self._open)
+
+    # ── 兼容旧 QComboBox 接口 ─────────────────────────────────────────
+
+    def view(self) -> QTreeWidget:
+        return self._tree
+
+    def currentData(self) -> str:
+        return self._current
+
+    def currentIndex(self) -> int:
+        names = self._leaf_names()
+        try:
+            return names.index(self._current)
+        except ValueError:
+            return -1
+
+    def setMaxVisibleItems(self, n: int):
+        self._max_visible = n
+
+    def setCurrentIndex(self, index: int):
+        names = self._leaf_names()
+        if 0 <= index < len(names):
+            self._set_current(names[index])
+
+    def itemData(self, index: int, role: int = Qt.UserRole) -> object:
+        names = self._leaf_names()
+        if 0 <= index < len(names):
+            return names[index]
+        return None
+
+    def findData(self, data: str, role: int = Qt.UserRole) -> int:
+        names = self._leaf_names()
+        return names.index(data) if data in names else -1
+
+    def count(self) -> int:
+        return len(self._leaf_names())
+
+    def _leaf_names(self) -> list[str]:
+        """按显示顺序返回所有叶子（主题）名。"""
+        out: list[str] = []
+        it = self._tree.topLevelItem(0)
+        while it is not None:
+            if it.data(0, self._NAME_ROLE):
+                out.append(it.data(0, self._NAME_ROLE))
+            else:
+                for i in range(it.childCount()):
+                    ch = it.child(i)
+                    if ch.data(0, self._NAME_ROLE):
+                        out.append(ch.data(0, self._NAME_ROLE))
+            it = self._tree.topLevelItem(self._tree.indexOfTopLevelItem(it) + 1)
+        return out
+
+    # ── 填充 ──────────────────────────────────────────────────────────
+
+    def set_styles(self, base: list, groups: list[tuple[str, list]], current: str = ""):
+        """填充树：``base`` 为无分组的主题，``groups`` 为 [(组名, [主题])]。"""
+        self._tree.clear()
+        self._current = ""
+
+        def _add_leaf(text: str, name: str):
+            item = QTreeWidgetItem([text])
+            item.setData(0, self._NAME_ROLE, name)
+            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            return item
+
+        if not base and not groups:
+            self._tree.addTopLevelItem(_add_leaf("(默认 bwx)", "bwx"))
+
+        for t in base:
+            self._tree.addTopLevelItem(_add_leaf(self._display(t), t.name))
+
+        for gname, members in groups:
+            head = QTreeWidgetItem([f"{gname} ({len(members)})"])
+            head.setData(0, self._GROUP_ROLE, gname)
+            head.setFlags(Qt.ItemIsEnabled)  # 组头不可选中，仅可展开/收起
+            f = head.font(0)
+            f.setBold(True)
+            head.setFont(0, f)
+            head.setForeground(0, QBrush(QColor("#6b7280")))
+            head.setBackground(0, QBrush(QColor("#f1f1f4")))
+            for t in members:
+                head.addChild(_add_leaf(self._display(t), t.name))
+            self._tree.addTopLevelItem(head)
+
+        if current:
+            self.setCurrentData(current)
+
+    def setCurrentData(self, name: str):
+        """按主题名设置当前值，同时保持弹层展开其所在分组、滚动到该行。"""
+        self._set_current(name)
+        target = None
+        it = self._tree.topLevelItem(0)
+        while it is not None:
+            if it.data(0, self._NAME_ROLE) == name:
+                target = it
+                break
+            if not it.data(0, self._NAME_ROLE):
+                for i in range(it.childCount()):
+                    if it.child(i).data(0, self._NAME_ROLE) == name:
+                        it.setExpanded(True)
+                        target = it.child(i)
+                        break
+            it = self._tree.topLevelItem(self._tree.indexOfTopLevelItem(it) + 1)
+        if target is not None:
+            self._tree.setCurrentItem(target)
+            self._tree.scrollToItem(target)
+
+    def _set_current(self, name: str):
+        old = self._current
+        self._current = name
+        if name:
+            disp = name[7:].replace("-", " ").title() if name.startswith("typora-") else name
+            self._btn.setText(disp)
+        if name != old:
+            self.currentIndexChanged.emit(self.currentIndex())
+
+    def _display(self, t) -> str:
+        """模板显示名：去掉 "Typora " 前缀。"""
+        disp = t.label
+        if disp.lower().startswith("typora "):
+            disp = disp[len("Typora ") :]
+        return disp
+
+    # ── 弹层交互 ──────────────────────────────────────────────────────
+
+    def _open(self):
+        if self._tree.topLevelItemCount() == 0:
+            return
+        w = max(self._btn.width(), 180)
+        self._tree.setFixedWidth(w)
+        self._resize_popup()
+        # 定位在按钮正下方
+        gp = self._btn.mapToGlobal(self._btn.rect().bottomLeft())
+        screen = QApplication.screenAt(gp)
+        if screen is not None:
+            avail = screen.availableGeometry()
+            self._tree.move(gp.x(), min(gp.y(), avail.bottom() - self._tree.height()))
+        else:
+            self._tree.move(gp.x(), gp.y())
+        self._tree.show()
+        self._tree.setFocus()
+
+    def _resize_popup(self):
+        """弹层高度按当前可见行数封顶（不超 maxVisibleItems 行，其余滚动）。"""
+        row_h = self._tree.fontMetrics().height() + 12
+        if row_h <= 0:
+            row_h = 24
+        visible = 0
+        it = self._tree.topLevelItem(0)
+        while it is not None:
+            visible += 1
+            if it.isExpanded():
+                visible += it.childCount()
+            it = self._tree.topLevelItem(self._tree.indexOfTopLevelItem(it) + 1)
+        rows = min(max(visible, 1), self._max_visible)
+        self._tree.setFixedHeight(rows * row_h + 10)
+
+    def _on_item_clicked(self, item: QTreeWidgetItem, column: int):
+        if item is None:
+            return
+        if item.data(0, self._GROUP_ROLE):
+            # 点击组头行 → 展开/收起（原生）；不选中、不关闭弹层
+            item.setExpanded(not item.isExpanded())
+            self._resize_popup()
+            return
+        name = item.data(0, self._NAME_ROLE)
+        if name:
+            self._set_current(name)
+            self.activated.emit(self.currentIndex())
+            self._tree.hide()
+
+    def _on_item_activated(self, item: QTreeWidgetItem, column: int):
+        self._on_item_clicked(item, column)
+
+    def _on_item_entered(self, item: QTreeWidgetItem, column: int):
+        if item is None:
+            return
+        if not item.data(0, self._NAME_ROLE):
+            return  # 组头不触发预览
+        self._show_hover(item)
+
+    def eventFilter(self, obj, event):
+        if obj is self._tree:
+            if event.type() == QEvent.Show:
+                QTimer.singleShot(0, self._resize_popup)
+            elif event.type() == QEvent.KeyPress and event.key() == Qt.Key_Escape:
+                self._tree.hide()
+                return True
+            elif event.type() == QEvent.MouseButtonPress:
+                # 点击弹层外区域 → Qt.Popup 会自行关闭；点击组头行不关闭弹层
+                pass
+        return super().eventFilter(obj, event)
 
 
 class FloatingPreview(QWidget):
@@ -1051,6 +1220,23 @@ class MainWindow(QWidget):
 
         root.addWidget(content, 1)
 
+    def _make_card_title(self, glyph: str, title: str) -> QWidget:
+        """原型风格的卡片标题：indigo 色块图标 + 标题文字（替代 emoji）。"""
+        row = QWidget()
+        row.setObjectName("card_header")
+        h = QHBoxLayout(row)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(8)
+        icon = QLabel(glyph)
+        icon.setObjectName("card_icon")
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setFixedSize(22, 22)
+        h.addWidget(icon)
+        lbl = QLabel(title)
+        lbl.setObjectName("card_title")
+        h.addWidget(lbl)
+        return row
+
     def _build_plugin_card(self, parent: QVBoxLayout):
         """Card 1: 插件管理 — 选插件 → 看详情 → 生成模板 → 指定源文件"""
         card = QWidget()
@@ -1059,8 +1245,7 @@ class MainWindow(QWidget):
         cv.setContentsMargins(14, 12, 14, 10)
         cv.setSpacing(6)
 
-        title = QLabel("📦 插件管理")
-        title.setObjectName("card_title")
+        title = self._make_card_title("◢", "插件管理")
         cv.addWidget(title)
 
         # ── 插件选择行（固定高度） ──
@@ -1074,6 +1259,7 @@ class MainWindow(QWidget):
         sel_h.addWidget(sel_lbl)
         self._plugins: list[PluginManifest] = []
         self.plugin_combo = QComboBox()
+        sel_lbl.setBuddy(self.plugin_combo)
         self.plugin_combo.currentIndexChanged.connect(self._on_plugin_changed)
         sel_h.addWidget(self.plugin_combo, 1)
         cv.addWidget(sel_row)
@@ -1085,7 +1271,22 @@ class MainWindow(QWidget):
         da.setContentsMargins(0, 2, 0, 0)
         da.setSpacing(2)
 
-        # 第1行：名称 + schema + 版本  ←[stretch]→  🎨 风格
+        # 原型风格：左侧 indigo 图标方块 + 右侧 muted 圆角信息卡
+        body_h = QHBoxLayout()
+        body_h.setSpacing(12)
+        icon_s = QLabel("◧")
+        icon_s.setObjectName("plugin_icon")
+        icon_s.setFixedSize(38, 38)
+        icon_s.setAlignment(Qt.AlignCenter)
+        body_h.addWidget(icon_s, 0, Qt.AlignTop)
+
+        info = QWidget()
+        info.setObjectName("plugin_info")
+        dc = QVBoxLayout(info)
+        dc.setContentsMargins(12, 10, 12, 8)
+        dc.setSpacing(4)
+
+        # 第1行：名称 + schema + 版本  ←[stretch]→  风格
         top_row = QHBoxLayout()
         top_row.setSpacing(6)
         self._detail_name = QLabel()
@@ -1093,49 +1294,49 @@ class MainWindow(QWidget):
         top_row.addWidget(self._detail_name)
         self._detail_schema = QLabel()
         self._detail_schema.setStyleSheet(
-            "font-size:10px;color:#1a56db;background:#e8f0fe;padding:1px 6px;border-radius:2px;"
+            "font-size:10px;color:#4338ca;background:#eef2ff;padding:1px 7px;border-radius:3px;"
         )
         top_row.addWidget(self._detail_schema)
         self._detail_version = QLabel()
         self._detail_version.setStyleSheet(
-            "font-size:10px;color:#999;background:#f5f5f5;padding:1px 6px;border-radius:2px;"
+            "font-size:10px;color:#71717a;background:#f1f1f3;padding:1px 7px;border-radius:3px;"
         )
         top_row.addWidget(self._detail_version)
         top_row.addStretch(1)
         self._detail_templates = QLabel()
-        self._detail_templates.setStyleSheet("font-size:11px;color:#999;")
+        self._detail_templates.setStyleSheet("font-size:11px;color:#a1a1aa;")
         self._detail_templates.setFixedHeight(16)
         top_row.addWidget(self._detail_templates)
-        da.addLayout(top_row)
+        dc.addLayout(top_row)
 
         # 第2行：描述（独占整行宽度，充分利用水平空间）
         desc_row = QHBoxLayout()
         self._detail_desc = QLabel()
-        self._detail_desc.setStyleSheet("font-size:11px;color:#888;")
+        self._detail_desc.setStyleSheet("font-size:11px;color:#71717a;")
         self._detail_desc.setWordWrap(True)
         self._detail_desc.setMaximumHeight(30)
         desc_row.addWidget(self._detail_desc, 1)
-        da.addLayout(desc_row)
+        dc.addLayout(desc_row)
 
         # 模板使用提示（需要特定源模板时红色警示；否则隐藏）
         self._template_warn = QLabel()
         self._template_warn.setStyleSheet("font-size:11px;color:#dc2626;font-weight:600;")
         self._template_warn.setWordWrap(True)
         self._template_warn.setMaximumHeight(30)
-        da.addWidget(self._template_warn)
+        dc.addWidget(self._template_warn)
 
         # 公文字体缺失提示 + 一键安装（仅 gongwen 插件显示）
         self._font_warn = QLabel()
         self._font_warn.setStyleSheet("font-size:11px;color:#b45309;font-weight:600;")
         self._font_warn.setWordWrap(True)
         self._font_warn.setVisible(False)
-        da.addWidget(self._font_warn)
+        dc.addWidget(self._font_warn)
 
         self._font_btn = QPushButton("⬇ 下载并安装公文字体（免费）")
         self._font_btn.setFixedHeight(24)
         self._font_btn.setVisible(False)
         self._font_btn.clicked.connect(self._install_gongwen_fonts)
-        da.addWidget(self._font_btn)
+        dc.addWidget(self._font_btn)
 
         # 一行：生成模板按钮 + 源文件已指定
         row2 = QHBoxLayout()
@@ -1155,12 +1356,15 @@ class MainWindow(QWidget):
         check_icon.setStyleSheet("color:#22c55e;font-size:12px;font-weight:700;")
         sr.addWidget(check_icon)
         self._source_label = QLabel()
-        self._source_label.setStyleSheet("font-size:11px;color:#555;")
+        self._source_label.setStyleSheet("font-size:11px;color:#525252;")
         self._source_label.setWordWrap(True)
         sr.addWidget(self._source_label, 1)
         row2.addWidget(self._source_row, 1)
         row2.addStretch(1)
-        da.addLayout(row2)
+        dc.addLayout(row2)
+
+        body_h.addWidget(info, 1)
+        da.addLayout(body_h)
 
         cv.addWidget(self._detail_area)
         parent.addWidget(card)
@@ -1249,9 +1453,7 @@ class MainWindow(QWidget):
         cv.setContentsMargins(14, 12, 14, 10)
         cv.setSpacing(6)
 
-        title = QLabel("输出设置")
-        title.setObjectName("card_title")
-        cv.addWidget(title)
+        cv.addWidget(self._make_card_title("◫", "输出设置"))
 
         # ── 源文件（固定高度行） ──
         src_row_w = QWidget()
@@ -1263,15 +1465,16 @@ class MainWindow(QWidget):
         src_lbl.setFixedWidth(60)
         src_h.addWidget(src_lbl)
         self.source_edit = QLineEdit()
-        self.source_edit.setPlaceholderText("选择或输入 Markdown 源文件")
+        self.source_edit.setPlaceholderText("选择或输入 Markdown 源文件…")
+        src_lbl.setBuddy(self.source_edit)
         src_btn = QPushButton("选择文件…")
         src_btn.setObjectName("primary")
         src_btn.clicked.connect(self._browse_source)
         norm_btn = QPushButton("✂ 规范化源文档")
         norm_btn.setToolTip("按当前排版规范生成规范化副本作为源文件（原始文件不被修改），并自动勾选 md 输出")
         norm_btn.setStyleSheet(
-            "background:#f59e0b;color:#ffffff;border:none;border-radius:6px;"
-            "padding:0 10px;font-size:12px;"
+            "background:#f59e0b;color:#ffffff;border:1px solid #f59e0b;border-radius:6px;"
+            "padding:7px 10px;font-size:13px;"
         )
         norm_btn.clicked.connect(self._normalize_source)
         src_h.addWidget(self.source_edit, 1)
@@ -1289,7 +1492,8 @@ class MainWindow(QWidget):
         out_lbl.setFixedWidth(60)
         out_h.addWidget(out_lbl)
         self.out_edit = QLineEdit()
-        self.out_edit.setPlaceholderText("留空则输出到源文件所在目录")
+        self.out_edit.setPlaceholderText("留空则输出到源文件所在目录…")
+        out_lbl.setBuddy(self.out_edit)
         out_btn = QPushButton("选择目录…")
         out_btn.clicked.connect(self._browse_out)
         out_h.addWidget(self.out_edit, 1)
@@ -1310,15 +1514,20 @@ class MainWindow(QWidget):
         style_h.addWidget(style_lbl)
         zh_tag = QLabel("中文")
         zh_tag.setFixedWidth(32)
+        zh_tag.setVisible(False)
         style_h.addWidget(zh_tag)
         self.tpl_zh = QComboBox()
         self.tpl_zh.setFixedWidth(160)
+        style_lbl.setBuddy(self.tpl_zh)
         style_h.addWidget(self.tpl_zh)
+        # 中文/英文共用同一套主题：英文下拉隐藏并始终跟随中文。
         self._tpl_en_label = QLabel("英文")
         self._tpl_en_label.setFixedWidth(32)
+        self._tpl_en_label.setVisible(False)
         style_h.addWidget(self._tpl_en_label)
         self.tpl_en = QComboBox()
         self.tpl_en.setFixedWidth(160)
+        self.tpl_en.setVisible(False)
         style_h.addWidget(self.tpl_en)
         style_h.addStretch(1)
         sr_lay.addLayout(style_h)
@@ -1433,20 +1642,24 @@ class MainWindow(QWidget):
                 mh = QHBoxLayout(margin_w)
                 mh.setContentsMargins(2, 0, 2, 0)
                 mh.setSpacing(4)
-                mh.addWidget(QLabel("页边距"))
+                margin_lbl = QLabel("页边距")
+                mh.addWidget(margin_lbl)
                 self.margin_combo = QComboBox()
                 self.margin_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                 for val, label in MARGIN_LABELS.items():
                     self.margin_combo.addItem(label, val)
                 self.margin_combo.setCurrentIndex(0)
+                margin_lbl.setBuddy(self.margin_combo)
                 mh.addWidget(self.margin_combo)
                 mh.addStretch(8)
-                mh.addWidget(QLabel("页面尺寸"))
+                size_lbl = QLabel("页面尺寸")
+                mh.addWidget(size_lbl)
                 self.page_size_combo = QComboBox()
                 self.page_size_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                 for val in ("A4", "A3", "A5", "Letter", "Legal"):
                     self.page_size_combo.addItem(val, val)
                 self.page_size_combo.setCurrentText("A4")
+                size_lbl.setBuddy(self.page_size_combo)
                 mh.addWidget(self.page_size_combo)
                 group_lay.addWidget(margin_w)
 
@@ -1483,9 +1696,7 @@ class MainWindow(QWidget):
         cv.setSpacing(6)
 
         header = QHBoxLayout()
-        title = QLabel("输出文件")
-        title.setObjectName("card_title")
-        header.addWidget(title)
+        header.addWidget(self._make_card_title("▤", "输出文件"))
         # ── 重名处理 — 与标题同一行，选插件后显示 ──
         self._naming_label = QLabel("重名处理")
         self._naming_label.setObjectName("naming_label")
@@ -1502,6 +1713,11 @@ class MainWindow(QWidget):
         header.addWidget(self.naming_ts)
         header.addWidget(self.naming_overwrite)
         header.addStretch(1)
+        self.pulse_cb = QCheckBox("状态闪烁")
+        self.pulse_cb.setChecked(True)
+        self.pulse_cb.setToolTip("同步中/待同步状态以闪烁提示；对光敏感者可关闭。")
+        self.pulse_cb.toggled.connect(self._on_pulse_toggled)
+        header.addWidget(self.pulse_cb)
         self.open_btn = QPushButton("打开输出目录")
         self.open_btn.setEnabled(False)
         self.open_btn.clicked.connect(self._open_out)
@@ -1554,22 +1770,51 @@ class MainWindow(QWidget):
         parent.addWidget(card)
 
     def _build_log(self, parent: QVBoxLayout):
-        """Card 4: 同步日志"""
+        """Card 4: 同步日志（默认折叠为一行，可展开/收起）"""
         card = QWidget()
         card.setObjectName("card")
         cv = QVBoxLayout(card)
         cv.setContentsMargins(14, 12, 14, 10)
         cv.setSpacing(6)
-        title_lbl = QLabel("同步日志")
-        title_lbl.setObjectName("card_title")
-        cv.addWidget(title_lbl)
+
+        head_row = QHBoxLayout()
+        head_row.addWidget(self._make_card_title("≫", "同步日志"))
+        head_row.addStretch(1)
+        self.log_toggle_btn = QPushButton("展开")
+        self.log_toggle_btn.setObjectName("log_toggle")
+        self.log_toggle_btn.setFixedWidth(48)
+        self.log_toggle_btn.setCursor(Qt.PointingHandCursor)
+        self.log_toggle_btn.clicked.connect(self._toggle_log)
+        head_row.addWidget(self.log_toggle_btn)
+        cv.addLayout(head_row)
 
         self.log = QTextEdit()
         self.log.setReadOnly(True)
-        self.log.setMinimumHeight(90)
-        cv.addWidget(self.log, 1)
+        self.log.setMinimumHeight(24)
+        self.log.setMaximumHeight(60)  # 默认折叠：约一行高度
+        self.log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        cv.addWidget(self.log, 0)
 
-        parent.addWidget(card)
+        self._log_expanded = False
+        self._log_card = card
+        self._log_parent_layout = parent
+        parent.addWidget(card, 0)
+
+    def _toggle_log(self):
+        """展开/收起同步日志。折叠时占最小高度（一行），展开时占满剩余空间。"""
+        self._log_expanded = not self._log_expanded
+        if self._log_expanded:
+            self.log.setMaximumHeight(16777215)
+            self.log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            self.log_toggle_btn.setText("收起")
+            self._log_parent_layout.setStretchFactor(self._log_card, 1)
+        else:
+            self.log.setMaximumHeight(60)
+            self.log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            self.log_toggle_btn.setText("展开")
+            self._log_parent_layout.setStretchFactor(self._log_card, 0)
+        # 重新计算卡片在父布局中的分配
+        self.log.updateGeometry()
 
     def _load_templates(self):
         """加载插件包列表，并填充第一个插件的模板。"""
@@ -1810,6 +2055,48 @@ class MainWindow(QWidget):
                     break
         return super().eventFilter(obj, event)
 
+    def keyPressEvent(self, event):
+        # 表格获得焦点时：Enter/Return 打开选中行，Shift+F10 弹出行上下文菜单
+        if self.file_tbl.hasFocus() and not self._floating_preview.isVisible():
+            row = self.file_tbl.currentRow()
+            if row >= 0:
+                cell = self.file_tbl.cellWidget(row, 3)
+                path = cell.property("path") if cell is not None else None
+                if path:
+                    if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+                        self._open_file(path)
+                        event.accept()
+                        return
+                    if event.key() == Qt.Key.Key_F10 and event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                        self._show_file_menu(path)
+                        event.accept()
+                        return
+        super().keyPressEvent(event)
+
+    def _show_file_menu(self, path: str):
+        """在文件名单元格处弹出上下文菜单（支持键盘 Shift+F10 触发）。"""
+        row = self.file_tbl.currentRow()
+        if row >= 0:
+            it = self.file_tbl.item(row, 0)
+            if it is not None:
+                cell_rect = self.file_tbl.visualItemRect(it)
+                global_pos = self.file_tbl.viewport().mapToGlobal(cell_rect.center())
+            else:
+                global_pos = self.file_tbl.mapToGlobal(self.file_tbl.rect().center())
+        else:
+            global_pos = self.file_tbl.mapToGlobal(self.file_tbl.rect().center())
+        menu = self.file_tbl.createStandardContextMenu()
+        act_open = menu.addAction("打开文件")
+        act_copy = menu.addAction("复制路径")
+        act_delete = menu.addAction("删除文件")
+        choice = menu.exec(global_pos)
+        if choice == act_open:
+            self._open_file(path)
+        elif choice == act_copy:
+            QApplication.clipboard().setText(path)
+        elif choice == act_delete:
+            self._delete_output_file(path)
+
     def _cap_popup_height(self, combo: QComboBox):
         """普通下拉弹层封顶 ~14 行：行数少时按实际行数自适应，多时其余滚动。"""
         cont = combo.view().parent()
@@ -1830,7 +2117,10 @@ class MainWindow(QWidget):
         # 下拉即将重建，任何残留的浮动预览都要先隐藏
         self._floating_preview.hide()
         if infos:
-            self._style_base = [t for t in infos if not t.name.startswith("typora-")]
+            # 裸 "typora" 基座模板无 style.css（仅解析器底座），不列入可选项。
+            self._style_base = [
+                t for t in infos if not t.name.startswith("typora-") and t.name != "typora"
+            ]
             self._style_groups = self._group_typora_infos(
                 [t for t in infos if t.name.startswith("typora-")]
             )
@@ -1995,8 +2285,15 @@ class MainWindow(QWidget):
             border-radius: 8px;
             padding: 7px 10px;
         }
-        QLineEdit:focus { border: 1px solid #2563eb; }
+        QLineEdit:focus { border: 1px solid #6366f1; }
         QLineEdit::placeholder { color: #a1a1aa; }
+        QPushButton:focus { border: 2px solid #6366f1; padding: 6px 15px; }
+        QPushButton#primary:focus { border: 2px solid #4f46e5; padding: 6px 15px; }
+        QPushButton#secondary:focus { border: 2px solid #6366f1; padding: 6px 15px; }
+        QPushButton#typo_btn:focus { border: 2px solid #6366f1; padding: 2px 9px; }
+        QComboBox:focus { border: 1px solid #6366f1; }
+        QCheckBox::indicator:focus { border: 2px solid #4f46e5; }
+        QRadioButton::indicator:focus { border: 2px solid #6366f1; }
         QComboBox {
             background: #ffffff;
             border: 1px solid #e5e7eb;
@@ -2007,7 +2304,7 @@ class MainWindow(QWidget):
         QComboBox QAbstractItemView {
             background: #ffffff;
             border: 1px solid #e5e7eb;
-            selection-background-color: #eff6ff;
+            selection-background-color: #eef2ff;
             border-radius: 8px;
         }
         QCheckBox { spacing: 7px; color: #27272a; font-size: 13px; }
@@ -2021,7 +2318,7 @@ class MainWindow(QWidget):
             width: 16px; height: 16px; border-radius: 8px;
             border: 1.5px solid #cbd5e1; background: #ffffff;
         }
-        QRadioButton::indicator:checked { background: #1890ff; border: 1.5px solid #1890ff; }
+        QRadioButton::indicator:checked { background: #6366f1; border: 1.5px solid #6366f1; }
         QCheckBox::indicator:checked {
             background: #4f46e5; border: 1.5px solid #4f46e5;
             image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgdmlld0JveD0iMCAwIDEyIDEyIj48cGF0aCBkPSJNMSAxLjVMNC41IDUgMTAgMSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==);
@@ -2038,10 +2335,10 @@ class MainWindow(QWidget):
         QPushButton:pressed { background: #e4e4e7; }
         QPushButton:disabled { color: #a1a1aa; background: #fafafa; }
         QPushButton#primary {
-            background: #2563eb; border: 1px solid #2563eb; color: #ffffff; font-weight: 500;
+            background: #6366f1; border: 1px solid #6366f1; color: #ffffff; font-weight: 500;
         }
-        QPushButton#primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
-        QPushButton#primary:disabled { background:#93c5fd; border-color:#93c5fd; }
+        QPushButton#primary:hover { background: #4f46e5; border-color: #4f46e5; }
+        QPushButton#primary:disabled { background:#c7d2fe; border-color:#c7d2fe; }
         QPushButton#secondary {
             background: #ffffff; border: 1px solid #e5e7eb; color: #3f3f46;
         }
@@ -2056,6 +2353,16 @@ class MainWindow(QWidget):
             font-weight: 600;
         }
         QPushButton#typo_btn:hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
+        QPushButton#log_toggle {
+            background: #ffffff;
+            border: 1px solid #d8deea;
+            border-radius: 6px;
+            padding: 2px 8px;
+            color: #4f46e5;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        QPushButton#log_toggle:hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
         QTextEdit {
             background: #ffffff;
             border: 1px solid #e5e7eb;
@@ -2072,8 +2379,9 @@ class MainWindow(QWidget):
             gridline-color: #f5f6f8;
             outline: 0;
             font-size: 13px;
-            selection-background-color: #f5f8ff;
+            selection-background-color: #c7d2fe;
         }
+        QTableWidget:focus { border: 1px solid #6366f1; }
         QTableWidget::item { padding: 9px 10px; border: none; }
         QTableWidget::item:selected { color: #18181b; }
         QTableWidget::item:hover { background: #f8fafc; }
@@ -2097,7 +2405,7 @@ class MainWindow(QWidget):
             background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ffffff, stop:1 #f6f8ff);
             border: 1px solid #e8ebf2;
         }
-        #col_title_zh { border-left: 3px solid #3b82f6; }
+        #col_title_zh { border-left: 3px solid #6366f1; }
         #col_title_en { border-left: 3px solid #8b5cf6; }
         QPushButton#cell_btn {
             background: #ffffff;
@@ -2191,7 +2499,7 @@ class MainWindow(QWidget):
             return
         src = Path(src_txt).expanduser()
         if not src.exists():
-            QMessageBox.warning(self, "文件不存在", f"源文件不存在：\n{src}")
+            QMessageBox.warning(self, "文件不存在", f"源文件不存在：\n{src}\n\n请点击「选择文件…」重新选择一个有效的 Markdown 源文件。")
             return
         try:
             text = src.read_text(encoding="utf-8")
@@ -2249,7 +2557,7 @@ class MainWindow(QWidget):
             return None
         src_path = Path(src).expanduser()
         if not src_path.exists():
-            QMessageBox.warning(self, "文件不存在", f"源文件不存在：\n{src_path}")
+            QMessageBox.warning(self, "文件不存在", f"源文件不存在：\n{src_path}\n\n请点击「选择文件…」重新选择一个有效的 Markdown 源文件。")
             return None
 
         stem = src_path.stem
@@ -2265,7 +2573,7 @@ class MainWindow(QWidget):
             return None
 
         zh_style = self.tpl_zh.currentData()
-        en_style = self.tpl_en.currentData() or zh_style
+        en_style = zh_style
 
         # 输出文件名：稳定、不含时间戳，仅用语言代码区分多语言，避免：
         #   1) zh/en 重名冲突；2) 每次同步生成新文件导致 watcher 死循环/堆积。
@@ -2351,6 +2659,24 @@ class MainWindow(QWidget):
         cfg = self._build_config()
         if cfg is None:
             return
+        if cfg.output_naming == "overwrite":
+            existing = [
+                p
+                for o in cfg.outputs
+                for p in (o.path, o.pdf_path)
+                if p and Path(p).exists()
+            ]
+            if existing:
+                names = "\n".join(sorted(Path(p).name for p in existing))
+                ret = QMessageBox.question(
+                    self,
+                    "覆盖模式",
+                    f"当前为「覆盖」模式，以下 {len(existing)} 个已存在文件将被覆盖：\n\n{names}\n\n是否继续？",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No,
+                )
+                if ret != QMessageBox.Yes:
+                    return
         self.cfg = cfg
         self.source_mtime = cfg.source_path.stat().st_mtime
         self._refresh_src_info()
@@ -2360,7 +2686,6 @@ class MainWindow(QWidget):
         )
         self.watcher.start()
         self.watching = True
-        self.watch_btn.setText("重启输出")
         self.watch_btn.setStyleSheet(
             "background:#ef4444;border:1px solid #ef4444;color:#fff;font-weight:500;"
         )
@@ -2374,7 +2699,6 @@ class MainWindow(QWidget):
             self.watcher = None
         self.watching = False
         self._pending_sync = False
-        self.watch_btn.setText("启动多格式同步输出")
         self.watch_btn.setStyleSheet("")
         self._validate_form()  # 停止后按当前表单状态恢复可用性
         self._update_status_pill()
@@ -2420,6 +2744,8 @@ class MainWindow(QWidget):
 
     def _pulse_step(self):
         """定时切换透明度，让处于 pulsing 状态的标签闪烁。"""
+        if not self.pulse_cb.isChecked():
+            return
         self._pulse_on = not self._pulse_on
         alpha = 1.0 if self._pulse_on else 0.35
         for tag in self._status_tags:
@@ -2427,6 +2753,12 @@ class MainWindow(QWidget):
                 tag.set_alpha(alpha)
         if self.title_bar.status_pill.pulsing:
             self.title_bar.status_pill.set_alpha(alpha)
+
+    def _on_pulse_toggled(self, on: bool):
+        if not on:
+            for tag in self._status_tags:
+                tag.set_alpha(1.0)
+            self.title_bar.status_pill.set_alpha(1.0)
 
     def _update_status_pill(self):
         """刷新标题栏全局状态指示器。"""
@@ -2457,6 +2789,14 @@ class MainWindow(QWidget):
             return "--"
         dt = datetime.fromtimestamp(mtime)
         return dt.strftime("%Y-%m-%d %H:%M:%S.") + f"{dt.microsecond // 1000:03d}"
+
+    @staticmethod
+    def _fmt_size(n: int) -> str:
+        if n >= 1024 * 1024:
+            return f"{n / (1024 * 1024):.1f} MB"
+        if n >= 1024:
+            return f"{n / 1024:.0f} KB"
+        return f"{n} B"
 
     def _iter_output_files(self):
         """按语言分组输出文件： yield (path, fmt, color, lang)"""
@@ -2492,14 +2832,13 @@ class MainWindow(QWidget):
             any_row = True
             p = Path(path)
             exists = p.exists()
-            size = f"{p.stat().st_size // 1024}KB" if exists else "--"
+            size = self._fmt_size(p.stat().st_size) if exists else "--"
             if self._syncing:
                 color = C_RUNNING
             st_text = _status_text(color)
             pulse = self._syncing or color == C_PENDING
             row = self.file_tbl.rowCount()
             self.file_tbl.insertRow(row)
-            self.file_tbl.setRowHeight(row, 54)
 
             status = StatusTag(color, st_text, pulse=pulse)
             self.file_tbl.setCellWidget(row, 0, status)
@@ -2535,7 +2874,7 @@ class MainWindow(QWidget):
             ll.addStretch(1)
             self.file_tbl.setCellWidget(row, 2, lang_cell)
 
-            # 文件名 + 元信息
+            # 文件名 + 元信息（长文件名单行省略，行高自适应）
             file_cell = QWidget()
             file_cell.setObjectName("file_cell")
             file_cell.setProperty("path", path)
@@ -2545,12 +2884,27 @@ class MainWindow(QWidget):
             name_lbl = QLabel(p.name)
             name_lbl.setObjectName("file_name")
             name_lbl.setToolTip(path)
-            name_lbl.setWordWrap(True)
+            fc.addWidget(name_lbl)
             meta_lbl = QLabel(f"{size}" if exists else "— 尚未生成")
             meta_lbl.setObjectName("file_meta")
-            fc.addWidget(name_lbl)
             fc.addWidget(meta_lbl)
             self.file_tbl.setCellWidget(row, 3, file_cell)
+            # 依据文件名宽度动态调整行高：过长文件名单行省略显示，行高固定 54 即可完整展示
+            fm = name_lbl.fontMetrics()
+            fixed_w = (
+                self.file_tbl.columnWidth(0)
+                + self.file_tbl.columnWidth(1)
+                + self.file_tbl.columnWidth(2)
+                + self.file_tbl.columnWidth(4)
+                + self.file_tbl.columnWidth(5)
+            )
+            avail = max(120, self.file_tbl.viewport().width() - fixed_w - 20)
+            elided = fm.elidedText(p.name, Qt.ElideMiddle, avail)
+            if elided != p.name:
+                name_lbl.setText(elided)
+            name_lbl.adjustSize()
+            row_h = max(54, name_lbl.sizeHint().height() + meta_lbl.sizeHint().height() + 24)
+            self.file_tbl.setRowHeight(row, min(row_h, 78))
 
             # 修改时间
             ts_lbl = QLabel(self._fmt_mtime(p.stat().st_mtime) if exists else "--")
@@ -2748,17 +3102,8 @@ class MainWindow(QWidget):
         path = cell.property("path")
         if not path:
             return
-        menu = self.file_tbl.createStandardContextMenu(pos)
-        act_open = menu.addAction("打开文件")
-        act_copy = menu.addAction("复制路径")
-        act_delete = menu.addAction("删除文件")
-        choice = menu.exec(self.file_tbl.mapToGlobal(pos))
-        if choice == act_open:
-            self._open_file(path)
-        elif choice == act_copy:
-            QApplication.clipboard().setText(path)
-        elif choice == act_delete:
-            self._delete_output_file(path)
+        self.file_tbl.setCurrentCell(item.row(), 0)
+        self._show_file_menu(path)
 
     # ── Logging ────────────────────────────────────────────────────────
     def _append_log(self, msg: str):

@@ -3,7 +3,7 @@
 你用**中文或英文**写一份 Markdown 源文件，md-sync 会**自动把它翻译成另一种语言**，并同时生成
 多种格式（HTML / PDF / Markdown 等等）的输出；源文件一改动，所有产物自动重新生成。适合文档工作者的效率提升神器。
 
-- 一份源 → 多份产物：`html/zh`、`html/en`、`pdf/zh`、`pdf/en`、`md/zh`、`md/en`、 …
+- 一份源 → 多份产物：`html/zh`、`html/en`、`pdf/zh`、`pdf/en`、`md/zh`、`md/en`、…
 - 源文件改了 → 自动重新同步（带防抖 / debounce）
 - 翻译走 **缓存优先**：已有译文直接复用，缺失才回退到 AI
 - 原生桌面 GUI（Qt）+ 命令行，零 HTTP 服务器
@@ -33,7 +33,7 @@ md-sync 只负责「把稿子变成发布物」，**写稿仍用你最顺手的 
 
 1. **用你喜欢的 MD 编辑器写稿**：例如 [Typora](https://typora.io/)、Obsidian、VS Code 等，按习惯写好 `.md` 源文件即可。
 2. **交给 md-sync 自动生成发布文档**：把源文件交给 md-sync，它会按配置自动同步出多种格式（HTML / PDF / Markdown / DOCX / EPUB）与多种语言（中文 / 英文）的产物，并在源文件改动时自动重新生成。
-3. **套用 Typora 主题产出美观文档**：md-sync 可直接选用你电脑上 Typora 主题目录下的丰富主题资源（如 bloom-mist、night、claude-like 等），用它渲染出风格统一、美观的 HTML / PDF 文档，无需自己从头调样式。**前提是你本机已安装 [Typora](https://typora.io/)** —— 主题 CSS 存放在 Typora 的配置目录里，未安装则不会出现在「渲染风格」下拉框中。
+3. **套用 Typora 主题产出美观文档**：md-sync 可直接选用你电脑上 Typora 主题目录下的丰富主题资源（如 bloom-mist、night、claude-like 等），用它渲染出风格统一、美观的 HTML / PDF 文档，无需自己从头调样式。**前提是你本机已安装 [Typora](https://typora.io/)**——主题 CSS 存放在 Typora 的配置目录里，未安装则不会出现在「渲染风格」下拉框中。
 
 > 一句话：**你只管在编辑器里写，md-sync 负责把它变成好看的发布稿。**
 
@@ -57,13 +57,13 @@ md-sync 只负责「把稿子变成发布物」，**写稿仍用你最顺手的 
 
 | 能力 | 说明 |
 |------|------|
-| **多格式输出** | `html` `md` `pdf`，并可经插件扩展 `docx` / `epub`（PDF 由 Chromium 生成） |
-| **多语言输出** | `zh` / `en`，翻译基于 `.translations.json` 缓存，缺失回退 AI（provider `auto`） |
+| **多格式输出** | `html` `md` `pdf`，并可经插件扩展 `docx` / `epub`（PDF 由 Chromium 生成）|
+| **多语言输出** | `zh` / `en`，翻译基于 `.translations.json` 缓存，缺失回退 AI（provider `auto`）|
 | **文件监听** | 基于 `watchdog` 监听源文件，`debounce` 默认 1.5s，改动即同步 |
-| **模板 / 主题** | `bwx`、`modern` 等内置样式；并可直接选用 Typora 主题目录（`~/.config/Typora/themes/`）下的主题（`typora-bloom-mist`、`typora-night`、`typora-claude-like` 等），自动兼容背景、dark/light 与代码块（`md-sync template` / `md-sync plugin`） |
+| **模板 / 主题** | `bwx`、`modern` 等内置样式；并可直接选用 Typora 主题目录（`~/.config/Typora/themes/`）下的主题（`typora-bloom-mist`、`typora-night`、`typora-claude-like` 等），自动兼容背景、dark/light 与代码块（`md-sync template` / `md-sync plugin`）|
 | **翻译缓存** | `strategy: mapping` + `mapping_file`，译文只更新缓存字典、不直接出文件，渲染时再取用 |
 | **桌面 GUI（Qt 原生）** | PySide6 原生界面，直接调用核心 pipeline，持续监听同步，零 HTTP 服务器 |
-| **标准公文（gongwen）** | 内置公文插件：按模板写 Markdown，一键导出符合 GB/T 9704-2012 的红头公文 `docx` / `pdf`（红头、版式、页码自动排版） |
+| **标准公文（gongwen）** | 内置公文插件：按模板写 Markdown，一键导出符合 GB/T 9704-2012 的红头公文 `docx` / `pdf`（红头、版式、页码自动排版）|
 
 ### Typora 主题兼容与 PDF 导出
 
@@ -86,7 +86,7 @@ md-sync 会自动发现本机 Typora 主题目录下的主题，并以
   而 md-sync 仅生成 `<body><div id="write">` 单层，故依据主题的 `--bg` 变量派生底色与
   卡片实色底，light / dark 通用。
 - **标题 / 正文颜色**：使用变量回退链（`--text` / `--text-color`），传统主题
-  （如 night）不会被误洗成浅色、也不会把 dark 主题输出成 light。
+（如 night）不会被误洗成浅色、也不会把 dark 主题输出成 light。
 - **代码块**：Typora 主题的 `pre` 规则多限定 `.md-fences` 类，而 md-sync 输出的是
   `<pre class="language-*">`，故补齐通用代码块样式，并兼容 bloom（`--code-bg`）、
   night（`--bg-color`）、claude（`--code-bg-color`）等多套变量命名。
@@ -97,8 +97,8 @@ PDF 导出（Chromium 引擎）已优化为「专业外观」：
 - 抑制页眉页脚（日期 / URL / 页码），同时兼容 `--no-pdf-header-footer` 与
   `--no-print-header-footer` 两种参数写法（不同 Chromium 版本/发行版各取其一）；
 - `@page { margin: 0 }` 配合 `#write` 的 `padding`
-  （`box-sizing: border-box` + `box-decoration-break: clone`），使每一页
-  （含末页）的四周边距保持一致，且无刺眼白色边框。
+（`box-sizing: border-box` + `box-decoration-break: clone`），使每一页
+（含末页）的四周边距保持一致，且无刺眼白色边框。
 
 ---
 
@@ -162,7 +162,7 @@ md-sync/
 
 ## 快速开始（推荐：原生桌面 GUI）
 
-最常用、最省心的方式就是打开原生桌面 GUI —— 不需要浏览器、不启动任何 HTTP 服务器：
+最常用、最省心的方式就是打开原生桌面 GUI——不需要浏览器、不启动任何 HTTP 服务器：
 
 ```bash
 pip install -e .
@@ -223,7 +223,7 @@ python -m md_sync.qt_app      # 或：md-sync gui
 GUI 功能：
 
 - **📄 源文件**：选择 `.md` 源文件，自动检测源语言、章节数与待译条数（同时作为「开始监听」的必填项）；点「✂ 规范化源文档」按当前排版规范把源文档生成一份规范化副本（`<stem>_normalized.md`）并将其设为源文件，自动勾选语言跟随源文件的 `md` 输出——**原始文件不会被修改**
-- **🎯 输出设置**：每种格式一个组（HTML / Markdown / PDF / DOCX / EPUB，后两者需插件），组内勾选中文、英文；**默认均不勾选**，须至少为一种格式勾选一种语言才可开始；PDF 组下方附带「页边距」下拉（15 / 20 / 25mm）控制 PDF 留白；标题栏「📐 文档标准配置」按钮可开关排版规范及其 7 条子规则（作用于生成产物，不改源文件）
+- **🎯 输出设置**：每种格式一个组（HTML / Markdown / PDF / DOCX / EPUB，后两者需插件），组内勾选中文、英文；**默认均不勾选**，须至少为一种格式勾选一种语言才可开始；PDF 组下方附带「页边距」下拉（15 / 20 / 25 mm）控制 PDF 留白；标题栏「📐 文档标准配置」按钮可开关排版规范及其 7 条子规则（作用于生成产物，不改源文件）
 - **〔开始监听 / 停止监听〕**：选定源文件且填好输出目录后按钮才可点击；开启监听后源改动自动同步，首次启动立即同步一次
 - **输出文件列表**：以单表呈现，每行含状态、格式、语言（带 badge）、文件、修改时间，双击〔打开文件〕或右键〔复制路径〕
 - **〔打开输出目录〕**：一键打开生成文件所在目录
@@ -477,7 +477,7 @@ python scripts/build_app.py --clean        # 清缓存后重新构建
 - 脚本自动把 `md_sync/templates`、`md_sync/plugins` 等资源打进 bundle，
   运行时通过 `md_sync.template.manager._find_install_dir()` 解析，**无需用户机器安装任何东西**。
 - **构建 Python 版本建议用 3.12**（PyInstaller 官方稳定支持）。在 3.14 上需排除 `mypy`
-  （脚本已默认 `--exclude-module mypy`，因其 mypyc 扩展与 3.14 的 CArchive 压缩不兼容会导致
+（脚本已默认 `--exclude-module mypy`，因其 mypyc 扩展与 3.14 的 CArchive 压缩不兼容会导致
   exe 启动即崩溃 `decompression resulted in return code -3`）。
 
 ### 3. 跨平台自动构建（GitHub Actions）

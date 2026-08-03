@@ -6,6 +6,7 @@ Usage:
     md-sync status       Show project status
     md-sync dry-run      Show what would change
     md-sync gui          Launch the native Qt GUI
+    md-sync start        Serve the web dashboard (index.html) at :8580
     md-sync template     Manage template styles
     md-sync plugin       Manage plugins
 """
@@ -55,6 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         ("status", "Show project status"),
         ("dry-run", "Show what would change without writing"),
         ("gui", "Launch the native Qt GUI"),
+        ("start", "Serve the web dashboard (index.html) at :8580"),
     ]:
         sp = sub.add_parser(cmd, help=help_text)
         _add_common_args(sp)
@@ -100,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
         "template": lambda: _cmd_template(args),
         "plugin": lambda: _cmd_plugin(args),
         "gui": lambda: _cmd_gui(),
+        "start": lambda: _cmd_start(),
     }
 
     handler = handlers.get(args.command)
@@ -342,6 +345,14 @@ def _cmd_gui() -> int:
     from md_sync.qt_app import main as gui_main
 
     gui_main()
+    return 0
+
+
+def _cmd_start() -> int:
+    """Serve the web dashboard (index.html) on localhost:8580."""
+    from md_sync.web.app import main as web_main
+
+    web_main()
     return 0
 
 

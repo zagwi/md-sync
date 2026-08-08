@@ -37,6 +37,7 @@ def _collect_datas() -> list[tuple[str, str]]:
     bundles = [
         (ROOT / "md_sync" / "templates", "md_sync/templates"),
         (ROOT / "md_sync" / "plugins", "md_sync/plugins"),
+        (ROOT / "md_sync" / "web" / "static", "md_sync/web/static"),
     ]
     return [(str(src), dest) for src, dest in bundles if src.exists()]
 

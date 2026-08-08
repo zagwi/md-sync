@@ -1,11 +1,12 @@
-"""Qt GUI 侧覆盖：✂ 规范化源文档 与 📐 文档标准配置。
+"""Qt GUI 侧覆盖：中文配置 / 英文配置两张并列卡与全局「文档排版规范」母开关。
 
-Web UI 已废弃（md_sync/web 已删除），原 test_source_normalize.py 覆盖的
-「规范化源文档」行为由 Qt GUI 承载，这里用 offscreen 模式做等值覆盖：
+原「规范化源文档」按钮已删除——规范化直接作用于生成产物，勾选规则后
+自动选中对应的 中文/英文 MD 输出。这里用 offscreen 模式覆盖：
 
-  * _normalize_source：生成 <stem>_normalized.md、原文件不动、源文件重指向、
-    自动勾选 md/<源语言> 输出、幂等重复点击不产生 *_normalized_normalized.md
-  * TypographyDialog：8 条排版规则开关的读写 roundtrip
+  * 三个顶部卡片各占 1/3：插件管理 / 中文配置（中英文混排规则）/ 英文配置（英文排版规则）
+  * 「文档排版规范」母开关位于卡片上方，统一控制两组并列规则
+  * 内联规则开关与 TypographyConfig 全部可配置字段一一对应，切换后 _typo_cfg 实时同步
+  * 勾选规范规则 → 自动选中 md/zh、md/en 输出（只增不减，不影响其它格式）
 """
 
 from __future__ import annotations
@@ -14,20 +15,10 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-import pathlib
-
 import pytest
-from md_sync.qt_app import MainWindow, TypographyDialog
+from md_sync.qt_app import TYPO_EN_RULES, TYPO_ZH_RULES, MainWindow
 from md_sync.typography import TypographyConfig
 from PySide6.QtWidgets import QApplication
-
-MESSY_Z = (
-    "这是一个用于规范化源文档测试的项目，该项目支持从Markdown源文件自动同步为多种格式输出，"
-    "并遵循国家标准进行排版处理。该工具支持ChatGPT与Python3.12的文本处理，"
-    "同时支持对代码块、行内代码与网址链接进行保护，保证内容完整性与一致性。"
-    "使用该工具时需要注意，代码块与链接中的内容不会被规范化处理，"
-    "这是为了保证源代码与超链接的完整性，避免破坏原有格式。"
-)
 
 
 @pytest.fixture(scope="session")
@@ -45,63 +36,8 @@ def win(qapp, monkeypatch):
     return MainWindow()
 
 
-def test_normalize_creates_file_repoints_source_and_checks_md(win, tmp_path: pathlib.Path) -> None:
-    src = tmp_path / "README.md"
-    src.write_text(MESSY_Z, encoding="utf-8")
-    win.source_edit.setText(str(src))
-    win.out_edit.setText(str(tmp_path / "dist"))
-
-    win._normalize_source()
-
-    target = tmp_path / "README_normalized.md"
-    assert target.exists(), "normalized file not created"
-    assert "支持 ChatGPT 与 Python3.12" in target.read_text(encoding="utf-8")
-
-    # 原文件不被修改
-    assert "支持ChatGPT与Python3.12" in src.read_text(encoding="utf-8")
-
-    # 源文件重指向到规范化文件，并自动勾选 md/zh 输出
-    assert win.source_edit.text() == str(target)
-    assert win.fmt_checks[("md", "zh")].isChecked()
-
-
-def test_normalize_is_idempotent(win, tmp_path: pathlib.Path) -> None:
-    src = tmp_path / "README.md"
-    src.write_text(MESSY_Z, encoding="utf-8")
-    win.source_edit.setText(str(src))
-    win.out_edit.setText(str(tmp_path / "dist"))
-
-    win._normalize_source()
-    # 第二次点击：源已是 *_normalized，原地重生成且内容不变
-    win._normalize_source()
-    assert not (tmp_path / "README_normalized_normalized.md").exists()
-    assert (tmp_path / "README_normalized.md").exists()
-
-
-def test_normalize_warns_when_source_missing(win, tmp_path: pathlib.Path) -> None:
-    win.source_edit.setText("")
-    win._normalize_source()  # 缺源文件 → warning（已被 patch 为 no-op），不抛异常
-
-
-def test_typography_dialog_roundtrip(qapp) -> None:
-    cfg = TypographyConfig()
-    dlg = TypographyDialog(cfg)
-    assert dlg._enabled.isChecked()
-    for cb in dlg._boxes.values():
-        assert cb.isChecked()
-
-    # 关掉部分规则后 config() 应返回带差异的配置，且不改动传入对象
-    dlg._boxes["cjk_latin_space"].setChecked(False)
-    dlg._enabled.setChecked(False)
-    out = dlg.config()
-    assert out.enabled is False
-    assert out.cjk_latin_space is False
-    assert out.cjk_digit_space is True
-    assert cfg.cjk_latin_space is True  # 原对象不受影响
-
-
-def test_typography_dialog_covers_all_config_fields(qapp) -> None:
-    """对话框的开关必须与 TypographyConfig 全部可配置字段一一对应。"""
+def test_inline_typo_widgets_cover_all_config_fields(win) -> None:
+    """内联规则开关必须与 TypographyConfig 全部可配置字段一一对应。"""
     from dataclasses import fields
 
     config_keys = {f.name for f in fields(TypographyConfig)}
@@ -115,5 +51,53 @@ def test_typography_dialog_covers_all_config_fields(qapp) -> None:
         "en_space_after_punct",
         "en_collapse_spaces",
     }
-    dlg = TypographyDialog(TypographyConfig())
-    assert set(dlg._boxes) == config_keys - {"enabled"}
+    assert set(win._typo_boxes) == config_keys - {"enabled"}
+
+
+def test_inline_typo_toggle_updates_config(win) -> None:
+    """内联开关默认全开；切换后 _typo_cfg 实时同步，且不改动其它规则。"""
+    assert win._typo_enabled.isChecked()
+    for cb in win._typo_boxes.values():
+        assert cb.isChecked()
+
+    win._typo_boxes["cjk_latin_space"].setChecked(False)
+    win._typo_enabled.setChecked(False)
+
+    assert win._typo_cfg.enabled is False
+    assert win._typo_cfg.cjk_latin_space is False
+    assert win._typo_cfg.cjk_digit_space is True
+
+
+def test_typo_rules_auto_select_md_outputs_by_default(win) -> None:
+    """规范规则默认全开 → 启动时自动选中 md/zh 与 md/en；其它格式不受影响。"""
+    assert win.fmt_checks[("md", "zh")].isChecked()
+    assert win.fmt_checks[("md", "en")].isChecked()
+    assert not win.fmt_checks[("html", "zh")].isChecked()
+    assert not win.fmt_checks[("pdf", "zh")].isChecked()
+
+
+def test_typo_rule_toggle_rechecks_matching_md_output(win) -> None:
+    """只重新勾选中文规则 → 仅 md/zh 被自动选中，md/en 不受影响（对应关系）。"""
+    win.fmt_checks[("md", "zh")].setChecked(False)
+    for key, _ in TYPO_EN_RULES:
+        win._typo_boxes[key].setChecked(False)
+    win.fmt_checks[("md", "en")].setChecked(False)  # 英文规则已全部关闭，取消后不会被自动重选
+
+    zh_cb = win._typo_boxes[TYPO_ZH_RULES[0][0]]
+    zh_cb.setChecked(False)
+    zh_cb.setChecked(True)  # 触发 _on_typo_changed → 自动重新选中 md/zh
+
+    assert win.fmt_checks[("md", "zh")].isChecked()
+    assert not win.fmt_checks[("md", "en")].isChecked()
+
+
+def test_english_rule_toggle_selects_md_en(win) -> None:
+    """英文规则对应 md/en：关闭全部英文规则后再开启一条，md/en 被自动选中。"""
+    win.fmt_checks[("md", "en")].setChecked(False)
+    for key, _ in TYPO_EN_RULES:
+        win._typo_boxes[key].setChecked(False)
+
+    en_cb = win._typo_boxes[TYPO_EN_RULES[0][0]]
+    en_cb.setChecked(True)
+
+    assert win.fmt_checks[("md", "en")].isChecked()

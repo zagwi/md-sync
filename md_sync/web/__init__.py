@@ -1,4 +1,4 @@
-"""Web dashboard for md-sync — reproduce ``index.html`` as the live UI.
+"""Web dashboard for md-sync — reproduce ``static/index.html`` as the live UI.
 
 The browser is the user's "output config" surface: it drives the same
 :class:`~md_sync.core.pipeline.SyncPipeline` the CLI and Qt GUI use, but with

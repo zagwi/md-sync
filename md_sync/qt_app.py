@@ -49,16 +49,14 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
     QComboBox,
-    QDialog,
     QFileDialog,
-    QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLayout,
     QLineEdit,
     QMessageBox,
     QPushButton,
-    QRadioButton,
     QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
@@ -77,7 +75,7 @@ from md_sync.exporters.pdf import _find_chromium
 from md_sync.plugin.interface import DirectoryPlugin, PluginManifest
 from md_sync.plugin.registry import PluginRegistry
 from md_sync.template.manager import TemplateManager
-from md_sync.typography import TypographyConfig, normalize_for_lang
+from md_sync.typography import TypographyConfig
 from md_sync.watcher import FileWatcher
 
 LANG_LABELS = {"zh": "中文", "en": "英文"}
@@ -1070,87 +1068,19 @@ class FontInstallWorker(QThread):
             self.done.emit(False, f"字体安装失败：{e}")
 
 
-class TypographyDialog(QDialog):
-    """「文档标准配置」— 中英文排版规则开关，对齐 TypographyConfig 全部字段。"""
-
-    # (字段名, 展示文案) — 字段顺序与 typography.py 默认值定义保持一致。
-    ZH_RULES = [
-        ("cjk_latin_space", "中英文之间加空格（支持ChatGPT → 支持 ChatGPT）"),
-        ("cjk_digit_space", "中文与数字之间加空格（花100元 → 花 100 元）"),
-        ("number_unit_space", "数字与单位之间加空格（20Gbps → 20 Gbps；90°、15% 除外）"),
-        ("fullwidth_punct_no_space", "全角标点旁不加空格（iPhone ，好用 → iPhone，好用）"),
-    ]
-    EN_RULES = [
-        ("en_no_space_before_punct", "标点前不加空格（Hello ,world → Hello,world）"),
-        ("en_space_after_punct", "标点后加空格（Hello,world → Hello, world；1,000、10:30 除外）"),
-        ("en_collapse_spaces", "合并连续空格（Hello   world → Hello world，保留缩进与换行）"),
-    ]
-
-    def __init__(self, cfg: TypographyConfig, parent: QWidget | None = None):
-        super().__init__(parent)
-        self.setWindowTitle("📐 文档标准配置")
-        self.setMinimumWidth(600)
-        self._boxes: dict[str, QCheckBox] = {}
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 18, 20, 16)
-        layout.setSpacing(10)
-
-        tip = QLabel(
-            "中英文混排规范（参照 W3C CLReq / CY/T 154-2017）与英文标点间距规范。"
-            "作用于生成产物与「✂ 规范化源文档」；源文件不会被自动修改。"
-            "代码块、行内代码与网址链接始终不受影响。"
-        )
-        tip.setWordWrap(True)
-        tip.setStyleSheet("color:#71717a;font-size:12px;")
-        layout.addWidget(tip)
-
-        def _add_group(title: str, rules: list[tuple[str, str]]) -> None:
-            group = QGroupBox(title)
-            group.setStyleSheet(
-                "QGroupBox{font-size:12px;font-weight:600;color:#333;margin-top:4px;}"
-                "QGroupBox::title{subcontrol-origin:margin;left:8px;padding:0 4px;}"
-            )
-            v = QVBoxLayout(group)
-            v.setSpacing(6)
-            for key, label in rules:
-                cb = QCheckBox(label)
-                cb.setStyleSheet("font-size:12px;color:#444;")
-                self._boxes[key] = cb
-                v.addWidget(cb)
-            layout.addWidget(group)
-
-        _add_group("中英文混排规则（作用于中文产物）", self.ZH_RULES)
-        _add_group("英文排版规则（作用于英文产物）", self.EN_RULES)
-
-        self._enabled = QCheckBox("启用文档排版规范")
-        self._enabled.setStyleSheet("font-size:12px;color:#333;font-weight:600;")
-        layout.addWidget(self._enabled)
-
-        buttons = QHBoxLayout()
-        buttons.addStretch(1)
-        cancel_btn = QPushButton("取消")
-        cancel_btn.setObjectName("secondary")
-        cancel_btn.clicked.connect(self.reject)
-        ok_btn = QPushButton("保存")
-        ok_btn.setObjectName("primary")
-        ok_btn.clicked.connect(self.accept)
-        buttons.addWidget(cancel_btn)
-        buttons.addWidget(ok_btn)
-        layout.addLayout(buttons)
-
-        self._load(cfg)
-
-    def _load(self, cfg: TypographyConfig) -> None:
-        self._enabled.setChecked(cfg.enabled)
-        for key, cb in self._boxes.items():
-            cb.setChecked(bool(getattr(cfg, key)))
-
-    def config(self) -> TypographyConfig:
-        return TypographyConfig(
-            enabled=self._enabled.isChecked(),
-            **{key: cb.isChecked() for key, cb in self._boxes.items()},
-        )
+# 文档标准配置的规则清单：(字段名, 展示文案) —— 字段顺序与 typography.py 默认值定义保持一致。
+# 配置直接内联在「规范化源文档」卡片内，不再弹对话框。
+TYPO_ZH_RULES = [
+    ("cjk_latin_space", "中英文之间加空格（支持ChatGPT → 支持 ChatGPT）"),
+    ("cjk_digit_space", "中文与数字之间加空格（花100元 → 花 100 元）"),
+    ("number_unit_space", "数字与单位之间加空格（20Gbps → 20 Gbps；90°、15% 除外）"),
+    ("fullwidth_punct_no_space", "全角标点旁不加空格（iPhone ，好用 → iPhone，好用）"),
+]
+TYPO_EN_RULES = [
+    ("en_no_space_before_punct", "标点前不加空格（Hello ,world → Hello,world）"),
+    ("en_space_after_punct", "标点后加空格（Hello,world → Hello, world；1,000、10:30 除外）"),
+    ("en_collapse_spaces", "合并连续空格（Hello   world → Hello world，保留缩进与换行）"),
+]
 
 
 class MainWindow(QWidget):
@@ -1212,8 +1142,16 @@ class MainWindow(QWidget):
         cw = QVBoxLayout(content)
         cw.setContentsMargins(16, 12, 16, 14)
         cw.setSpacing(8)
-        self._build_plugin_card(cw)  # Card 1: 插件管理
-        self._build_output_card(cw)  # Card 2: 输出设置
+        # 插件管理（1/3）+ 文档排版规范大卡（2/3，内含 中文配置/英文配置 各 1/3）
+        top_row = QHBoxLayout()
+        top_row.setSpacing(8)
+        self._build_plugin_card(top_row)  # Card 1: 插件管理（占 1/3）
+        self._build_typo_master_card(top_row)  # Card 2: 文档排版规范（大卡，占 2/3）
+        cw.addLayout(top_row)
+        self._build_output_card(cw)  # Card 4: 输出设置
+        # 内联规范开关初始同步；默认全开 → 自动选中 md/zh 与 md/en 输出
+        self._sync_typo_widgets()
+        self._sync_md_output_for_typo()
         self._build_actions(cw)
         self._build_file_list(cw)  # Card 3: 输出文件
         self._build_log(cw)  # Card 4: 同步日志
@@ -1237,7 +1175,7 @@ class MainWindow(QWidget):
         h.addWidget(lbl)
         return row
 
-    def _build_plugin_card(self, parent: QVBoxLayout):
+    def _build_plugin_card(self, parent: QLayout):
         """Card 1: 插件管理 — 选插件 → 看详情 → 生成模板 → 指定源文件"""
         card = QWidget()
         card.setObjectName("card")
@@ -1367,7 +1305,137 @@ class MainWindow(QWidget):
         da.addLayout(body_h)
 
         cv.addWidget(self._detail_area)
-        parent.addWidget(card)
+        parent.addWidget(card, 1)  # 插件卡占 1 份（文档排版规范大卡占 2 份）
+
+    def _build_typo_master_card(self, parent: QLayout) -> None:
+        """Card 2: 文档排版规范大卡（占 2/3 宽）。
+
+        顶部为全局母开关；下方内含「中文配置」「英文配置」两张并列内卡（各占 1/3 宽）。
+        """
+        card = QWidget()
+        card.setObjectName("card")
+        cv = QVBoxLayout(card)
+        cv.setContentsMargins(0, 0, 0, 0)
+        cv.setSpacing(0)
+
+        # ── 大卡头部：标题 + 全局启用开关 ──
+        head = QWidget()
+        head.setObjectName("typo_master_head")
+        hh = QHBoxLayout(head)
+        hh.setContentsMargins(14, 10, 14, 10)
+        hh.setSpacing(8)
+        hh.addWidget(self._make_card_title("✦", "文档排版规范"))
+        hh.addStretch(1)
+        self._typo_enabled = QCheckBox("启用排版规范")
+        self._typo_enabled.setObjectName("typo_enabled")
+        self._typo_enabled.toggled.connect(self._on_typo_changed)
+        hh.addWidget(self._typo_enabled)
+        cv.addWidget(head)
+
+        # ── 内卡区：中文配置 + 英文配置 并列 ──
+        inner = QHBoxLayout()
+        inner.setSpacing(10)
+        inner.setContentsMargins(14, 12, 14, 14)
+        self._build_normalize_card(inner)  # 中文配置（内卡，占 1/3）
+        self._build_english_card(inner)  # 英文配置（内卡，占 1/3）
+        cv.addLayout(inner)
+
+        parent.addWidget(card, 2)  # 大卡占 2 份，插件卡占 1 份 → 中文/英文各 1/3
+
+    def _build_normalize_card(self, parent: QLayout):
+        """内卡：中文配置 — 中英文混排规则内联（与「英文配置」并列，各占 1/3 宽）。
+
+        勾选规则后自动选中中文 MD 输出；不生成规范化副本，源文件永不被改动。
+        """
+        card = QWidget()
+        card.setObjectName("typo_inner_card")
+        cv = QVBoxLayout(card)
+        cv.setContentsMargins(14, 10, 14, 12)
+        cv.setSpacing(6)
+
+        cv.addWidget(self._make_card_title("✂", "中文配置"))
+
+        # ── 描述 ──
+        desc = QLabel(
+            "勾选下方中英文混排规则后，中文产物按规范排版，并自动选中中文 MD 输出；"
+            "仅在内存中处理、不改动源文件，代码块、行内代码与网址链接始终不受影响。"
+        )
+        desc.setWordWrap(True)
+        desc.setStyleSheet("font-size:11px;color:#71717a;")
+        cv.addWidget(desc)
+
+        # ── 中英文混排规则（内联） ──
+        self._typo_boxes: dict[str, QCheckBox] = {}
+        zh_head = QLabel("中英文混排规则")
+        zh_head.setStyleSheet("font-size:12px;font-weight:600;color:#333;")
+        cv.addWidget(zh_head)
+        for key, label in TYPO_ZH_RULES:
+            cb = QCheckBox(label)
+            self._typo_boxes[key] = cb
+            cb.toggled.connect(self._on_typo_changed)
+            cv.addWidget(cb)
+
+        cv.addStretch(1)
+        parent.addWidget(card, 1)
+
+    def _build_english_card(self, parent: QLayout):
+        """内卡：英文配置 — 英文排版规则内联（与「中文配置」并列，各占 1/3 宽）。
+
+        勾选规则后自动选中英文 MD 输出。
+        """
+        card = QWidget()
+        card.setObjectName("typo_inner_card")
+        cv = QVBoxLayout(card)
+        cv.setContentsMargins(14, 10, 14, 12)
+        cv.setSpacing(6)
+
+        cv.addWidget(self._make_card_title("EN", "英文配置"))
+
+        desc = QLabel(
+            "勾选下方英文标点间距规则后，英文产物按规范排版，并自动选中英文 MD 输出。"
+        )
+        desc.setWordWrap(True)
+        desc.setStyleSheet("font-size:11px;color:#71717a;")
+        cv.addWidget(desc)
+
+        for key, label in TYPO_EN_RULES:
+            cb = QCheckBox(label)
+            self._typo_boxes[key] = cb
+            cb.toggled.connect(self._on_typo_changed)
+            cv.addWidget(cb)
+
+        cv.addStretch(1)
+        parent.addWidget(card, 1)
+
+    def _sync_typo_widgets(self) -> None:
+        """把 self._typo_cfg 同步到内联规则开关（blockSignals 防止回写污染 cfg）。"""
+        widgets = [self._typo_enabled, *self._typo_boxes.values()]
+        for w in widgets:
+            w.blockSignals(True)
+        try:
+            self._typo_enabled.setChecked(self._typo_cfg.enabled)
+            for key, cb in self._typo_boxes.items():
+                cb.setChecked(bool(getattr(self._typo_cfg, key)))
+        finally:
+            for w in widgets:
+                w.blockSignals(False)
+
+    def _sync_md_output_for_typo(self) -> None:
+        """勾选规范规则 → 自动选中对应的 中文/英文 MD 输出（只增不减）。"""
+        for lang, rules in (("zh", TYPO_ZH_RULES), ("en", TYPO_EN_RULES)):
+            if any(self._typo_boxes[k].isChecked() for k, _ in rules):
+                cb = self.fmt_checks.get(("md", lang))
+                if cb is not None:
+                    cb.setChecked(True)
+
+    def _on_typo_changed(self, *_args) -> None:
+        """内联开关变更 → 写回配置、自动选中对应 MD 输出；监听中立即用新规则重跑。"""
+        self._typo_cfg.enabled = self._typo_enabled.isChecked()
+        for key, cb in self._typo_boxes.items():
+            setattr(self._typo_cfg, key, cb.isChecked())
+        self._sync_md_output_for_typo()
+        if self.watching:
+            self._run_sync()
 
     def _generate_and_set_source(self):
         """生成选中插件的 template.md → 保存 → 设为源文件 → 打开编辑。"""
@@ -1470,16 +1538,8 @@ class MainWindow(QWidget):
         src_btn = QPushButton("选择文件…")
         src_btn.setObjectName("primary")
         src_btn.clicked.connect(self._browse_source)
-        norm_btn = QPushButton("✂ 规范化源文档")
-        norm_btn.setToolTip("按当前排版规范生成规范化副本作为源文件（原始文件不被修改），并自动勾选 md 输出")
-        norm_btn.setStyleSheet(
-            "background:#f59e0b;color:#ffffff;border:1px solid #f59e0b;border-radius:6px;"
-            "padding:7px 10px;font-size:13px;"
-        )
-        norm_btn.clicked.connect(self._normalize_source)
         src_h.addWidget(self.source_edit, 1)
         src_h.addWidget(src_btn)
-        src_h.addWidget(norm_btn)
         cv.addWidget(src_row_w)
 
         # ── 输出目录（固定高度行） ──
@@ -1580,13 +1640,6 @@ class MainWindow(QWidget):
         fmt_label.setStyleSheet("font-size:11px;color:#555;font-weight:600;margin-top:2px;")
         fmt_head_lay.addWidget(fmt_label)
         fmt_head_lay.addStretch(1)
-        self.typo_btn = QPushButton("📐 文档标准配置")
-        self.typo_btn.setObjectName("typo_btn")
-        self.typo_btn.setToolTip(
-            "中英文排版规则（对齐 W3C CLReq / CY/T 154-2017）——影响生成产物与「规范化源文档」，不改源文件"
-        )
-        self.typo_btn.clicked.connect(self._open_typography)
-        fmt_head_lay.addWidget(self.typo_btn)
         cv.addWidget(fmt_head)
 
         self.fmt_checks: dict[tuple[str, str], QCheckBox] = {}
@@ -1702,11 +1755,13 @@ class MainWindow(QWidget):
         self._naming_label.setObjectName("naming_label")
         self._naming_label.setVisible(False)
         header.addWidget(self._naming_label)
-        self.naming_ts = QRadioButton("加时间戳")
+        # 加时间戳/覆盖：互斥勾选框（与 状态闪烁、排版规则 勾选框同一外观）
+        self.naming_ts = QCheckBox("加时间戳")
         self.naming_ts.setVisible(False)
-        self.naming_overwrite = QRadioButton("覆盖")
+        self.naming_overwrite = QCheckBox("覆盖")
         self.naming_overwrite.setVisible(False)
         self._naming_group = QButtonGroup(self)
+        self._naming_group.setExclusive(True)
         self._naming_group.addButton(self.naming_ts)
         self._naming_group.addButton(self.naming_overwrite)
         self.naming_ts.setChecked(True)
@@ -2249,6 +2304,13 @@ class MainWindow(QWidget):
         font = QFont("PingFang SC", 10) if "PingFang SC" in QFont().families() else QFont()
         self.setFont(font)
         qss = """
+        /* ═══ 令牌对齐约定 ═══
+         * 本 QSS 值对应 Web 界面 md_sync/web/static/index.html 的 tailwind.config 令牌（单点对齐）：
+         *   background #fafafa / foreground #18181b / border #e5e7eb(≈#e4e4e7) /
+         *   muted #f4f4f5 / muted-foreground #71717a / primary #6366f1 /
+         *   success #15803d / warning #b45309 / destructive #b91c1c /
+         *   html #c2410c / markdown #0369a1 / docx #1d4ed8 / violet #6d28d9
+         * 改色请先在 index.html 定值，再于此同步。 */
         QWidget {
             background: #fafafa;
             color: #18181b;
@@ -2290,10 +2352,9 @@ class MainWindow(QWidget):
         QPushButton:focus { border: 2px solid #6366f1; padding: 6px 15px; }
         QPushButton#primary:focus { border: 2px solid #4f46e5; padding: 6px 15px; }
         QPushButton#secondary:focus { border: 2px solid #6366f1; padding: 6px 15px; }
-        QPushButton#typo_btn:focus { border: 2px solid #6366f1; padding: 2px 9px; }
         QComboBox:focus { border: 1px solid #6366f1; }
-        QCheckBox::indicator:focus { border: 2px solid #4f46e5; }
-        QRadioButton::indicator:focus { border: 2px solid #6366f1; }
+        /* 聚焦仅换边框色、不撑大盒子（对齐 Web outline 语义，避免聚焦后指示器比别处大 2px） */
+        QCheckBox::indicator:focus { border: 1px solid #6366f1; }
         QComboBox {
             background: #ffffff;
             border: 1px solid #e5e7eb;
@@ -2308,21 +2369,29 @@ class MainWindow(QWidget):
             border-radius: 8px;
         }
         QCheckBox { spacing: 7px; color: #27272a; font-size: 13px; }
+        /* 勾选框统一为 shadcn 样式（对齐 Web 版 .shadcn-checkbox）：
+           16px、1px #d4d4d8 描边、4px 圆角、选中 #6366f1 + 白色对勾 */
         QCheckBox::indicator {
-            width: 17px; height: 17px;
-            border: 1.5px solid #cbd5e1; border-radius: 5px; background: #ffffff;
+            width: 16px; height: 16px;
+            border: 1px solid #d4d4d8; border-radius: 4px; background: #ffffff;
         }
-        /* 重名处理单选（亮色主题） */
-        QRadioButton { color: #27272a; spacing: 6px; font-size: 13px; }
-        QRadioButton::indicator {
-            width: 16px; height: 16px; border-radius: 8px;
-            border: 1.5px solid #cbd5e1; background: #ffffff;
-        }
-        QRadioButton::indicator:checked { background: #6366f1; border: 1.5px solid #6366f1; }
+        QCheckBox::indicator:hover { border-color: #a1a1aa; }
         QCheckBox::indicator:checked {
-            background: #4f46e5; border: 1.5px solid #4f46e5;
+            background: #6366f1; border: 1px solid #6366f1;
             image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgdmlld0JveD0iMCAwIDEyIDEyIj48cGF0aCBkPSJNMSAxLjVMNC41IDUgMTAgMSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==);
         }
+        QCheckBox::indicator:checked:hover { background: #4f46e5; border-color: #4f46e5; }
+        QCheckBox::indicator:disabled { background: #f4f4f5; border-color: #e4e4e7; }
+        QCheckBox::indicator:disabled:checked { background: #c7d2fe; border-color: #c7d2fe; }
+        /* 文档排版规范大卡：头部（标题 + 全局母开关）与内部两张并列内卡 */
+        QWidget#typo_master_head { border-bottom: 1px solid #e5e7eb; }
+        QWidget#typo_inner_card {
+            background: #f8f9fb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+        }
+        /* 中文/英文配置内卡里规则勾选框沿用 MainWindow 级联的 indicator 样式 */
+        QCheckBox#typo_enabled { color: #333; font-weight: 600; }
         /* 输出设置：分组卡片内部标题已在上方定义，这里仅保留按钮样式 */
         QPushButton {
             background: #ffffff;
@@ -2343,16 +2412,6 @@ class MainWindow(QWidget):
             background: #ffffff; border: 1px solid #e5e7eb; color: #3f3f46;
         }
         QPushButton#secondary:hover { background: #f4f4f5; }
-        QPushButton#typo_btn {
-            background: #ffffff;
-            border: 1px solid #d8deea;
-            border-radius: 7px;
-            padding: 3px 10px;
-            color: #4f46e5;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        QPushButton#typo_btn:hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
         QPushButton#log_toggle {
             background: #ffffff;
             border: 1px solid #d8deea;
@@ -2390,7 +2449,7 @@ class MainWindow(QWidget):
             border: none;
             border-bottom: 1px solid #eef0f3;
             padding: 11px 12px;
-            color: #9aa3b2;
+            color: #4b5563;
             font-weight: 600;
             font-size: 11px;
             letter-spacing: 1px;
@@ -2455,7 +2514,7 @@ class MainWindow(QWidget):
         /* 文件单元格：文件名 + 元信息两行 */
         #file_cell { background: transparent; }
         #file_name { font-size: 14px; font-weight: 600; color: #1f2937; line-height: 18px; }
-        #file_meta { font-size: 11px; color: #aeb4c0; }
+        #file_meta { font-size: 11px; color: #6b7280; }
         #tag_cell { background: transparent; }
         QPushButton#title_min, QPushButton#title_max, QPushButton#title_close {
             background: transparent; border: none; border-radius: 8px;
@@ -2476,63 +2535,6 @@ class MainWindow(QWidget):
             if not self.out_edit.text().strip():
                 self.out_edit.setText(str(Path(path).parent))
             self._validate_form()
-
-    def _open_typography(self):
-        """打开「文档标准配置」对话框；保存后若正在监听则立即用新规则重跑输出。"""
-        dlg = TypographyDialog(self._typo_cfg, self)
-        if dlg.exec():
-            self._typo_cfg = dlg.config()
-            self._append_log("· 排版规范已更新（文档标准配置）")
-            if self.watching:
-                self._run_sync()
-
-    def _normalize_source(self):
-        """生成规范化源文档副本并设为源文件（原始文件不被修改）。
-
-        - 按当前排版规范（默认全开，可在「文档标准配置」调整）规范化源文本
-        - 写到 <stem>_normalized.md（源已是 *_normalized 则原地重生成）
-        - 将「源文件」输入框指向新文件，并自动勾选 md/<源语言> 输出
-        """
-        src_txt = self.source_edit.text().strip()
-        if not src_txt:
-            QMessageBox.warning(self, "缺少源文件", "请先选择 Markdown 源文件。")
-            return
-        src = Path(src_txt).expanduser()
-        if not src.exists():
-            QMessageBox.warning(self, "文件不存在", f"源文件不存在：\n{src}\n\n请点击「选择文件…」重新选择一个有效的 Markdown 源文件。")
-            return
-        try:
-            text = src.read_text(encoding="utf-8")
-            # 语言跟随源文件：与解析器一致的判定（zh 字符数 > 100 → 中文）
-            zh_chars = sum(1 for c in text if "\u4e00" <= c <= "\u9fff")
-            lang = "zh" if zh_chars > 100 else "en"
-            normalized = normalize_for_lang(text, self._typo_cfg, lang)
-            if normalized == text:
-                QMessageBox.information(
-                    self,
-                    "规范化源文档",
-                    f"源文档已符合排版规范，无需修改（{LANG_LABELS.get(lang, lang)}）。",
-                )
-                return
-
-            stem = src.stem
-            target = src if stem.endswith("_normalized") else src.with_name(f"{stem}_normalized.md")
-            target.write_text(normalized, encoding="utf-8")
-            self.source_edit.setText(str(target))
-            if not self.out_edit.text().strip():
-                self.out_edit.setText(str(target.parent))
-            self.fmt_checks[("md", lang)].setChecked(True)
-            self._validate_form()
-            QMessageBox.information(
-                self,
-                "规范化源文档",
-                f"✓ 已生成规范化源文档（{LANG_LABELS.get(lang, lang)}，"
-                f"{len(normalized)}/{len(text)} 字符）\n\n"
-                f"新源文件：{target}\n\n"
-                f"原始文件未被修改，并已自动勾选 md/{lang} 输出。",
-            )
-        except Exception as e:
-            QMessageBox.critical(self, "规范化失败", f"规范化失败：\n{e}")
 
     def _browse_out(self):
         d = QFileDialog.getExistingDirectory(self, "选择输出目录")

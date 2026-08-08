@@ -1,9 +1,9 @@
-"""FastAPI dashboard serving ``index.html`` with a live sync backend.
+"""FastAPI dashboard serving ``static/index.html`` with a live sync backend.
 
-The browser UI mirrors ``index.html`` exactly; this module adds the plumbing:
-state, one-shot sync, continuous watch, realtime logs (SSE) and the output
-file list. No ``md-sync.yaml`` is required — everything is configured in the
-browser and held in-memory in a :class:`WebSession`.
+The browser UI mirrors ``static/index.html`` exactly; this module adds the
+plumbing: state, one-shot sync, continuous watch, realtime logs (SSE) and the
+output file list. No ``md-sync.yaml`` is required — everything is configured in
+the browser and held in-memory in a :class:`WebSession`.
 
 Run it with ``md-sync start`` (or ``uvicorn md_sync.web.app:app``).
 """
@@ -37,7 +37,7 @@ LANGS = ["zh", "en"]
 DEFAULT_SCHEMA = "markdown"
 
 _PKG_DIR = Path(__file__).resolve().parent
-_INDEX_PATH = Path(__file__).resolve().parent.parent.parent / "index.html"
+_INDEX_PATH = Path(__file__).resolve().parent / "static" / "index.html"
 _UPLOAD_DIR = Path.home() / ".md-sync" / "uploads"
 
 
@@ -524,10 +524,16 @@ def create_app(session: WebSession | None = None) -> FastAPI:
     @app.post("/api/upload")
     async def upload(req: Request, filename: str = "") -> JSONResponse:
         """接收浏览器上传的源文件（raw body），保存到 ~/.md-sync/uploads/ 并设为源文件。"""
+        _MAX_UPLOAD = 20 * 1024 * 1024
+        cl = req.headers.get("content-length")
+        if cl and cl.isdigit() and int(cl) > _MAX_UPLOAD:
+            return JSONResponse({"ok": False, "errors": ["文件超过 20MB 上限"]}, status_code=413)
         safe = Path(filename or "upload.md").name or "upload.md"
         if not safe.lower().endswith((".md", ".markdown", ".txt", ".text")):
             safe = Path(safe).stem + ".md"
         data = await req.body()
+        if len(data) > _MAX_UPLOAD:
+            return JSONResponse({"ok": False, "errors": ["文件超过 20MB 上限"]}, status_code=413)
         if not data:
             return JSONResponse({"ok": False, "errors": ["上传内容为空"]})
         _UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -574,7 +580,8 @@ def create_app(session: WebSession | None = None) -> FastAPI:
             while True:
                 lines = session.log.tail(last)
                 for ln in lines:
-                    yield f"data: {ln['text']}\n\n"
+                    text = ln["text"].replace("\r", " ").replace("\n", " ")
+                    yield f"data: {text}\n\n"
                     last = ln["id"]
                 with suppress(asyncio.TimeoutError):
                     await asyncio.wait_for(req.is_disconnected(), timeout=0.5)
@@ -607,6 +614,9 @@ def create_app(session: WebSession | None = None) -> FastAPI:
         p = Path(path).expanduser()
         if not p.exists() or not p.is_file():
             return JSONResponse({"ok": False, "errors": ["文件不存在"]})
+        allowed_roots = (_UPLOAD_DIR.resolve(), session.output_root().resolve())
+        if not any(p.resolve().is_relative_to(r) for r in allowed_roots):
+            return JSONResponse({"ok": False, "errors": ["路径超出可访问范围"]}, status_code=403)
         media = {
             ".html": "text/html; charset=utf-8",
             ".md": "text/markdown; charset=utf-8",

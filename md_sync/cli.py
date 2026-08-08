@@ -6,7 +6,7 @@ Usage:
     md-sync status       Show project status
     md-sync dry-run      Show what would change
     md-sync gui          Launch the native Qt GUI
-    md-sync start        Serve the web dashboard (index.html) at :8580
+    md-sync start        Serve the web dashboard (static/index.html) at :8580
     md-sync template     Manage template styles
     md-sync plugin       Manage plugins
 """
@@ -349,7 +349,7 @@ def _cmd_gui() -> int:
 
 
 def _cmd_start() -> int:
-    """Serve the web dashboard (index.html) on localhost:8580."""
+    """Serve the web dashboard (static/index.html) on localhost:8580."""
     from md_sync.web.app import main as web_main
 
     web_main()

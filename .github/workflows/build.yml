@@ -54,16 +54,27 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
         with:
-          path: artifacts
-          merge-multiple: true
+          name: md-sync-ubuntu-latest
+          path: artifacts/linux
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: md-sync-macos-latest
+          path: artifacts/macos
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: md-sync-windows-latest
+          path: artifacts/windows
       - name: Stage binaries
         run: |
           mkdir -p release
-          cp artifacts/md-sync release/md-sync-linux
-          cp artifacts/md-sync.exe release/md-sync-windows.exe
-          cp artifacts/md-sync release/md-sync-macos
+          cp artifacts/linux/md-sync release/md-sync-linux
+          cp artifacts/windows/md-sync.exe release/md-sync-windows.exe
+          cp artifacts/macos/md-sync release/md-sync-macos
           chmod +x release/md-sync-linux release/md-sync-macos
       - uses: softprops/action-gh-release@v2
         with:

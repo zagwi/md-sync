@@ -707,7 +707,8 @@
   },
   "f1359ef7ef7e": {
     "zh": "工作经历",
-    "status": "auto"
+    "status": "auto",
+    "en": "Employment:"
   },
   "615db57aa314": {
     "zh": "张三",
@@ -995,6 +996,190 @@
   },
   "616d2dc58c70": {
     "zh": "我花100元买了 20Gbps的设备 ，支持 ChatGPT。",
+    "status": "auto"
+  },
+  "a9777393909f": {
+    "en": "Education",
+    "status": "auto"
+  },
+  "bfbfb79b9947": {
+    "en": "**2003.09-2006.06 Jilin University (985) (Computer Software and Theory Major · Master)**",
+    "status": "auto"
+  },
+  "34f38493dfbe": {
+    "en": "13480860896 | zagwi@126.com | github.com/zagwi | Master | Ready to go",
+    "status": "auto"
+  },
+  "1fcfa12b02ac": {
+    "en": "Zhang Wei — Java Software Architect/Technical Manager",
+    "status": "auto"
+  },
+  "b56b1f51a6bf": {
+    "en": "**1996.09-2000.06 Chongqing University (985) (Bachelor of Communication Engineering)**",
+    "status": "auto"
+  },
+  "fee283b807c3": {
+    "en": "Overall quality and ability",
+    "status": "auto"
+  },
+  "873c2a8c5eff": {
+    "en": "Proficient in Java technology stack (Spring Boot/Cloud/MyBatis/JPA), microservice architecture (Spring Cloud), distributed system core technology and cloud native technology (K8s) applications. It has high concurrency (peak QPS 10K +), high availability (99.9% +) and disaster recovery system architecture capabilities, and has full link architecture control capabilities from requirements analysis, architecture design to deployment, operation and maintenance. Proficient in using AI programming tools to speed up the development process.",
+    "status": "auto"
+  },
+  "c7ce4a9602d6": {
+    "en": "Strong business understanding and the ability to quickly translate business needs into a landable technology architecture solution. Coordinate the IT technical architecture review of 100 + projects in Ping An Smart City, formulate unified technical standards and governance norms, and cover a cumulative amount of 1 billion +.",
+    "status": "auto"
+  },
+  "a3ca570d3e31": {
+    "en": "20 years of enterprise software architecture design experience, leading the landing and continuous evolution of microservice architectures from 0 to 1. Good at technology selection and architecture trade-offs in complex business scenarios, balancing scalability, cost, and delivery efficiency. In-depth practice of domain-driven design and event-driven architecture.",
+    "status": "auto"
+  },
+  "9219291740fc": {
+    "en": "More than 25 people have experience in software R&D team and project management, covering technical team building, KPI assessment, cross-departmental coordination and large-scale project delivery. Drive team technical capacity building through Code Review, Technology Sharing, and Architectural Review. Extensive technical bidding, upward reporting, and solid documentation capabilities.",
+    "status": "auto"
+  },
+  "cb486c320e6e": {
+    "en": "**2023.08-2024.01 Shenzhen Huahao Information Technology Co., Ltd. (Architecture Consultant)**",
+    "status": "auto"
+  },
+  "fe85b4ed2c08": {
+    "en": "**2013.01-2019.07 Dalian Yifeng Software Co., Ltd. (Architect and Project Manager)**",
+    "status": "auto"
+  },
+  "5f963293ad0d": {
+    "en": "**2019.11-2022.06 Ping An Smart City (Head of Platform Team, System Management Department)**",
+    "status": "auto"
+  },
+  "68a0d137b298": {
+    "en": "Responsible for system architecture research and optimization consulting, and leading the construction of R&D standardized system (Code Review, ticket management, release management, etc.).",
+    "status": "auto"
+  },
+  "3c66b1a23c9d": {
+    "en": "**2006.06-2012.08 Huawei Technology Co., Ltd. (System Engineer)**",
+    "status": "auto"
+  },
+  "2f8f5ff57760": {
+    "en": "Responsible for the architecture design and R&D of the company's digital platform, technical middle office and official website. Coordinate the review of the IT technology architecture of the Smart City 100 + project, formulate unified technical standards and governance norms, and cover a cumulative amount of 1 billion +.",
+    "status": "auto"
+  },
+  "44e66eb72642": {
+    "en": "**2000.06-2002.12 Mai General Information Technology Co., Ltd. (Technical Supervisor)**",
+    "status": "auto"
+  },
+  "b88758daa70e": {
+    "en": "Project Experience",
+    "status": "auto"
+  },
+  "7ffc51dd7ae3": {
+    "en": "Responsible for the management of the customer technical support team in Zhejiang Province, responsible for the planning, implementation and maintenance of the customer network architecture, and leading the pre-sales program presentation and engineering implementation. Developed the basic skills of customer communication and team management, laying the foundation for subsequent technical management work.",
+    "status": "auto"
+  },
+  "136761fbf350": {
+    "en": "As the technical leader of the Huawei partner, he leads the Java/Spring architecture design and technology selection of multiple product lines (communication energy/supply chain/financial cloud). Manage a 25-person R&D team (development/testing/UI), and control project progress, cost, and quality throughout the process. Lead technical bidding and program design.",
+    "status": "auto"
+  },
+  "9bf5a7f40d6b": {
+    "en": "**2023.08-2024.01 High-quality Service Project Architecture Consultant, Information Division, Shenzhen Municipal Construction Public Service Department**",
+    "status": "auto"
+  },
+  "71ebc5521420": {
+    "en": "Starting with the development of core network signaling processing, we gradually turned to the design of system architecture. He led the architecture design and optimization of the OSS data configuration subsystem and the SingleCloud cloud management platform, and accumulated the full-link experience of large-scale distributed systems from requirements analysis and architecture design to current network operation and maintenance.",
+    "status": "auto"
+  },
+  "45e2818a7092": {
+    "en": "In-depth investigation of multiple business systems to complete architecture evaluation and pain point identification (technical debt, performance bottlenecks, system coupling, etc.). Leads to propose an optimization scheme based on the Spring Cloud microservices architecture, and formulates the service splitting strategy and evolution route. Establish R&D specification systems such as Code Review, questionnaire management, and release management.",
+    "status": "auto"
+  },
+  "fb7e72e3f5f2": {
+    "en": "**2019.11-2022.06 Ping An Smart City Digital Operation Platform, Technology Middle Office, Inside and Outside Portal Technology Leader**",
+    "status": "auto"
+  },
+  "ba757d78257a": {
+    "en": "**2017.11-2019.07 VisualConfig Architect and Project Manager**",
+    "status": "auto"
+  },
+  "6b71f8115f64": {
+    "en": "**Technology Stack:** Spring Cloud Microservices Architecture, MySQL, Xinchuang",
+    "status": "auto"
+  },
+  "094dfeb6c28c": {
+    "en": "**2016.01-2016.11 Financial Cloud Rules Engine Platform (PFM2.0 Rule Engine) Architect and Project Manager**",
+    "status": "auto"
+  },
+  "fda89b9d0b13": {
+    "en": "**2016.11-2017.11 Backend Architect and Project Manager, Supply Chain Public SaaS Platform (Keystone)**",
+    "status": "auto"
+  },
+  "ae9b91749e5c": {
+    "en": "**Technology Stack:** Spring Boot, MySQL/Sqlite, Electron Desktop Framework, Groovy Scripting Engine, Three.js WebGL 3D Rendering",
+    "status": "auto"
+  },
+  "4ce83528de57": {
+    "en": "**Technology Stack:** Spring Cloud microservice governance, MySQL/Postgres, PClickhouse real-time data warehouse, Flink flow batch integration, Metabase BI",
+    "status": "auto"
+  },
+  "b113ff2aa9a2": {
+    "en": "Leads the design and core development of distributed rule engine architecture, builds rule caching and dynamic load balancing mechanism based on Zookeeper; leads the optimization of Drools Rete algorithm network, reducing response time by 60% + and memory by 35%. Lead the research and development of online visual diagnostic tools (breakpoint debugging/trajectory playback/conflict detection), and the efficiency of rule launch is doubled. Host 1000 + business rules.",
+    "status": "auto"
+  },
+  "fb3d6b672324": {
+    "en": "**Technology Stack:** Spring MVC/Boot/Cloud (Eureka/Ribbon/Hystrix), FreeMarker Template Engine",
+    "status": "auto"
+  },
+  "5e137552320e": {
+    "en": "**2013.01-2015.11 Supply Chain Circulation Processing Project Middle Office Architect**",
+    "status": "auto"
+  },
+  "03971386aaaa": {
+    "en": "In the context of rapid business growth, multi-project parallelism, and fragmented technology stack, leading technology mid-platform architecture planning, decision-making and adoption **Spring Cloud** Microservice governance system, unified gateway/configuration center/registration center/fuse downgrade program, to solve the problem of inconsistent and redundant construction of cross-team technology stack. The governance system supports 3000 + users, daily work 1000 +, pressure measurement peak QPS 10K +, P99 < 300ms, availability 99.9% +. Design the Clickhouse real-time data warehouse (ODS/DWD/DWS/ads) architecture, integrate the Flink flow batch integration engine, and build a Metabase and self-developed BI platform to drive real-time data decision-making.",
+    "status": "auto"
+  },
+  "cbae6cae2c4e": {
+    "en": "**Technology Stack:** Spring MVC, Zookeeper distributed orchestration, Drools rules engine, online diagnostic tools, visual orchestration",
+    "status": "auto"
+  },
+  "2d7d9108acfe": {
+    "en": "Develop a middle-end service layering specification, and the abstract service engine layer realizes multi-service multiplexing and decoupling. Lead the architecture design and code review of key modules, and guide the delivery of the 15-person team. Establish a quality access control and automated API testing system.",
+    "status": "auto"
+  },
+  "da88638c4066": {
+    "en": "**2006.06-2012.08 Huawei Technology Co., Ltd. System Engineer**",
+    "status": "auto"
+  },
+  "ab6eb4cc1d10": {
+    "en": "Open Source Projects",
+    "status": "auto"
+  },
+  "ab523265c26c": {
+    "en": "Participate in the core network legal monitoring system (XI), undertake the OSS configuration express (CCE), SingleCloud cloud management base configuration system and other system architecture design and core development. It involves C + + signaling protocol processing, Python data ETL pipeline, Visual C + +/Qt graphics programming, Thrift RPC communication and other technology stacks. Accumulated experience in carrier-grade high-availability, high-reliability system architecture and current network operation and maintenance.",
+    "status": "auto"
+  },
+  "d6b268f5a1e2": {
+    "en": "Leads the configuration system architecture design of Huawei's communication energy solutions (multi-product/multi-component/set relationship). Adopts **Spring Boot + Electron** Hybrid architecture, introducing the Groovy scripting engine to achieve rule hot-swapping and dynamic orchestration, selecting the 3D rendering engine, and designing the WebGL 3D preload mechanism. The configuration efficiency is increased by 5 times, and the error rate is reduced by 98%.",
+    "status": "auto"
+  },
+  "2619d51cc46a": {
+    "en": "**Cloud-Platform Microservices Architecture Platform**",
+    "status": "auto"
+  },
+  "9068ef850d42": {
+    "en": "**Technology Stack:** Spring MVC, MyBatis, Bootstrap Frontend",
+    "status": "auto"
+  },
+  "1adac884a3ac": {
+    "en": "Evaluate the evolution path of monolithic applications to microservice architecture, select an incremental split strategy (prioritize stripping high change modules), and decide to adopt **Spring Cloud** The system (Eureka/Ribbon/Hystrix) solves the problem of service discovery and fault tolerance. Leading UI builder backend core architecture development, based on FreeMarker design visual component dynamic rendering engine, page generation speed increased by 40% +.",
+    "status": "auto"
+  },
+  "18898f16ddd4": {
+    "en": "**Technology Stack:** C + +, Python, Visual C + +/Qt, Thrift RPC, ETL data pipeline",
+    "status": "auto"
+  },
+  "971e94203d1f": {
+    "en": "**Technology Stack:** Spring Cloud, Docker, K8s, Grafana",
+    "status": "auto"
+  },
+  "05a8fe243b0c": {
+    "en": "Open source address: https://github.com/zagwi/cloud-platform。基于 **Spring Cloud** Constructed Complete**Microservices Architecture Platform**covers the core governance components such as registration center, configuration center, gateway, fuse downgrade, etc. Integrate enterprise-class capabilities such as distributed transactions, message queuing, and caching. Project Features: 1. Perfect cloud platform distributed microservices architecture. 2. Provide local,**Docker** and . **K8s**Three deployment modes. 3. Provides web console visualization and CLI one-click deployment capabilities. 4. Provide service pressure measurement function.",
     "status": "auto"
   }
 }

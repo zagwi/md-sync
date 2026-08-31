@@ -89,11 +89,28 @@ PDF 由本机 **Chromium / Chrome** 生成，**`pip install` 不会自动下载�
 
 > 桌面 GUI、Web 看板与命令行三套入口共用同一套同步引擎，按场景任选。
 
-#### 方式 A：桌面 GUI（推荐）
+#### 方式 A：桌面 app（Dioxus，单文件，免 Python）
+
+Dioxus 原生窗口，同步引擎**内嵌在同一个可执行文件里**：最终交付单个可执行文件，拷到任何机器双击即用，**目标机器无需安装 Python**。
 
 ```bash
-md-sync gui
+cd dioxus
+python ../scripts/build_app.py           # 1) 打包 Python 后端 → ../dist/md-sync
+cargo build --release --features desktop # 2) 编译桌面 app，build.rs 自动把后端内嵌进二进制
+./target/release/md-sync-ui             # 3) 运行——内嵌后端自动在 :8580 启动
 ```
+
+app 与后端通过**本机 Unix socket** 通信（无 HTTP、不监听/访问任何网络端口）。启动时 app 依次：① 若 IPC socket 已有后端在跑，直接复用；② 否则找同目录（或仓库 `dist/`）的打包后端，或把内嵌副本解压到缓存目录后执行 `md-sync ipc`；③ 都没有才回退 `python -m md_sync.web.ipc`（仅开发环境）。产物是真正的单文件 app：把 `md-sync-ui` 拷走即用。
+
+#### 方式 B：桌面 GUI（Qt，需 Python 环境）
+
+```bash
+md-sync gui                     # 需先安装：pip install -e ".[gui]"（含 PySide6）
+python -m md_sync.qt_app        # 若 `md-sync` 命令不在 PATH，用此等价命令
+```
+
+> GUI 依赖 **PySide6**。若窗口起不来且报 `No module named 'PySide6'`，
+> 先安装：`python -m pip install PySide6`。
 
 选择源 `.md` 文件 → 选择输出目录 → 勾选需要的格式 / 语言 → 点〔开始监听〕。
 源文件一保存（防抖 1.5s）即自动同步，产物出现在「输出文件」列表中，可双击打开。GUI 功能：
@@ -103,15 +120,16 @@ md-sync gui
 - **输出文件列表**：单表逐行显示每个产物（状态、格式、语言 badge、路径），双击打开、右键复制路径
 - **同步日志**：本次会话的同步记录（时间、生成文件、耗时、错误）
 
-#### 方式 B：Web 看板
+#### 方式 C：Web 看板
 
 无需配置文件的浏览器界面，网页里一键完成：上传源文件、设输出目录 / 格式 / 语言、开关排版规范、实时查看同步日志、下载产物。
 
 ```bash
 md-sync start                  # 打开 http://127.0.0.1:8580
+python -m uvicorn md_sync.web.app:app --host 127.0.0.1 --port 8580   # 等价命令，无需入口点
 ```
 
-#### 方式 C：命令行
+#### 方式 D：命令行
 
 ```bash
 md-sync init                  # 在当前目录生成默认 md-sync.yaml

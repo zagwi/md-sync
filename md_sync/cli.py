@@ -57,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
         ("dry-run", "Show what would change without writing"),
         ("gui", "Launch the native Qt GUI"),
         ("start", "Serve the web dashboard (index.html) at :8580"),
+        ("ipc", "Serve the desktop backend over a Unix socket (no network port)"),
     ]:
         sp = sub.add_parser(cmd, help=help_text)
         _add_common_args(sp)
@@ -103,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         "plugin": lambda: _cmd_plugin(args),
         "gui": lambda: _cmd_gui(),
         "start": lambda: _cmd_start(),
+        "ipc": lambda: _cmd_ipc(),
     }
 
     handler = handlers.get(args.command)
@@ -353,6 +355,14 @@ def _cmd_start() -> int:
     from md_sync.web.app import main as web_main
 
     web_main()
+    return 0
+
+
+def _cmd_ipc() -> int:
+    """Serve the desktop backend over a Unix socket (no network port)."""
+    from md_sync.web.ipc import main as ipc_main
+
+    ipc_main()
     return 0
 
 

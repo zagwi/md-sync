@@ -30,6 +30,7 @@ from md_sync.watcher import FileWatcher
 logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 ALL_FORMATS = ["html", "md", "pdf", "docx", "epub"]
@@ -79,8 +80,8 @@ class ViewerState:
     output_dir: str = ""
     style_zh: str = ""
     style_en: str = ""
-    formats: list[str] = field(default_factory=lambda: ["html", "md"])  # enabled formats
-    langs: list[str] = field(default_factory=lambda: ["zh"])  # enabled langs
+    formats: list[str] = field(default_factory=list)  # enabled formats（默认不勾选，由用户主动选择）
+    langs: list[str] = field(default_factory=list)  # enabled langs
     naming: str = "timestamp"
     blink: bool = True
 
@@ -194,11 +195,13 @@ class WebSession:
         src_path = self.source_path()
         if src_path is None:
             problems.append("请选择有效的 Markdown 源文件。")
+            self.cfg = None  # 源文件失效时清空旧输出列表，避免与当前配置不匹配
             return None, problems
 
         selected = [(f, l) for f in self.state.formats for l in self.state.langs]
         if not selected:
             problems.append("请至少为一种格式勾选一种语言。")
+            self.cfg = None  # 未勾选任何格式时同样清空，保持「勾选 ↔ 输出」一致
             return None, problems
 
         root = self.output_root()
@@ -404,6 +407,81 @@ class WebSession:
             return str(root)
         return None
 
+    # ── RPC 友好封装（HTTP 路由与 Unix socket IPC 共用，单一事实来源） ──
+
+    def meta_payload(self) -> dict:
+        """``/api/meta`` 的响应体。"""
+        return {
+            "plugins": self.plugins(),
+            "schemas": self.schemas(),
+            "styles": self.styles(),
+            "formats": ALL_FORMATS,
+            "langs": LANGS,
+        }
+
+    def state_payload(self) -> dict:
+        """``/api/state`` 的响应体（含输出文件列表与最近一次同步统计）。"""
+        st = self.state
+        return {
+            "source": st.source,
+            "output_dir": st.output_dir,
+            "plugin": st.plugin,
+            "schema": st.schema,
+            "style_zh": st.style_zh,
+            "style_en": st.style_en,
+            "formats": st.formats,
+            "langs": st.langs,
+            "naming": st.naming,
+            "blink": st.blink,
+            "typography": self.typography.as_dict(),
+            "watching": self.watching,
+            "syncing": self._syncing,
+            "output_files": self.output_files(),
+            "last_stats": self.last_stats,
+        }
+
+    def apply_config(self, data: dict) -> dict:
+        """``/api/config`` 的处理逻辑：合并字段 → 重建 config → 必要时重跑。"""
+        st = self.state
+        if "source" in data:
+            st.source = (data.get("source") or "").strip()
+        if "output_dir" in data:
+            st.output_dir = (data.get("output_dir") or "").strip()
+        if "plugin" in data:
+            st.plugin = data.get("plugin", st.plugin)
+        if "schema" in data:
+            st.schema = data.get("schema", st.schema)
+        if "style_zh" in data:
+            st.style_zh = data.get("style_zh", st.style_zh)
+        if "style_en" in data:
+            st.style_en = data.get("style_en", st.style_en)
+        if "formats" in data or "langs" in data:
+            if "formats" in data:
+                st.formats = data.get("formats", st.formats) or []
+            if "langs" in data:
+                st.langs = data.get("langs", st.langs) or []
+        if "naming" in data:
+            st.naming = "overwrite" if data.get("naming") == "overwrite" else "timestamp"
+        if "blink" in data:
+            st.blink = bool(data.get("blink", st.blink))
+        if "typography" in data:
+            self.typography = TypographyConfig.parse(data.get("typography"))
+        # Rebuild config eagerly so file list/validate reflect current values.
+        self.build_config()
+        # 文档标准配置变更时，若正在监听则立即用新规则重跑输出（对齐 Qt 行为）
+        if "typography" in data and self.watching:
+            self.run_sync_async()
+        return self.state_payload()
+
+    def normalize_source(self) -> dict:
+        """``/api/normalize`` 的处理逻辑。"""
+        src = self.source_path()
+        if src is None:
+            return {"ok": False, "errors": ["请先选择有效的源文件。"]}
+        self.log.append(f"🧹 规范化源文档: {src.name}")
+        self.log.append("  ✓ 中英文混排规范将在输出渲染时应用（源文件保持不变）")
+        return {"ok": True}
+
 
 def sys_platform_darwin() -> bool:
     import sys
@@ -441,6 +519,14 @@ def create_app(session: WebSession | None = None) -> FastAPI:
 
     app = FastAPI(title="md-sync", version="1.0")
 
+    # Dioxus web 前端跑在独立端口（静态服务 8080 / dx 开发服务器），跨域调用需放开本地来源
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"^http://(127\.0\.0\.1|localhost)(:\d+)?$",
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     @app.get("/", response_class=HTMLResponse)
     async def index() -> HTMLResponse:
         if _INDEX_PATH.exists():
@@ -449,77 +535,20 @@ def create_app(session: WebSession | None = None) -> FastAPI:
 
     @app.get("/api/meta")
     async def meta() -> JSONResponse:
-        return JSONResponse(
-            {
-                "plugins": session.plugins(),
-                "schemas": session.schemas(),
-                "styles": session.styles(),
-                "formats": ALL_FORMATS,
-                "langs": LANGS,
-            }
-        )
+        return JSONResponse(session.meta_payload())
 
     @app.get("/api/styles")
     async def styles(schema: str | None = None) -> JSONResponse:
         return JSONResponse({"styles": session.styles(schema)})
 
-    def _state_payload() -> dict:
-        st = session.state
-        return {
-            "source": st.source,
-            "output_dir": st.output_dir,
-            "plugin": st.plugin,
-            "schema": st.schema,
-            "style_zh": st.style_zh,
-            "style_en": st.style_en,
-            "formats": st.formats,
-            "langs": st.langs,
-            "naming": st.naming,
-            "blink": st.blink,
-            "typography": session.typography.as_dict(),
-            "watching": session.watching,
-            "syncing": session._syncing,
-            "output_files": session.output_files(),
-            "last_stats": session.last_stats,
-        }
-
     @app.get("/api/state")
     async def state() -> JSONResponse:
-        return JSONResponse(_state_payload())
+        return JSONResponse(session.state_payload())
 
     @app.post("/api/config")
     async def set_config(req: Request) -> JSONResponse:
         data = await req.json()
-        st = session.state
-        if "source" in data:
-            st.source = (data.get("source") or "").strip()
-        if "output_dir" in data:
-            st.output_dir = (data.get("output_dir") or "").strip()
-        if "plugin" in data:
-            st.plugin = data.get("plugin", st.plugin)
-        if "schema" in data:
-            st.schema = data.get("schema", st.schema)
-        if "style_zh" in data:
-            st.style_zh = data.get("style_zh", st.style_zh)
-        if "style_en" in data:
-            st.style_en = data.get("style_en", st.style_en)
-        if "formats" in data or "langs" in data:
-            if "formats" in data:
-                st.formats = data.get("formats", st.formats) or []
-            if "langs" in data:
-                st.langs = data.get("langs", st.langs) or []
-        if "naming" in data:
-            st.naming = "overwrite" if data.get("naming") == "overwrite" else "timestamp"
-        if "blink" in data:
-            st.blink = bool(data.get("blink", st.blink))
-        if "typography" in data:
-            session.typography = TypographyConfig.parse(data.get("typography"))
-        # Rebuild config eagerly so file list/validate reflect current values.
-        session.build_config()
-        # 文档标准配置变更时，若正在监听则立即用新规则重跑输出（对齐 Qt 行为）
-        if "typography" in data and session.watching:
-            session.run_sync_async()
-        return JSONResponse(_state_payload())
+        return JSONResponse(session.apply_config(data))
 
     @app.post("/api/upload")
     async def upload(req: Request, filename: str = "") -> JSONResponse:
@@ -542,7 +571,7 @@ def create_app(session: WebSession | None = None) -> FastAPI:
         session.state.source = str(target)
         session.build_config()
         session.log.append(f"⬆ 已上传源文件: {target.name}（{len(data)} 字节）")
-        return JSONResponse(_state_payload())
+        return JSONResponse(session.state_payload())
 
     @app.post("/api/sync")
     async def sync() -> JSONResponse:
@@ -570,8 +599,15 @@ def create_app(session: WebSession | None = None) -> FastAPI:
         return JSONResponse({"ok": shown is None, "path": str(session.output_root())})
 
     # Realtime log stream via SSE; fallbacks to polling are fine.
-    @app.get("/api/logs")
-    async def logs(req: Request, after: int = 0, _stream: int = 0) -> StreamingResponse:
+    # response_model=None：返回注解是 StreamingResponse | JSONResponse 的
+    # 联合类型，FastAPI 无法据此推断响应模型，会直接启动崩溃。
+    @app.get("/api/logs", response_model=None)
+    async def logs(req: Request, after: int = 0, _stream: int = 0, json: int = 0) -> StreamingResponse | JSONResponse:
+        # JSON polling branch (used by the Dioxus client): returns all lines
+        # with id > after plus the latest id, so clients can resume cleanly.
+        if json:
+            lines = session.log.tail(after)
+            return JSONResponse({"lines": lines, "max_id": session.log._last_id})
         # If _stream is set, keep the connection open and push new lines.
         async def gen():
             from contextlib import suppress
@@ -596,12 +632,7 @@ def create_app(session: WebSession | None = None) -> FastAPI:
 
     @app.post("/api/normalize")
     async def normalize() -> JSONResponse:
-        src = session.source_path()
-        if src is None:
-            return JSONResponse({"ok": False, "errors": ["请先选择有效的源文件。"]})
-        session.log.append(f"🧹 规范化源文档: {src.name}")
-        session.log.append("  ✓ 中英文混排规范将在输出渲染时应用（源文件保持不变）")
-        return JSONResponse({"ok": True})
+        return JSONResponse(session.normalize_source())
 
     @app.get("/api/file")
     async def serve_file(path: str = "", download: bool = False):

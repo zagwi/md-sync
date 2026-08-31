@@ -40,6 +40,7 @@ env/
 /verification_output.md
 
 # 工具链缓存 / 覆盖率
+dioxus/target/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

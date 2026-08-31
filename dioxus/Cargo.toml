@@ -1,0 +1,29 @@
+[package]
+name = "md-sync-ui"
+version = "0.1.0"
+edition = "2021"
+description = "Dioxus (web + desktop) frontend for md-sync"
+license = "MIT"
+
+[features]
+default = []
+web = ["dioxus/web", "dioxus/asset"]
+desktop = ["dioxus/desktop", "dioxus/asset"]
+
+[dependencies]
+dioxus = { version = "0.7", features = ["asset"] }
+dioxus-logger = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+percent-encoding = "2"
+# rustls 后端：desktop 无 openssl 系统依赖；wasm 目标自动使用浏览器 fetch
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rfd = "0.15"
+# net/io-util：desktop 通过 Unix socket 与打包后端通信（无 HTTP 端口）
+tokio = { version = "1", features = ["time", "rt", "macros", "net", "io-util"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+gloo-timers = { version = "0.3", features = ["futures"] }

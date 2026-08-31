@@ -65,6 +65,8 @@ def build(clean: bool = False) -> None:
         "md_sync.plugin.loader",
         "--hidden-import",
         "md_sync.plugin.registry",
+        "--hidden-import",
+        "md_sync.web.ipc",
         # mypy (and its mypyc-compiled extensions) may live in the global
         # site-packages and get pulled in by analysis on some Python builds.
         # md-sync does not use it, so exclude to avoid corrupt-bundle errors.

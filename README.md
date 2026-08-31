@@ -84,11 +84,28 @@ md-sync auto-detects common paths (e.g. `/usr/bin/chromium`) after installation;
 
 > The desktop GUI, web dashboard, and CLI all share the same sync engine — pick whichever fits the moment.
 
-#### Option A: desktop GUI (recommended)
+#### Option A: standalone desktop app (Dioxus, no Python needed)
+
+A native window (Dioxus) talking to the same sync engine **bundled inside** — the deliverable is a single executable you can copy anywhere and run, **no Python required on the target machine**.
 
 ```bash
-md-sync gui
+cd dioxus
+python ../scripts/build_app.py           # 1) bundle the Python backend → ../dist/md-sync
+cargo build --release --features desktop # 2) build the app; build.rs embeds ../dist/md-sync
+./target/release/md-sync-ui             # 3) run — the embedded backend auto-starts on :8580
 ```
+
+The app talks to the backend over a **local Unix socket** (no HTTP, no network port). At startup it: ① reuses an already-running backend on the IPC socket; ② otherwise looks for a bundled backend next to the executable (or in the repo `dist/`, or extracts the embedded copy to the cache dir) and runs `md-sync ipc`; ③ only if none is found does it fall back to `python -m md_sync.web.ipc` (development only).
+
+#### Option B: desktop GUI (Qt, requires Python)
+
+```bash
+md-sync gui                     # requires: pip install -e ".[gui]" (installs PySide6)
+python -m md_sync.qt_app        # equivalent if the `md-sync` entry point is missing
+```
+
+> The GUI needs **PySide6**. If the desktop window fails to start with `No module named 'PySide6'`,
+> install it first: `python -m pip install PySide6`.
 
 Choose a source `.md` file → choose an output directory → tick the formats / languages you want → click **[Start watching]**. Every source save (debounced 1.5 s) syncs automatically, and artifacts appear in the "output files" list where you can double-click to open. GUI features:
 
@@ -97,15 +114,16 @@ Choose a source `.md` file → choose an output directory → tick the formats /
 - **Output file list**: one row per artifact (status, format, language badge, path), double-click to open, right-click to copy the path
 - **Sync log**: this session's sync records (time, generated file, duration, errors)
 
-#### Option B: web dashboard
+#### Option C: web dashboard
 
 A browser-based interface that needs no config file: upload the source, set the output directory / formats / languages, toggle typography rules, watch the sync log live, and download artifacts — all in the page.
 
 ```bash
 md-sync start                  # opens http://127.0.0.1:8580
+python -m uvicorn md_sync.web.app:app --host 127.0.0.1 --port 8580   # equivalent, no entry point needed
 ```
 
-#### Option C: CLI
+#### Option D: CLI
 
 ```bash
 md-sync init                  # writes a default md-sync.yaml in the current directory

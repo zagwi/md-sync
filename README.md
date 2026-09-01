@@ -89,32 +89,13 @@ md-sync auto-detects common paths (e.g. `/usr/bin/chromium`) after installation;
 A native window (Dioxus) talking to the same sync engine **bundled inside** — the deliverable is a single executable you can copy anywhere and run, **no Python required on the target machine**.
 
 ```bash
-cd dioxus
-python ../scripts/build_app.py           # 1) bundle the Python backend → ../dist/md-sync
-cargo build --release --features desktop # 2) build the app; build.rs embeds ../dist/md-sync
-./target/release/md-sync-ui             # 3) run — the embedded backend auto-starts on :8580
+python scripts/build_desktop.py   # one command → dist/md-sync-ui (embedded backend, no Python needed)
+./dist/md-sync-ui                 # run — the embedded backend auto-starts on :8580
 ```
 
 The app talks to the backend over a **local Unix socket** (no HTTP, no network port). At startup it: ① reuses an already-running backend on the IPC socket; ② otherwise looks for a bundled backend next to the executable (or in the repo `dist/`, or extracts the embedded copy to the cache dir) and runs `md-sync ipc`; ③ only if none is found does it fall back to `python -m md_sync.web.ipc` (development only).
 
-#### Option B: desktop GUI (Qt, requires Python)
-
-```bash
-md-sync gui                     # requires: pip install -e ".[gui]" (installs PySide6)
-python -m md_sync.qt_app        # equivalent if the `md-sync` entry point is missing
-```
-
-> The GUI needs **PySide6**. If the desktop window fails to start with `No module named 'PySide6'`,
-> install it first: `python -m pip install PySide6`.
-
-Choose a source `.md` file → choose an output directory → tick the formats / languages you want → click **[Start watching]**. Every source save (debounced 1.5 s) syncs automatically, and artifacts appear in the "output files" list where you can double-click to open. GUI features:
-
-- **Source file**: auto-detects the source language and how many lines need translation; the "✂ Normalize source" button produces a typography-corrected copy (`<stem>_normalized.md`) and makes it the new source — **your original file is never modified**
-- **Output settings**: groups for HTML / Markdown / PDF / DOCX / EPUB, each with zh / en checkboxes; the PDF group adds a "page margin" dropdown; the "📐 Document standards" button in the title bar toggles the typography rules and their 7 sub-rules (applied to generated artifacts only, never your source)
-- **Output file list**: one row per artifact (status, format, language badge, path), double-click to open, right-click to copy the path
-- **Sync log**: this session's sync records (time, generated file, duration, errors)
-
-#### Option C: web dashboard
+#### Option B: web dashboard
 
 A browser-based interface that needs no config file: upload the source, set the output directory / formats / languages, toggle typography rules, watch the sync log live, and download artifacts — all in the page.
 
@@ -123,7 +104,7 @@ md-sync start                  # opens http://127.0.0.1:8580
 python -m uvicorn md_sync.web.app:app --host 127.0.0.1 --port 8580   # equivalent, no entry point needed
 ```
 
-#### Option D: CLI
+#### Option C: CLI
 
 ```bash
 md-sync init                  # writes a default md-sync.yaml in the current directory
@@ -143,7 +124,7 @@ md-sync auto-discovers locally installed Typora themes and exposes them as `typo
 - **Linux**: `~/.config/Typora/themes`
 
 Visit <https://github.com/zagwi/typora-themes-util> to install Typora's recommended community themes in one go.
-When no such directory is detected, Typora themes do not appear in the "render theme" dropdown (the GUI shows "Typora not detected on this machine").
+When no such directory is detected, Typora themes do not appear in the "render theme" dropdown (the UI shows "Typora not detected on this machine").
 
 ### The gongwen plugin: standard official documents
 
@@ -169,7 +150,7 @@ Fill in the template (issuing authority heading / document number / addressee / 
 md-sync plugin template gongwen -o 通知.md    # generate the official-document source template
 ```
 
-**Fonts**: Windows generally ships the required national-standard fonts; on Linux, if fonts are missing the GUI offers to download the free Fandol font set.
+**Fonts**: Windows generally ships the required national-standard fonts; on Linux, if fonts are missing the UI offers to download the free Fandol font set.
 
 ### Configuration file (md-sync.yaml)
 
@@ -216,14 +197,14 @@ Notes:
 
 - `source` points at your source Markdown; each `outputs` entry is one "format × language" combination, and `html` entries can specify a `style` and optionally export a `pdf` as well.
 - Translation uses a **cache**: already-translated content is reused directly — no repeated translation calls, no re-generated files; only missing pieces fall back.
-- `typography` rules apply **only to generated artifacts** (md / html / pdf) and **never modify your source**; code blocks, inline code, and URLs are always untouched. Use the "📐 Document standards" button in the GUI (in-memory); from the CLI, edit this config section directly.
+- `typography` rules apply **only to generated artifacts** (md / html / pdf) and **never modify your source**; code blocks, inline code, and URLs are always untouched. Use the "📐 Document standards" button in the UI (in-memory); from the CLI, edit this config section directly.
 
 ### FAQ
 
 - **The input clears after picking a file with "Open"**: expected behavior — picking a file loads it, so there is no path to type.
 - **Why is there still HTML after translating?** Translation changes the text (language); HTML is about the format (rendering). They are independent artifacts; tick them separately.
-- **Where are the Qt GUI sync logs?** In the "Sync log" panel.
-- **Do I need to restart after changing "Document standards" in the GUI?** No — once saved, if watching is active, artifacts are regenerated immediately with the new rules; "Normalize source" also always uses the current config.
+- **Where are the sync logs?** In the "Sync log" panel.
+- **Do I need to restart after changing "Document standards" in the UI?** No — once saved, if watching is active, artifacts are regenerated immediately with the new rules; "Normalize source" also always uses the current config.
 
 ---
 
@@ -236,9 +217,8 @@ For developers who want to extend md-sync, package it, or integrate it into thei
 ```
 md-sync/
 ├── md_sync/                # core package
-│   ├── cli.py              # CLI entry points (md-sync sync / gui / status …)
+│   ├── cli.py              # CLI entry points (md-sync sync / start / ipc …)
 │   ├── config.py           # ProjectConfig parsing (md-sync.yaml)
-│   ├── qt_app.py           # native PySide6 desktop GUI (python -m md_sync.qt_app / md-sync gui)
 │   ├── watcher.py          # file watching (watchdog + debounce)
 │   ├── core/               # Document model + pipeline sync orchestration
 │   ├── renderers/          # md / html renderers
@@ -249,7 +229,8 @@ md-sync/
 │   └── plugin/             # plugin engine (interfaces / registry / loader / hooks), no plugin instances
 ├── plugins/                # built-in plugins (typora / resume / generic-markdown / gongwen), each ships its own templates
 ├── docs/example-plugin/    # plugin development example (resume-pack: source template + parser + render themes)
-├── scripts/build_app.py    # PyInstaller single-file packaging
+├── scripts/build_web.py    # package the Web edition (→ dist/md-sync-web)
+├── scripts/build_desktop.py # package the desktop edition (→ dist/md-sync-ui)
 ├── tests/                  # test scripts
 └── pyproject.toml
 ```
@@ -416,42 +397,46 @@ python -m build
 
 CLI entry point: `md-sync` (see `[project.scripts]` in `pyproject.toml`).
 
-#### 2. Single-file executable (PyInstaller, recommended)
+#### 2. Single-file executables (recommended, no Python required)
 
-The repo ships a cross-platform build script, `scripts/build_app.py`, which produces a Python-free executable for the current system:
+The web and desktop editions share the same Dioxus frontend; one command builds both:
 
 ```bash
 pip install pyinstaller            # or pip install -e ".[build]"
-python scripts/build_app.py                # produces dist/md-sync (Linux/macOS) or dist/md-sync.exe (Windows)
-python scripts/build_app.py --clean        # rebuild after clearing the cache
+
+python scripts/build_all.py        # one shot → dist/md-sync-web + dist/md-sync-ui
+python scripts/build_all.py --web       # web edition only
+python scripts/build_all.py --desktop   # desktop edition only
+python scripts/build_all.py --force     # force re-package the backends (skip fingerprint cache)
 ```
 
 **Artifacts (all under this project's `dist/`):**
 
-| Platform | Artifact path | Notes |
+| Edition | Artifact path | Notes |
 |------|----------|------|
-| Linux   | `dist/md-sync`        | ELF executable; run directly with `./dist/md-sync --help` |
-| macOS   | `dist/md-sync`        | same name as Linux; must be built on macOS |
-| Windows | `dist/md-sync.exe`    | must be built on Windows |
+| Web   | `dist/md-sync-web`    | standalone web server; run `./dist/md-sync-web` → open http://127.0.0.1:8580 |
+| Desktop | `dist/md-sync-ui`     | Dioxus native window; run directly, embedded backend auto-starts (Unix socket, no network port) |
 
-> The current environment is Linux, so a local build yields only `dist/md-sync`; Windows / macOS binaries must be produced on the matching OS or via the CI below.
-> `dist/`, `build/`, and `*.spec` are all in `.gitignore` and never committed.
+> A backend fingerprint cache (`dist/.backend-*.fp`) tracks source / dependency / environment changes:
+> the bundle is only re-packaged when its inputs changed (e.g. installing `python-docx` triggers a repack
+> automatically). `dist/`, `build/`, and `*.spec` are all in `.gitignore` and never committed.
+> `dist/md-sync` is the intermediate backend embedded in the desktop binary — handled by the scripts, no manual steps.
 
-- The script bundles resources such as `md_sync/templates`, `md_sync/plugins`, and `md_sync/web/static` into the binary, resolved at runtime through `md_sync.template.manager._find_install_dir()` — **nothing needs to be installed on the user's machine**.
+- The scripts bundle resources such as `md_sync/templates`, `md_sync/plugins`, and `md_sync/web/static` into the binary, resolved at runtime through `md_sync.template.manager._find_install_dir()` — **nothing needs to be installed on the user's machine**.
 - **Use Python 3.12 for building** (PyInstaller's officially supported release). On 3.14, `mypy` must be excluded (the script does `--exclude-module mypy` by default).
 
 #### 3. Cross-platform automated builds (GitHub Actions)
 
-`.github/workflows/build.yml` runs `python scripts/build_app.py` on `ubuntu-latest` / `windows-latest` / `macos-latest` runners and uploads the three platform executables as Release artifacts.
+`.github/workflows/build.yml` runs `python scripts/build_web.py` on `ubuntu-latest` / `windows-latest` / `macos-latest` runners and uploads the three-platform Web executables as Release artifacts.
 
 ```bash
 # tag to trigger the automated build and publish a Release
 git tag v1.0.0 && git push origin v1.0.0
-# download from GitHub Releases: md-sync-linux / md-sync-windows.exe / md-sync-macos
+# download from GitHub Releases: md-sync-web-linux / md-sync-web-windows.exe / md-sync-web-macos
 ```
 
 To grab the three-platform binaries without publishing a Release, download them from that run's Artifacts page instead;
-artifacts are named `md-sync-ubuntu-latest` / `md-sync-windows-latest` / `md-sync-macos-latest`.
+artifacts are named `md-sync-web-ubuntu-latest` / `md-sync-web-windows-latest` / `md-sync-web-macos-latest`.
 
 ---
 

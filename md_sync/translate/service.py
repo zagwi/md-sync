@@ -213,7 +213,7 @@ def translate_document(
                 except Exception:
                     logger.debug("translate task failed", exc_info=True)
                     result = None
-                if result:
+                if result and "ZXQWPZLP" not in result:
                     results[text] = result
                     if translator:
                         translator.store(text, result, target_lang, status="auto")

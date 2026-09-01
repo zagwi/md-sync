@@ -28,22 +28,22 @@ jobs:
           pip install -e ".[build]"
 
       - name: Build executable
-        run: python scripts/build_app.py
+        run: python scripts/build_web.py
 
       - name: Upload artifact (Linux / macOS)
         if: matrix.os != 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: md-sync-${{ matrix.os }}
-          path: dist/md-sync
+          name: md-sync-web-${{ matrix.os }}
+          path: dist/md-sync-web
           if-no-files-found: error
 
       - name: Upload artifact (Windows)
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: md-sync-${{ matrix.os }}
-          path: dist/md-sync.exe
+          name: md-sync-web-${{ matrix.os }}
+          path: dist/md-sync-web.exe
           if-no-files-found: error
 
   release:
@@ -57,25 +57,25 @@ jobs:
       - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
-          name: md-sync-ubuntu-latest
+          name: md-sync-web-ubuntu-latest
           path: artifacts/linux
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
         with:
-          name: md-sync-macos-latest
+          name: md-sync-web-macos-latest
           path: artifacts/macos
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: md-sync-windows-latest
+          name: md-sync-web-windows-latest
           path: artifacts/windows
       - name: Stage binaries
         run: |
           mkdir -p release
-          cp artifacts/linux/md-sync release/md-sync-linux
-          cp artifacts/windows/md-sync.exe release/md-sync-windows.exe
-          cp artifacts/macos/md-sync release/md-sync-macos
-          chmod +x release/md-sync-linux release/md-sync-macos
+          cp artifacts/linux/md-sync-web release/md-sync-web-linux
+          cp artifacts/windows/md-sync-web.exe release/md-sync-web-windows.exe
+          cp artifacts/macos/md-sync-web release/md-sync-web-macos
+          chmod +x release/md-sync-web-linux release/md-sync-web-macos
       - uses: softprops/action-gh-release@v2
         with:
           files: release/*

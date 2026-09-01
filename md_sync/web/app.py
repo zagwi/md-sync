@@ -38,7 +38,8 @@ LANGS = ["zh", "en"]
 DEFAULT_SCHEMA = "markdown"
 
 _PKG_DIR = Path(__file__).resolve().parent
-_INDEX_PATH = Path(__file__).resolve().parent / "static" / "index.html"
+_STATIC_DIR = _PKG_DIR / "static"
+_INDEX_PATH = _STATIC_DIR / "index.html"
 _UPLOAD_DIR = Path.home() / ".md-sync" / "uploads"
 
 
@@ -136,15 +137,17 @@ class WebSession:
         return [{"name": k, "label": v} for k, v in seen.items()]
 
     def styles(self, schema: str | None = None) -> list[dict]:
-        """Render styles for the current schema.
+        """Render styles, optionally filtered by schema.
 
-        Typora themes (``typora-<theme>``) 按作者仓库分组返回 ``group`` 字段，
-        前端据此渲染两级「可折叠/展开」列表；非 Typora 模板 ``group`` 为 None。
+        ``schema=None`` 返回全量（meta 用）：Typora 主题（``typora-<theme>``）只在
+        meta 全量或显式请求 ``typora`` schema 时出现，前端按当前 schema 过滤后展示。
+        Typora 主题按作者仓库分组返回 ``group`` 字段，前端据此渲染两级
+        「可折叠/展开」列表；非 Typora 模板 ``group`` 为 None。
         裸 ``typora`` 基座模板无 style.css，不列入可选项。
         """
         from md_sync.plugins.typora.groups import OTHER_GROUP, typora_group_key
 
-        infos = self._tmgr.list_templates(schema or self.state.schema)
+        infos = self._tmgr.list_templates(schema)
         result = []
         for t in infos:
             if t.name == "typora":
@@ -281,7 +284,9 @@ class WebSession:
         self.last_stats = stats
         ok = stats.get("ok") and not stats.get("errors")
         self.log.append(f"{'✓ 同步完成' if ok else '✗ 同步完成（有错误）'}: "
-                        f"{len(stats['outputs'])} 个产物")
+                        f"{len(stats['outputs'])} 个输出")
+        for err in stats.get("errors", []):
+            self.log.append(f"  ✗ {err}")
         self.state.source = str(cfg.source)
         return stats
 
@@ -388,6 +393,9 @@ class WebSession:
                     removed += 1
                 except OSError:
                     pass
+        # 输出文件已删除，同步清空输出清单，令输出文件表格随之清空。
+        # 与「源文件失效/未勾选格式时 cfg=None」保持同一惯例：UI 与实际输出一致。
+        self.cfg.outputs = []
         self.log.append(f"🗑 已清除 {removed} 个输出文件")
         return removed
 
@@ -518,6 +526,16 @@ def create_app(session: WebSession | None = None) -> FastAPI:
     _INDEX_MOD = _INDEX_PATH.stat().st_mtime if _INDEX_PATH.exists() else 0
 
     app = FastAPI(title="md-sync", version="1.0")
+
+    # Dioxus wasm 前端静态资源（构建输出：assets/ + wasm/）
+    from fastapi.staticfiles import StaticFiles
+
+    if _STATIC_DIR.exists():
+        app.mount(
+            "/assets", StaticFiles(directory=_STATIC_DIR / "assets"), name="assets"
+        )
+        if (_STATIC_DIR / "wasm").exists():
+            app.mount("/wasm", StaticFiles(directory=_STATIC_DIR / "wasm"), name="wasm")
 
     # Dioxus web 前端跑在独立端口（静态服务 8080 / dx 开发服务器），跨域调用需放开本地来源
     app.add_middleware(

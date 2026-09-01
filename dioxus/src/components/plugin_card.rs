@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use serde_json::json;
 
+use crate::components::theme_dropdown::ThemeDropdown;
 use crate::state::{save_and_apply, AppState};
 
 #[component]
@@ -15,15 +16,15 @@ pub fn PluginCard() -> Element {
     rsx! {
         section { class: "card",
             div { class: "card-header",
-                div { class: "flex items-center gap-2",
+                div { class: "flex items-center gap-2 flex-wrap",
                     svg { class: "size-4 text-muted-foreground", fill: "none", view_box: "0 0 24 24", stroke: "currentColor", stroke_width: "2",
                         path { stroke_linecap: "round", stroke_linejoin: "round",
                             d: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" } }
                     h2 { class: "text-base font-semibold", "插件" }
                     span { class: "badge badge-secondary", "核心" }
+                    p { class: "text-xs text-muted-foreground ml-auto text-right",
+                        "选择用于解析 Markdown 源文档的渲染插件，决定输出输出的能力与排版风格。" }
                 }
-                p { class: "text-xs text-muted-foreground",
-                    "选择用于解析 Markdown 源文档的渲染插件，决定输出产物的能力与排版风格。" }
             }
             div { class: "card-body",
                 div { class: "flex flex-col sm:flex-row items-end gap-3",
@@ -53,8 +54,12 @@ pub fn PluginCard() -> Element {
                             }
                         }
                     }
+                    // 渲染主题：与渲染插件并排（插件在左，主题在右）
+                    div { class: "w-full sm:max-w-sm",
+                        ThemeDropdown { state: state }
+                    }
                     if let Some(cur) = &current {
-                        div { class: "plugin-meta",
+                        div { class: "plugin-meta sm:ml-auto",
                             div { class: "flex flex-wrap items-center gap-2",
                                 span { class: "badge badge-outline", "{cur.plugin_type}" }
                                 span { class: "text-xs text-muted-foreground", "v{cur.version}" }

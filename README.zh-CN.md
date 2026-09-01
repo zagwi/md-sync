@@ -1,9 +1,9 @@
 # md-sync
 
 你用**中文或英文**写一份 Markdown 源文件，md-sync 会**自动把它翻译成另一种语言**，并同时生成
-多种格式（HTML / PDF / Markdown / DOCX / EPUB）的输出；源文件一改动，所有产物自动重新生成。适合文档工作者的效率提升神器。
+多种格式（HTML / PDF / Markdown / DOCX / EPUB）的输出；源文件一改动，所有输出自动重新生成。适合文档工作者的效率提升神器。
 
-- 一份源 → 多份产物：`zh` / `en` × HTML / PDF / Markdown / DOCX / EPUB，一次写稿全部到位
+- 一份源 → 多份输出：`zh` / `en` × HTML / PDF / Markdown / DOCX / EPUB，一次写稿全部到位
 - 源文件保存即自动重新生成，无需任何手动操作
 - 翻译**缓存优先**：已有译文直接复用，缺失才回退 AI，译稿不被重复翻译
 - 三条入口任选：**桌面 GUI、Web 看板、命令行**
@@ -20,12 +20,12 @@
 
 把「重复、繁琐、易错的体力活」交给 md-sync，你专注内容本身。AI 工具确实能翻译文档、也能转换格式——但那解决的是「一次性」需求。
 真正繁琐的是**频繁修改源文件**的场景：你每改一个词，就要手动走完
-**修改 → 翻译 → 转换格式** 这一整条链路，而且往往要同时维护多个语言、多种格式的产物。
+**修改 → 翻译 → 转换格式** 这一整条链路，而且往往要同时维护多个语言、多种格式的输出。
 人工反复操作，不仅费时，更容易漏翻译、漏转、版本对不齐。
 
 **md-sync 就是为这个场景而生：你只管改源文件，其余交给工具。**
 
-- **所改即所得**：源文件一保存，所有语言 / 格式的产物在秒级内自动重新生成。
+- **所改即所得**：源文件一保存，所有语言 / 格式的输出在秒级内自动重新生成。
 - **一次配置，长期收益**：翻译缓存与多输出配置只需设定一次，后续每次修改零额外操作。
 - **不易出错**：译文与格式由工具统一处理，避免人工复制粘贴导致的漏翻、漏转、错版。
 
@@ -35,10 +35,10 @@
 |------|------|
 | **多格式输出** | HTML / PDF / Markdown / DOCX / EPUB，可任意组合 |
 | **多语言输出** | 中文 / 英文自动互译，翻译缓存优先，缺失时回退 AI |
-| **自动重新生成** | 源文件一保存，所有选中的格式 / 语言产物自动更新 |
+| **自动重新生成** | 源文件一保存，所有选中的格式 / 语言输出自动更新 |
 | **渲染风格** | 内置多套风格，可直接选用本机 [Typora](https://typora.io/) 主题 |
 | **桌面 GUI** | 原生窗口界面，选源文件、勾格式、即点即用 |
-| **Web 看板** | 无需配置文件，浏览器里上传源文件、看日志、下载产物 |
+| **Web 看板** | 无需配置文件，浏览器里上传源文件、看日志、下载输出 |
 | **标准公文** | 内置模板，一键导出符合 GB/T 9704-2012 的公文 `docx` / `pdf` |
 
 ### 为什么用 Markdown 写稿（而不是 docx）
@@ -87,49 +87,29 @@ PDF 由本机 **Chromium / Chrome** 生成，**`pip install` 不会自动下载�
 
 ### 使用方式
 
-> 桌面 GUI、Web 看板与命令行三套入口共用同一套同步引擎，按场景任选。
+> 桌面 app、Web 看板与命令行三套入口共用同一套同步引擎，按场景任选。
 
 #### 方式 A：桌面 app（Dioxus，单文件，免 Python）
 
 Dioxus 原生窗口，同步引擎**内嵌在同一个可执行文件里**：最终交付单个可执行文件，拷到任何机器双击即用，**目标机器无需安装 Python**。
 
 ```bash
-cd dioxus
-python ../scripts/build_app.py           # 1) 打包 Python 后端 → ../dist/md-sync
-cargo build --release --features desktop # 2) 编译桌面 app，build.rs 自动把后端内嵌进二进制
-./target/release/md-sync-ui             # 3) 运行——内嵌后端自动在 :8580 启动
+python scripts/build_desktop.py   # 一条命令 → dist/md-sync-ui（内嵌后端，免 Python）
+./dist/md-sync-ui                 # 运行——内嵌后端自动在 :8580 启动
 ```
 
-app 与后端通过**本机 Unix socket** 通信（无 HTTP、不监听/访问任何网络端口）。启动时 app 依次：① 若 IPC socket 已有后端在跑，直接复用；② 否则找同目录（或仓库 `dist/`）的打包后端，或把内嵌副本解压到缓存目录后执行 `md-sync ipc`；③ 都没有才回退 `python -m md_sync.web.ipc`（仅开发环境）。产物是真正的单文件 app：把 `md-sync-ui` 拷走即用。
+app 与后端通过**本机 Unix socket** 通信（无 HTTP、不监听/访问任何网络端口）。启动时 app 依次：① 若 IPC socket 已有后端在跑，直接复用；② 否则找同目录（或仓库 `dist/`）的打包后端，或把内嵌副本解压到缓存目录后执行 `md-sync ipc`；③ 都没有才回退 `python -m md_sync.web.ipc`（仅开发环境）。输出是真正的单文件 app：把 `md-sync-ui` 拷走即用。
 
-#### 方式 B：桌面 GUI（Qt，需 Python 环境）
+#### 方式 B：Web 看板
 
-```bash
-md-sync gui                     # 需先安装：pip install -e ".[gui]"（含 PySide6）
-python -m md_sync.qt_app        # 若 `md-sync` 命令不在 PATH，用此等价命令
-```
-
-> GUI 依赖 **PySide6**。若窗口起不来且报 `No module named 'PySide6'`，
-> 先安装：`python -m pip install PySide6`。
-
-选择源 `.md` 文件 → 选择输出目录 → 勾选需要的格式 / 语言 → 点〔开始监听〕。
-源文件一保存（防抖 1.5s）即自动同步，产物出现在「输出文件」列表中，可双击打开。GUI 功能：
-
-- **源文件**：自动识别源语言与待翻译行数；点「✂ 规范化源文档」按排版规范生成一份规整副本（`<stem>_normalized.md`）并将其设为源文件，**原始文件不会被修改**
-- **输出设置**：HTML / Markdown / PDF / DOCX / EPUB 分组勾选中文、英文；PDF 组可设「页边距」；标题栏「📐 文档标准配置」可开关排版规范与其 7 条子规则（只作用于生成产物，不改源文件）
-- **输出文件列表**：单表逐行显示每个产物（状态、格式、语言 badge、路径），双击打开、右键复制路径
-- **同步日志**：本次会话的同步记录（时间、生成文件、耗时、错误）
-
-#### 方式 C：Web 看板
-
-无需配置文件的浏览器界面，网页里一键完成：上传源文件、设输出目录 / 格式 / 语言、开关排版规范、实时查看同步日志、下载产物。
+无需配置文件的浏览器界面，网页里一键完成：上传源文件、设输出目录 / 格式 / 语言、开关排版规范、实时查看同步日志、下载输出。
 
 ```bash
 md-sync start                  # 打开 http://127.0.0.1:8580
 python -m uvicorn md_sync.web.app:app --host 127.0.0.1 --port 8580   # 等价命令，无需入口点
 ```
 
-#### 方式 D：命令行
+#### 方式 C：命令行
 
 ```bash
 md-sync init                  # 在当前目录生成默认 md-sync.yaml
@@ -150,7 +130,7 @@ md-sync 会自动发现本机 Typora 主题并以 `typora-<主题名>` 形式选
 - **Linux**：`~/.config/Typora/themes`
 
 访问 <https://github.com/zagwi/typora-themes-util> 可一键安装 Typora 官方推荐的社区主题。
-未检测到上述目录时，Typora 主题不会出现在「渲染风格」下拉框中（GUI 会提示「未检测到本机已安装 Typora」）。
+未检测到上述目录时，Typora 主题不会出现在「渲染风格」下拉框中（界面会提示「未检测到本机已安装 Typora」）。
 
 ### 公文插件（gongwen）：标准公文导出
 
@@ -209,7 +189,7 @@ translation:
   mapping_file: .translations.json  # 译文缓存文件
 
 typography:                          # 文档排版规范（默认全部开启）
-  enabled: true                      # 总开关；关闭则产物与源完全一致
+  enabled: true                      # 总开关；关闭则输出与源完全一致
   cjk_latin_space: true              # 中英文之间加空格（支持ChatGPT → 支持 ChatGPT）
   cjk_digit_space: true              # 中文与数字之间加空格（花100元 → 花 100 元）
   number_unit_space: true            # 数字与单位之间加空格（20Gbps → 20 Gbps）
@@ -223,12 +203,12 @@ typography:                          # 文档排版规范（默认全部开启�
 
 - `source` 指向你的源 Markdown；`outputs` 每项是一个「格式 × 语言」组合，`html` 可指定 `style` 并可同时导出 `pdf`。
 - 翻译走**译文缓存**：已译内容直接复用，不重复调翻译、不重复出文件；缺失片段才回退。
-- `typography` 排版规范仅作用于**生成的产物**（md / html / pdf），**绝不修改你的源文件**；代码块、行内代码与网址链接不受影响。GUI 用「📐 文档标准配置」按钮调整（内存生效）；命令行直接编辑此段配置。
+- `typography` 排版规范仅作用于**生成的输出**（md / html / pdf），**绝不修改你的源文件**；代码块、行内代码与网址链接不受影响。GUI 用「📐 文档标准配置」按钮调整（内存生效）；命令行直接编辑此段配置。
 
 ### 常见问题
 
 - **「打开」选完后输入框清空**：预期行为——选文件即加载，无需手填路径。
-- **翻译后为什么还有 HTML？** 翻译换文字（语言），HTML 是格式（渲染），两者是独立的产物，可分别勾选。
+- **翻译后为什么还有 HTML？** 翻译换文字（语言），HTML 是格式（渲染），两者是独立的输出，可分别勾选。
 - **Qt GUI 的同步日志在哪？** 在「同步日志」面板中。
 - **GUI 里改了「文档标准配置」要重启吗？** 不需要——保存后若正在监听会立即用新规则重跑；「规范化源文档」也始终用当前配置。
 
@@ -243,9 +223,8 @@ typography:                          # 文档排版规范（默认全部开启�
 ```
 md-sync/
 ├── md_sync/                # 核心包
-│   ├── cli.py              # 命令行入口（md-sync sync / gui / status …）
+│   ├── cli.py              # 命令行入口（md-sync sync / start / ipc …）
 │   ├── config.py           # ProjectConfig 解析（md-sync.yaml）
-│   ├── qt_app.py           # 原生 PySide6 桌面 GUI（python -m md_sync.qt_app / md-sync gui）
 │   ├── watcher.py          # 文件监听（watchdog + debounce）
 │   ├── core/               # Document 数据模型 + pipeline 同步主流程编排
 │   ├── renderers/          # md / html 渲染器
@@ -256,7 +235,8 @@ md-sync/
 │   └── plugin/             # 插件引擎（接口 / 注册表 / 加载器 / 钩子），不含插件实例
 ├── plugins/                # 内置插件（typora / resume / generic-markdown / gongwen），各自携带模板
 ├── docs/example-plugin/    # 插件开发示例（resume-pack：源模板 + 解析器 + 渲染风格）
-├── scripts/build_app.py    # PyInstaller 单文件打包
+├── scripts/build_web.py    # 打包 Web 版（→ dist/md-sync-web）
+├── scripts/build_desktop.py # 打包桌面版（→ dist/md-sync-ui）
 ├── tests/                  # 测试脚本
 └── pyproject.toml
 ```
@@ -268,7 +248,7 @@ md-sync/
    │
    ├─[1 解析]   按 config.schema 选用解析器（插件解析器优先，缺省 MdParser）→ Document 模型
    ├─[2 翻译]   对每个目标语言去 .translations.json 查译文，命中复用，未命中回退 AI
-   ├─[3 排版]   typography 规范化（按目标语言启用对应子规则，仅作用于产物文本）
+   ├─[3 排版]   typography 规范化（按目标语言启用对应子规则，仅作用于输出文本）
    ├─[4 渲染]   模板系统渲染（Jinja2 + 插件自定义过滤器）
    ├─[5 导出]   md / html 直接写盘；pdf 由 Chromium 打印 html；docx/epub 经 pandoc
    └─ 保存译文缓存
@@ -420,33 +400,36 @@ outputs:
 ```bash
 pip install build
 python -m build
-# 产物在 dist/md_sync-*.whl，可 pip install 分发
+# 输出在 dist/md_sync-*.whl，可 pip install 分发
 ```
 
 CLI 入口：`md-sync`（见 `pyproject.toml` 的 `[project.scripts]`）。
 
-#### 2. 单文件可执行程序（PyInstaller，推荐）
+#### 2. 单文件可执行程序（推荐，免 Python）
 
-仓库自带跨平台构建脚本 `scripts/build_app.py`，在当前系统上产出免 Python 环境的可执行文件：
+Web 与桌面两个版本共用同一套 Dioxus 前端，一条命令全部打包：
 
 ```bash
 pip install pyinstaller            # 或 pip install -e ".[build]"
-python scripts/build_app.py                # 产出 dist/md-sync (Linux/macOS) 或 dist/md-sync.exe (Windows)
-python scripts/build_app.py --clean        # 清缓存后重新构建
+
+python scripts/build_all.py        # 一键 → dist/md-sync-web + dist/md-sync-ui
+python scripts/build_all.py --web       # 只打 Web 版
+python scripts/build_all.py --desktop   # 只打桌面版
+python scripts/build_all.py --force     # 强制重新打包后端（跳过指纹缓存）
 ```
 
-**产物位置（均在本项目 `dist/` 目录下）：**
+**输出位置（均在本项目 `dist/` 目录下）：**
 
-| 平台 | 产物路径 | 说明 |
+| 版本 | 输出路径 | 说明 |
 |------|----------|------|
-| Linux   | `dist/md-sync`        | ELF 可执行文件，直接 `./dist/md-sync --help` 运行 |
-| macOS   | `dist/md-sync`        | 同 Linux 命名，需在 macOS 上构建 |
-| Windows | `dist/md-sync.exe`    | 需在 Windows 上构建 |
+| Web   | `dist/md-sync-web`    | 独立 web 服务器，`./dist/md-sync-web` 运行 → 浏览器打开 http://127.0.0.1:8580 |
+| 桌面   | `dist/md-sync-ui`     | Dioxus 原生窗口，直接运行，内嵌后端自动启动（Unix socket，无网络端口） |
 
-> 当前环境是 Linux，本地构建只会得到 `dist/md-sync`；Windows / macOS 二进制需在对应系统或下面的 CI 上产出。
-> `dist/`、`build/`、`*.spec` 都已写入 `.gitignore`，不会进版本库。
+> 后端指纹缓存（`dist/.backend-*.fp`）自动感知源码 / 依赖 / 环境变化：只有后端输入变了才重新打
+> （如新装 `python-docx` 后会自动重打）。`dist/`、`build/`、`*.spec` 均已写入 `.gitignore`。
+> `dist/md-sync` 是桌面版内嵌用的后端中间物，由脚本自动处理，无需手动管理。
 
-- 脚本自动把 `md_sync/templates`、`md_sync/plugins`、`md_sync/web/static` 等资源打进 bundle，
+- 打包脚本自动把 `md_sync/templates`、`md_sync/plugins`、`md_sync/web/static` 等资源打进 bundle，
   运行时通过 `md_sync.template.manager._find_install_dir()` 解析，**无需用户机器安装任何东西**。
 - **构建 Python 版本建议 3.12**（PyInstaller 官方稳定支持）。在 3.14 上需排除 `mypy`
   （脚本已默认 `--exclude-module mypy`）。
@@ -454,16 +437,16 @@ python scripts/build_app.py --clean        # 清缓存后重新构建
 #### 3. 跨平台自动构建（GitHub Actions）
 
 `.github/workflows/build.yml` 在 `ubuntu-latest` / `windows-latest` / `macos-latest`
-三个 runner 上分别运行 `python scripts/build_app.py`，将三个平台的可执行文件作为 Release artifact 上传。
+三个 runner 上分别运行 `python scripts/build_web.py`，将三个平台的 Web 版可执行文件作为 Release artifact 上传。
 
 ```bash
 # 打 tag 触发自动构建并发布 Release
 git tag v1.0.0 && git push origin v1.0.0
-# 到 GitHub Releases 页面下载：md-sync-linux / md-sync-windows.exe / md-sync-macos
+# 到 GitHub Releases 页面下载：md-sync-web-linux / md-sync-web-windows.exe / md-sync-web-macos
 ```
 
 若只想临时取三平台二进制（不发 Release），在 Actions 对应 run 的 Artifacts 里下载即可，
-artifact 命名为 `md-sync-ubuntu-latest` / `md-sync-windows-latest` / `md-sync-macos-latest`。
+artifact 命名为 `md-sync-web-ubuntu-latest` / `md-sync-web-windows-latest` / `md-sync-web-macos-latest`。
 
 ---
 

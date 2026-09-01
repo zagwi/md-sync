@@ -55,7 +55,6 @@ def main(argv: list[str] | None = None) -> int:
         ("sync", "Run a one-shot sync"),
         ("status", "Show project status"),
         ("dry-run", "Show what would change without writing"),
-        ("gui", "Launch the native Qt GUI"),
         ("start", "Serve the web dashboard (index.html) at :8580"),
         ("ipc", "Serve the desktop backend over a Unix socket (no network port)"),
     ]:
@@ -102,7 +101,6 @@ def main(argv: list[str] | None = None) -> int:
         "dry-run": lambda: _cmd_dry_run(cfg_path),
         "template": lambda: _cmd_template(args),
         "plugin": lambda: _cmd_plugin(args),
-        "gui": lambda: _cmd_gui(),
         "start": lambda: _cmd_start(),
         "ipc": lambda: _cmd_ipc(),
     }
@@ -340,14 +338,6 @@ def _load_config(config_path: str) -> ProjectConfig:
         print("  Run 'md-sync init' to create one, or use the Qt GUI ('md-sync gui').")
         sys.exit(1)
     return ProjectConfig.load(path)
-
-
-def _cmd_gui() -> int:
-    """Launch the native Qt GUI (no HTTP server)."""
-    from md_sync.qt_app import main as gui_main
-
-    gui_main()
-    return 0
 
 
 def _cmd_start() -> int:

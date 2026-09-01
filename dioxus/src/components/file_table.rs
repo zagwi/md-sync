@@ -18,14 +18,15 @@ pub fn FileTable() -> Element {
     rsx! {
         section { class: "card",
             div { class: "card-header",
-                div { class: "flex items-center gap-2",
+                div { class: "flex items-center gap-2 flex-wrap",
                     svg { class: "size-4 text-muted-foreground", fill: "none", view_box: "0 0 24 24", stroke: "currentColor", stroke_width: "2",
                         path { stroke_linecap: "round", stroke_linejoin: "round",
                             d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" } }
                     h2 { class: "text-base font-semibold", "输出文件" }
                     span { class: "badge badge-secondary", "{files.len()}" }
+                    p { class: "text-xs text-muted-foreground ml-auto text-right",
+                        "已生成的同步输出，点击直接打开查看。" }
                 }
-                p { class: "text-xs text-muted-foreground", "已生成的同步产物，点击直接打开查看。" }
             }
             div { class: "card-body",
                 if files.is_empty() {
@@ -88,13 +89,7 @@ fn FileRow(file: OutputFile, blink: bool) -> Element {
                 }
             }
             td {
-                div { class: "flex items-center gap-1.5",
-                    span { class: "format-dot {format_color(&file.format)}" }
-                    span { class: "text-[13px] uppercase", "{file.format}" }
-                    if file.pdf {
-                        span { class: "badge badge-outline text-[10px] px-1.5 py-0", "PDF" }
-                    }
-                }
+                span { class: "badge badge-outline uppercase", "{file.format}" }
             }
             td { span { class: "badge badge-outline", "{lang_label}" } }
             td {
@@ -113,17 +108,6 @@ fn FileRow(file: OutputFile, blink: bool) -> Element {
                 }
             }
         }
-    }
-}
-
-fn format_color(format: &str) -> &'static str {
-    match format {
-        "html" => "html",
-        "md" => "markdown",
-        "pdf" => "destructive",
-        "docx" => "docx",
-        "epub" => "violet",
-        _ => "neutral",
     }
 }
 
@@ -163,7 +147,7 @@ fn DownloadButton(file: OutputFile) -> Element {
                     let mut state = state;
                     let path = path.clone();
                     dioxus::prelude::spawn(async move {
-                        // desktop 下产物就在本机磁盘，直接用系统默认程序打开
+                        // desktop 下输出就在本机磁盘，直接用系统默认程序打开
                         match tokio::task::spawn_blocking(move || open_with_default_app(&path)).await {
                             Ok(Ok(())) => {}
                             Ok(Err(e)) => *state.status.write() = StatusKind::Err(format!("打开失败: {e}")),

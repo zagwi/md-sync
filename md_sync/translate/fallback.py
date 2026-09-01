@@ -37,7 +37,14 @@ logger = logging.getLogger(__name__)
 # Placeholder tokens must survive translation engines unaltered: use ASCII
 # letters only (no digits/symbols that engines may strip or reformat).
 _PLACEHOLDER_PREFIX = "ZXQWPZLP"
-_PLACEHOLDER_RE = re.compile(r"ZXQWPZLP(\d+)")
+# 占位符格式 "ZXQWPZLP-<n>-"：尾随 "-" 终结 \d+，使占位符后的原文数字
+# （日期如 2003）不会被贪婪正则吞入编号。旧格式 "ZXQWPZLP<n>" 会把
+# "ZXQWPZLP-1-" + "2003.09" 合成 "ZXQWPZLP12003"，与编号 12 的真实
+# 占位符产生歧义（"1|2003" vs "12|003"），还原时可能误吞数字。
+_PLACEHOLDER_RE = re.compile(r"ZXQWPZLP-(\d+)-")
+# 宽松残留检测：引擎可能把占位符拆成 "ZXQWPZLP 1"（加空格/标点），
+# 只要正文中仍出现 ZXQWPZLP 前缀即视为还原失败，须回退防泄漏。
+_LEAK_RE = re.compile(r"ZXQWPZLP")
 
 
 def _protect_code_and_urls(text: str) -> tuple[str, dict[str, str]]:
@@ -54,7 +61,7 @@ def _protect_code_and_urls(text: str) -> tuple[str, dict[str, str]]:
     counter = [0]
 
     def _sub(match: re.Match) -> str:
-        placeholder = f"{_PLACEHOLDER_PREFIX}{counter[0]}"
+        placeholder = f"{_PLACEHOLDER_PREFIX}-{counter[0]}-"
         counter[0] += 1
         placeholder_map[placeholder] = match.group(0)
         return placeholder
@@ -100,17 +107,32 @@ def _restore_code_and_urls(text: str, placeholder_map: dict[str, str]) -> str:
     def _restore(match: re.Match) -> str:
         ph = match.group(0)
         seen.add(ph)
-        return placeholder_map.get(ph, ph)
+        # 占位符整体命中：直接还原。
+        if ph in placeholder_map:
+            return placeholder_map[ph]
+        # 未命中（引擎改写丢了终止 "-"，如 "ZXQWPZLP-1-2003" → "ZXQWPZLP-1 2003"）：
+        # 逐位缩短数字部分找真实占位符，多余数字原样保留——否则 2003 这类
+        # 日期会被误删。
+        digits = match.group(1)
+        for i in range(len(digits), 0, -1):
+            key = f"{_PLACEHOLDER_PREFIX}-{digits[:i]}-"
+            if key in placeholder_map:
+                return placeholder_map[key] + digits[i:]
+        # 占位符不在映射中（翻译引擎改写/重排/发明了编号）时绝不能原样保留，
+        # 否则 ZXQWPZLP 会泄漏进译文并污染翻译缓存。丢弃比泄漏安全。
+        return ""
 
     result = _PLACEHOLDER_RE.sub(_restore, result)
 
     # Any placeholder the engine dropped entirely (never appeared in the
     # translated output) gets re-appended in order, so code is never lost.
-    dropped = [
-        (int(ph[len(_PLACEHOLDER_PREFIX) :]), placeholder_map[ph])
-        for ph in placeholder_map
-        if ph not in seen
-    ]
+    dropped = []
+    for ph, orig in placeholder_map.items():
+        if ph in seen:
+            continue
+        m = _PLACEHOLDER_RE.fullmatch(ph)
+        if m:
+            dropped.append((int(m.group(1)), orig))
     for _, orig in sorted(dropped):
         # A dropped emphasis delimiter (``**``/``*``…) must NOT be re-appended
         # to the end of the sentence — it would turn into stray markers. If the
@@ -211,6 +233,9 @@ def translate_via_api(
         if not result:
             return None
         restored = _restore_code_and_urls(result, placeholder_map)
+        # 兜底：还原后仍有占位符残留则视为翻译失败，回退原文，避免污染缓存
+        if _LEAK_RE.search(restored):
+            return None
         # Engines often pad a short leaf ("HTML" → " HTML "). The leaf's own
         # source spacing (``lead``/``trail``) is authoritative — drop the
         # engine's padding, or a neighbouring ``**``/``*`` marker stops parsing.
@@ -234,6 +259,9 @@ def translate_via_api(
     if not result:
         return None
     restored = _restore_code_and_urls(result, placeholder_map)
+    # 兜底：还原后仍有占位符残留则视为翻译失败，回退原文
+    if _LEAK_RE.search(restored):
+        return None
     return _repair_emphasis_spacing(restored)
 
 

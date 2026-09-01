@@ -3,7 +3,7 @@
 //!
 //! Probe order:
 //!   1. $MD_SYNC_BACKEND (explicit path)
-//!   2. <repo>/dist/md-sync[.exe]  (produced by scripts/build_app.py)
+//!   2. <repo>/dist/md-sync[.exe]  (packaged automatically by scripts/build_desktop.py)
 //!
 //! If none is found the build still succeeds and emits a `None` constant;
 //! at runtime the desktop app falls back to `python -m uvicorn`.

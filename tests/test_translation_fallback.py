@@ -242,8 +242,8 @@ class TestProtectAndRestore:
         text = "**多格式输出**"
         protected, p_map = _protect_code_and_urls(text)
         assert "**" not in protected
-        assert p_map["ZXQWPZLP0"] == "**"
-        assert p_map["ZXQWPZLP1"] == "**"
+        assert p_map["ZXQWPZLP-0-"] == "**"
+        assert p_map["ZXQWPZLP-1-"] == "**"
         assert _restore_code_and_urls(protected, p_map) == text
 
 

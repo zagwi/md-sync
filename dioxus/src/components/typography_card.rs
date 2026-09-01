@@ -51,14 +51,14 @@ pub fn TypographyCard() -> Element {
     rsx! {
         section { class: "card",
             div { class: "card-header",
-                div { class: "flex items-center gap-2",
+                div { class: "flex items-center gap-2 flex-wrap",
                     svg { class: "size-4 text-muted-foreground", fill: "none", view_box: "0 0 24 24", stroke: "currentColor", stroke_width: "2",
                         path { stroke_linecap: "round", stroke_linejoin: "round",
                             d: "M4 6h16M4 12h16M4 18h7" } }
                     h2 { class: "text-base font-semibold", "文档排版规范" }
+                    p { class: "text-xs text-muted-foreground ml-auto text-right",
+                        "自动规整中英文混排间距，输出更专业、更一致的排版。" }
                 }
-                p { class: "text-xs text-muted-foreground",
-                    "自动规整中英文混排间距，输出更专业、更一致的排版。" }
             }
             div { class: "card-body",
                 div { class: "flex items-center justify-between rounded-lg border border-border bg-muted/40 px-4 py-3",
@@ -80,11 +80,11 @@ pub fn TypographyCard() -> Element {
                     RuleGroup { title: "英文配置", subtitle: "英文语境下的自动排版规则", rules: TYPO_EN_RULES.to_vec(), state: state }
                 }
 
-                div { class: "flex items-center justify-end gap-2 mt-4 border-t border-border pt-4",
+                div { class: "flex items-center justify-end gap-2 mt-5",
                     p { class: "text-xs text-muted-foreground mr-auto",
                         "规范化将直接修改源文档，建议先备份。" }
                     button {
-                        class: "btn btn-primary",
+                        class: "btn btn-outline-destructive",
                         onclick: move |_| {
                             let mut state = state;
                             *state.busy.write() = true;

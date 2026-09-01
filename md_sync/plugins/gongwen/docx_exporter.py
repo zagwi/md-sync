@@ -1,6 +1,6 @@
 """Gongwen DOCX exporter — 生成符合 GB/T 9704-2012 的标准公文 Word 文档。
 
-基础 docx 导出走 ``HTML → pandoc``，产物只是普通 Word 样式（无红头、无页码、
+基础 docx 导出走 ``HTML → pandoc``，输出只是普通 Word 样式（无红头、无页码、
 字体行距均非公文规格）。本导出器改用 python-docx **直接从文档结构构建** docx，
 完整复现国标版式：
 

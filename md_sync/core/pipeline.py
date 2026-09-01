@@ -188,7 +188,7 @@ class SyncPipeline:
         self._stats["source"] = str(source)
         logger.info("[sync] ✓ Parsed: %s (%d sections)", source.name, len(doc.sections))
 
-        # 中英文混排规范：仅对内存中的产物文本做规范化，绝不写回用户源文件。
+        # 中英文混排规范：仅对内存中的输出文本做规范化，绝不写回用户源文件。
         self._apply_typography(doc)
 
         # 2. Process each output
@@ -321,7 +321,7 @@ class SyncPipeline:
             try:
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 if self._config.typography.enabled:
-                    # 中英文混排规范：md 产物写规范化文本（源文件仍保持原样）。
+                    # 中英文混排规范：md 输出写规范化文本（源文件仍保持原样）。
                     out_path.write_text(doc.source_raw, encoding="utf-8")
                     result["ok"] = True
                     result["copied"] = True
@@ -409,7 +409,7 @@ class SyncPipeline:
                     logger.info(
                         "  ✓ %s (%d KB, plugin docx) [%s]", out_path.name, size_kb, style_name
                     )
-                    # ② 插件机制：转换产物写出后触发 after_render hook
+                    # ② 插件机制：转换输出写出后触发 after_render hook
                     self._plugin_registry.emit_after_render(
                         out_path,
                         {"lang": target_lang, "format": "docx", "path": str(out_path)},
@@ -555,7 +555,7 @@ class SyncPipeline:
             result["ok"] = True
             size_kb = out_path.stat().st_size // 1024 if out_path.exists() else 0
             logger.info("  ✓ %s (%d KB, via pandoc) [%s]", out_path.name, size_kb, style_name)
-            # ② 插件机制：转换产物写出后触发 after_render hook
+            # ② 插件机制：转换输出写出后触发 after_render hook
             self._plugin_registry.emit_after_render(
                 out_path,
                 {"lang": target_lang, "format": out_cfg.format, "path": str(out_path)},

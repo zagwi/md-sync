@@ -28,7 +28,7 @@ from md_sync.translate.fallback import _protect_code_and_urls, _restore_code_and
 _CJK = "\u4e00-\u9fff"
 _LATIN = "A-Za-z"
 _FULLWIDTH_PUNCT = "，。、；：！？…—（）「」『』【】《》"
-_PLACEHOLDER_RE = re.compile(r"ZXQWPZLP\d+")
+_PLACEHOLDER_RE = re.compile(r"ZXQWPZLP-(\d+)-")
 
 
 @dataclass

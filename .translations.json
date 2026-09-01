@@ -1181,5 +1181,561 @@
   "05a8fe243b0c": {
     "en": "Open source address: https://github.com/zagwi/cloud-platform。基于 **Spring Cloud** Constructed Complete**Microservices Architecture Platform**covers the core governance components such as registration center, configuration center, gateway, fuse downgrade, etc. Integrate enterprise-class capabilities such as distributed transactions, message queuing, and caching. Project Features: 1. Perfect cloud platform distributed microservices architecture. 2. Provide local,**Docker** and . **K8s**Three deployment modes. 3. Provides web console visualization and CLI one-click deployment capabilities. 4. Provide service pressure measurement function.",
     "status": "auto"
+  },
+  "007af7ed319a": {
+    "zh": "\\[",
+    "status": "auto"
+  },
+  "4ce709d35b9b": {
+    "zh": "\\ vdots &\\ vdots &\\ ddots &\\ vdots\\\\ [6pt]",
+    "status": "auto"
+  },
+  "bcf19a701594": {
+    "zh": "a_ {11} & a_ {12} &\\ cdots & a_ {1n}\\\\ [6pt]",
+    "status": "auto"
+  },
+  "e9ef11ee44e3": {
+    "zh": "来源： algebrica.org — CC BY-NC 4.0",
+    "status": "auto"
+  },
+  "a9e2abe97303": {
+    "zh": "A =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "4deedacfae2e": {
+    "zh": "a_ {21} & a_ {22} &\\ cdots & a_ {2n}\\\\ [6pt]",
+    "status": "auto"
+  },
+  "eb3e67adf25d": {
+    "zh": "https://algebrica.org/matrices/",
+    "status": "auto"
+  },
+  "4b56e262856e": {
+    "zh": "- -",
+    "status": "auto"
+  },
+  "7c10c0f54428": {
+    "zh": "\\ end {pmatrix}",
+    "status": "auto"
+  },
+  "feb130d02d65": {
+    "zh": "a_ {m1} & a_ {m2} &\\ cdots & a_ {mn}",
+    "status": "auto"
+  },
+  "f71e5489493d": {
+    "zh": "向量和零矩阵",
+    "status": "auto"
+  },
+  "ce1c0e95cb30": {
+    "zh": "这也以紧凑形式写为\\ (A = (a_ {ij})\\) ，其中\\ (a_ {ij}\\)表示第\\ (i\\)行和第\\ (j\\)列中的元素，其中\\ (1\\ leq i\\ leq m\\)和\\ (1\\ leq j\\ leq n\\)。",
+    "status": "auto"
+  },
+  "dca545412fef": {
+    "zh": ">具有实数条目的所有\\\\ (m\\\\ times n\\\\)矩阵的集合在加法下形成一个阿贝尔群。当限制为阶方阵\\\\ (n\\\\)时，矩阵乘法的附加结构使\\\\ (M_ {n\\\\ times n} (\\\\ mathbb {R})\\\\)成为一个环。阶\\\\ (n\\\\)的可逆矩阵的子集在乘法下形成一个[群] (../groups/) ，称为一般线性群\\\\ (GL (n,\\\\ mathbb {R})\\\\)。",
+    "status": "auto"
+  },
+  "85735959b17e": {
+    "zh": "\\]",
+    "status": "auto"
+  },
+  "b4c28339c6b3": {
+    "zh": "\\\\ qquad",
+    "status": "auto"
+  },
+  "2335c7f14523": {
+    "zh": "A =\\ begin {pmatrix} a_1 & a_2 & a_3\\ end {pmatrix}",
+    "status": "auto"
+  },
+  "2949ca05b281": {
+    "zh": "B =\\ begin {pmatrix} b_1\\\\ [6pt] b_2\\\\ [6pt] b_3\\ end {pmatrix}",
+    "status": "auto"
+  },
+  "c66223e4921e": {
+    "zh": "每个元素等于零的矩阵称为零矩阵，表示为\\ (O\\)。零矩阵在矩阵加法中起着加法恒等式的作用，如下所述。",
+    "status": "auto"
+  },
+  "4724bfdace3d": {
+    "zh": ">行向量和列向量是通常意义上的矩阵，并遵循所有相同的代数规则。为了清楚起见，它们被视为特殊情况，但在[线性组合] (../linear-combinations/)和向量空间的背景下进行了更广泛的研究。",
+    "status": "auto"
+  },
+  "7e4bd3d001ef": {
+    "zh": "当矩阵的行数等于其列数时，即当矩阵具有维度\\ (n\\ times n\\)时，称为正方形。整数\\ (n\\)称为矩阵的顺序。在正方形矩阵中，\\ (i = j\\)构成主对角线的元素\\ (a_ {ij}\\)。\\ (i + j = n +1\\)形成次要对角线的元素：",
+    "status": "auto"
+  },
+  "e49cab47826e": {
+    "zh": "a_ {21} &\\ boldsymbol {a_ {22}} & a_ {23}\\\\ [6pt]",
+    "status": "auto"
+  },
+  "fc2d858f35ce": {
+    "zh": "a_ {31} & a_ {32} &\\ boldsymbol {a_ {33}}",
+    "status": "auto"
+  },
+  "cf7e6ee2d174": {
+    "zh": "正方形矩阵和特殊类型",
+    "status": "auto"
+  },
+  "a3a8aa618d8a": {
+    "zh": "由单个行组成的矩阵称为行 [向量](../vectors/)，由单列组成的矩阵称为列向量。以下是具有3列的行矢量\\ (A\\)和具有3行的列矢量\\ (B\\) ：",
+    "status": "auto"
+  },
+  "7bf836dc1ed2": {
+    "zh": "0 & 5 & 0\\\\ [6pt]",
+    "status": "auto"
+  },
+  "fc607189b9e9": {
+    "zh": "0 ... 6",
+    "status": "auto"
+  },
+  "4042510ea581": {
+    "zh": "D =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "96f5346cd732": {
+    "zh": "\\ boldsymbol {a_ {11}} & a_ {12} & a_ {13}\\\\ [6pt]",
+    "status": "auto"
+  },
+  "05d7113de648": {
+    "zh": "U =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "bb18d3a4cc41": {
+    "zh": "0. 7",
+    "status": "auto"
+  },
+  "b77554d30d28": {
+    "zh": "矩阵",
+    "status": "auto"
+  },
+  "b51b082a4923": {
+    "zh": "0 & 5 & 4\\\\ [6pt]",
+    "status": "auto"
+  },
+  "0b79795d3efc": {
+    "zh": "简介",
+    "status": "auto"
+  },
+  "141172c56b60": {
+    "zh": "3 & 0 & 0\\\\ [6pt]",
+    "status": "auto"
+  },
+  "6272da9d40f6": {
+    "zh": "5 & 1 & 4",
+    "status": "auto"
+  },
+  "9dcbbcc5e4e5": {
+    "zh": "-2 & 6 & 0\\\\ [6pt]",
+    "status": "auto"
+  },
+  "bc1387f5a0b2": {
+    "zh": "4 & 0 & 0\\\\ [6pt]",
+    "status": "auto"
+  },
+  "075bbee8b308": {
+    "zh": "主对角线以外的所有元素均为零的正方形矩阵称为对角矩阵。以下是\\ (3\\ times 3\\)对角矩阵的示例：",
+    "status": "auto"
+  },
+  "443c5d78f016": {
+    "zh": "S =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "3158811c991f": {
+    "zh": "1 & 3 & -2\\\\ [6pt]",
+    "status": "auto"
+  },
+  "2a4160d82d36": {
+    "zh": "如果正方形矩阵\\ (A\\)等于其自身的转置，即\\ (A = A ^ {\\ mathrm {T}}\\) ，则称为对称。这意味着所有\\ (i\\)和\\ (j\\)的\\ (a_ {ij} = a_ {ji}\\) ：行\\ (i\\)和列\\ (j\\)中的元素等于行\\ (j\\)和列\\ (i\\)中的元素。以下是一个\\ (3\\ times 3\\)对称矩阵：",
+    "status": "auto"
+  },
+  "9cbe7292011e": {
+    "zh": "3 & 0 & 5\\\\ [6pt]",
+    "status": "auto"
+  },
+  "62e0ef904e7c": {
+    "zh": "-2 & 5 & 4",
+    "status": "auto"
+  },
+  "e1cf451a6512": {
+    "zh": "2 & -1 & 3\\\\ [6pt]",
+    "status": "auto"
+  },
+  "af70b1ac8638": {
+    "zh": "转置",
+    "status": "auto"
+  },
+  "54e040bebfe7": {
+    "zh": "如果主对角线以下的所有元素均为零，则矩阵称为上三角形，如果主对角线以上的所有元素均为零，则矩阵称为下三角形：",
+    "status": "auto"
+  },
+  "06064aa3c13f": {
+    "zh": ">对称矩阵自然出现在数学的许多领域，包括二次型、内积空间和光谱理论。每个实对称矩阵都有实[特征值] （../特征值和特征向量/）和特征向量的正交基，这一结果被称为谱定理。",
+    "status": "auto"
+  },
+  "ccaa5d021df5": {
+    "zh": "9 & 6 & 8",
+    "status": "auto"
+  },
+  "5101fc78979f": {
+    "zh": "L =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "7d0fd63e7fe8": {
+    "zh": "矩阵是一个矩形数组， [實數集](../types-of-numbers) 排列成行和列。具有\\ (m\\)行和\\ (n\\)列的矩阵被称为具有维度\\ (m\\ times n\\) ，称为\\ (m\\ times n\\)矩阵。例如，\\ (3\\ times 2\\)矩阵有3行2列。矩阵中出现的每个数字都称为元素。元素由两个下标索引标识：第一个表示行，第二个表示列。因此\\ (a_ {2,3}\\)表示第二行和第三列中的元素。维度为\\ (m\\ times n\\)的矩阵\\ (A\\)如下：",
+    "status": "auto"
+  },
+  "ba595a50182e": {
+    "zh": "2 & 7 & 9\\\\ [6pt]",
+    "status": "auto"
+  },
+  "2b986e2b7d85": {
+    "zh": "对于兼容维度的矩阵\\ (A\\)和\\ (B\\)以及任何标量\\ (k\\) ，转置满足以下属性：",
+    "status": "auto"
+  },
+  "bd47bcfb28d3": {
+    "zh": "3 & 4 & 8",
+    "status": "auto"
+  },
+  "106bcb0e8ecf": {
+    "zh": "-1 & 5 & 6\\\\ [6pt]",
+    "status": "auto"
+  },
+  "e08e12aa0199": {
+    "zh": "\\ ((A ^ {\\ mathrm {T}}) ^ {\\ mathrm {T}} = A\\)",
+    "status": "auto"
+  },
+  "b752778e767c": {
+    "zh": "\\ ((kA) ^ {\\ mathrm {T}} = k A ^ {\\ mathrm {T}}\\)",
+    "status": "auto"
+  },
+  "88b5cd8e2ed7": {
+    "zh": "\\ (((A + B) ^ {\\ mathrm {T}} = A ^ {\\ mathrm {T}} + B ^ {\\ mathrm {T}}\\)",
+    "status": "auto"
+  },
+  "c1e0526a7014": {
+    "zh": "\\ (((AB) ^ {\\ mathrm {T}} = B ^ {\\ mathrm {T}} A ^ {\\ mathrm {T}}\\)",
+    "status": "auto"
+  },
+  "854353589a29": {
+    "zh": "加性逆矩阵",
+    "status": "auto"
+  },
+  "d81d01ee26c3": {
+    "zh": ">恒等式\\\\ ((AB) ^ {\\\\ mathrm {T}} = B ^ {\\\\ mathrm {T}} A ^ {\\\\ mathrm {T}}\\\\)颠倒了因子的顺序。这种逆转是必要的，因为矩阵乘法不是可交换的，它在其他几种情况下重复发生，包括乘积的逆转。",
+    "status": "auto"
+  },
+  "a60fd796247f": {
+    "zh": "A ^ {\\ mathrm {T}} =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "73490ece12e8": {
+    "zh": "矩阵\\ (A\\)的加性逆，表示为\\ (-A\\) ，是通过否定\\ (A\\)的每个元素获得的矩阵：每个条目\\ (a_ {ij}\\)变为\\ (-a_ {ij}\\)。矩阵\\ (A\\)和\\ (-A\\)具有相同的维度，它们的总和是零矩阵：",
+    "status": "auto"
+  },
+  "e0b682481e10": {
+    "zh": "-A =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "3d8682ea1916": {
+    "zh": "-9 & -6 & -8",
+    "status": "auto"
+  },
+  "2c21f93d49e6": {
+    "zh": "矩阵加减",
+    "status": "auto"
+  },
+  "5e770bb5ec6a": {
+    "zh": "7 & 5 & 4\\\\ [6pt]",
+    "status": "auto"
+  },
+  "f26d4da37f93": {
+    "zh": "-7 & -5 & -4\\\\ [6pt]",
+    "status": "auto"
+  },
+  "506c2c0c7f5b": {
+    "zh": "例如：",
+    "status": "auto"
+  },
+  "3a5c3509bbe2": {
+    "zh": "只有两个矩阵具有相同的维度，才能添加或减去它们。给定两个\\ (m\\ times n\\)矩阵\\ (A = (a_ {ij})\\)和\\ (B = (b_ {ij})\\) ，它们的总和\\ (C = A + B\\)是\\ (m\\ times n\\)矩阵，定义如下：",
+    "status": "auto"
+  },
+  "9a88f5f0b1a9": {
+    "zh": "也就是说，\\ (C\\)的每个元素是\\ (A\\)和\\ (B\\)的相应元素的总和。以下示例说明了两个\\ (2\\ times 3\\)矩阵的计算：",
+    "status": "auto"
+  },
+  "329040b49e6c": {
+    "zh": "7 & 5 & 4",
+    "status": "auto"
+  },
+  "189503e6ebea": {
+    "zh": "B =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "397b4ef36a10": {
+    "zh": "-2 & 1 & -3\\\\ [6pt]",
+    "status": "auto"
+  },
+  "d6d64e99b397": {
+    "zh": "0, 1, 3, 6",
+    "status": "auto"
+  },
+  "94447caa19ed": {
+    "zh": "总和是：",
+    "status": "auto"
+  },
+  "fc4177995931": {
+    "zh": "4 & 0 & -2\\\\ [6pt]",
+    "status": "auto"
+  },
+  "859d00bb3bf8": {
+    "zh": "c_ {ij} = a_ {ij} + b_ {ij}",
+    "status": "auto"
+  },
+  "f6bee9cf4e88": {
+    "zh": "A + B & =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "91f83e2ba1a6": {
+    "zh": "\\ begin {aligned}",
+    "status": "auto"
+  },
+  "f01d3d3fc8b5": {
+    "zh": "2 +4 & -1 +0 & 3 + (-2)\\\\ [6pt]",
+    "status": "auto"
+  },
+  "9782540f9e2e": {
+    "zh": "7 +1和5 +3和4 +6",
+    "status": "auto"
+  },
+  "7df945f61129": {
+    "zh": "\\ end {pmatrix}\\\\ [12pt]",
+    "status": "auto"
+  },
+  "f69601bff5ec": {
+    "zh": "6 & -1 & 1\\\\ [6pt]",
+    "status": "auto"
+  },
+  "0093d9482aa7": {
+    "zh": "& =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "e8fae24d4bc7": {
+    "zh": "\\ end {aligned}\\\\ [20pt]",
+    "status": "auto"
+  },
+  "be54a1506f83": {
+    "zh": "关联性：\\ ((A + B) + C = A + (B + C)\\)。可以在任何分组中计算三个或更多矩阵的总和。",
+    "status": "auto"
+  },
+  "7a878672f403": {
+    "zh": "8 & 8 & 10",
+    "status": "auto"
+  },
+  "2d17ef937ff9": {
+    "zh": "交换性：\\ (A + B = B + A\\)。添加两个矩阵的顺序不会影响结果。",
+    "status": "auto"
+  },
+  "46a39ba8ae22": {
+    "zh": "差分\\ (A-B\\)定义为\\ (A + (-B)\\) ，即\\ (A\\)与\\ (B\\)的加性逆的和。对于维度为\\ (m\\ times n\\)的任何矩阵\\ (A\\)、\\ (B\\)、\\ (C\\) ，矩阵加法满足以下属性：",
+    "status": "auto"
+  },
+  "9642950855d5": {
+    "zh": "加性逆：\\ (A + (-A) = O\\)。每个矩阵都有一个唯一的加性逆。",
+    "status": "auto"
+  },
+  "c448346584b3": {
+    "zh": "标量乘法",
+    "status": "auto"
+  },
+  "86c3f469628d": {
+    "zh": "3\"=1'-0”",
+    "status": "auto"
+  },
+  "a47fe42679b4": {
+    "zh": "给定维度为\\ (m\\ times n\\)的矩阵\\ (A = (a_ {ij})\\)和实数\\ (k\\) ，标量倍数\\ (kA\\)是其位置\\ ((i, j)\\)中的元素为\\ (k\\ cdot a_ {ij}\\)的\\ (m\\ times n\\)矩阵。矩阵的每个条目都乘以\\ (k\\)。例如，使用\\ (k = 2\\) ：",
+    "status": "auto"
+  },
+  "83fb0c258f0e": {
+    "zh": "加法恒等式：\\ (A + O = A\\) ，其中\\ (O\\)是相同维度的零矩阵。添加零矩阵保持\\ (A\\)不变。",
+    "status": "auto"
+  },
+  "ba0393f0ef29": {
+    "zh": "2 & -4 & 8\\\\ [6pt]",
+    "status": "auto"
+  },
+  "21abb71d9f78": {
+    "zh": "6-2",
+    "status": "auto"
+  },
+  "5e18793205e2": {
+    "zh": "矩阵 \\( A \\) 的转置，记为 \\( A^{\\mathrm{T}} \\)，是将 \\( A \\) 的行和列互换后得到的 \\( n \\times m \\) 矩阵。形式上，\\( A^{\\mathrm{T}} \\) 中位置 \\( i,j) \\) 处的元素等于 \\( A \\) 中位置 \\( j,i) \\) 处的元素。例如：",
+    "status": "auto"
+  },
+  "eb548be9f1b1": {
+    "zh": "对于相同维度和实数\\ (k\\)和\\ (h:\\)的矩阵\\ (A\\)和\\ (B\\) ，标量乘法满足以下属性",
+    "status": "auto"
+  },
+  "f35ba8de758a": {
+    "zh": "关联性：\\ (k (hA) = (kh) A\\)。连续的标量乘法可以组合成一个。",
+    "status": "auto"
+  },
+  "0003bd134798": {
+    "zh": "标量加法上的分布性：\\ ((k + h) A = kA + hA\\)。标量的总和分布在单个矩阵上。",
+    "status": "auto"
+  },
+  "af11dc4cf2c6": {
+    "zh": "矩阵乘法",
+    "status": "auto"
+  },
+  "213ed416d002": {
+    "zh": "A + (-A) = O",
+    "status": "auto"
+  },
+  "2ba74695d85c": {
+    "zh": "c_ {ij} =\\ sum_ {k = 1} ^ {n} a_ {ik}\\, b_ {kj}",
+    "status": "auto"
+  },
+  "688e7b9ea327": {
+    "zh": "2A =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "48835b4c0f52": {
+    "zh": "1 & -2 & 4\\\\ [6pt]",
+    "status": "auto"
+  },
+  "2599e66f7fb0": {
+    "zh": "基质加法上的分布性：\\ (k (A + B) = kA + kB\\)。标量分布在矩阵的总和上。",
+    "status": "auto"
+  },
+  "d9b6467b1afa": {
+    "zh": "每个条目\\ (c_ {ij}\\)的计算方法是将\\ (A\\)的第\\ (i\\)行与\\ (B\\)的第\\ (j\\)列相乘：将相应的条目成对相乘，并将结果相加。以下示例计算\\ (2\\ times 3\\)矩阵\\ (A\\)和\\ (3\\ times 2\\)矩阵\\ (B\\)的乘积：",
+    "status": "auto"
+  },
+  "68a53d0836be": {
+    "zh": "1 & -2 & 3\\\\ [6pt]",
+    "status": "auto"
+  },
+  "053ae2d4833e": {
+    "zh": "0 & 4 & -1",
+    "status": "auto"
+  },
+  "483b63642731": {
+    "zh": "2 & 0\\\\ [6pt]",
+    "status": "auto"
+  },
+  "00f1ad5b2018": {
+    "zh": "4-3、",
+    "status": "auto"
+  },
+  "aafda3cbf1cb": {
+    "zh": "乘积矩阵\\ (AB\\)的条目\\ (c_ {ij}\\)是通过将\\ (A\\)的每一行乘以\\ (B\\)的每一列获得的：",
+    "status": "auto"
+  },
+  "044b200971ce": {
+    "zh": "c_ {11} & = (1) (2) + (-2) (-1) + (3) (4) = 16\\\\ [6pt]",
+    "status": "auto"
+  },
+  "2e41a4c21175": {
+    "zh": "矩阵乘法是在兼容性条件下定义的：只有当\\ (A\\)的列数等于\\ (B\\)的行数时，才定义乘积\\ (AB\\)。如果\\ (A\\)具有维度\\ (m\\ times n\\)且\\ (B\\)具有维度\\ (n\\ times p\\) ，则乘积\\ (C = AB\\)是维度\\ (m\\ times p\\)的矩阵，其位置\\ ((i, j)\\)中的元素定义为：",
+    "status": "auto"
+  },
+  "285705fa2ddd": {
+    "zh": "c_ {21} & = (0) (2) + (4) (-1) + (-1) (4) = -8\\\\ [6pt]",
+    "status": "auto"
+  },
+  "006ea9e5cb65": {
+    "zh": "结果是一个\\ (2\\ times 2\\)矩阵，与维度\\ (m\\ times p = 2\\ times 2\\)一致。",
+    "status": "auto"
+  },
+  "d1b8c46896e5": {
+    "zh": "16 & -19\\\\ [6pt]",
+    "status": "auto"
+  },
+  "d68466a3214c": {
+    "zh": ">矩阵乘法通常不是可交换的：即使同时定义了\\\\ (AB\\\\)和\\\\ (BA\\\\) ，通常也是\\\\ (AB\\\\ neq BA\\\\)。这区分了矩阵乘法和实数乘法，是其最重要的特性之一。",
+    "status": "auto"
+  },
+  "babba0e90d16": {
+    "zh": "-1 & 5\\\\ [6pt]",
+    "status": "auto"
+  },
+  "2a3088ee2c00": {
+    "zh": "秩序的单位矩阵\\ (n\\) ，表示为\\ (I_n\\) ，是\\ (n\\ times n\\)正方形矩阵，主对角线上为1 ，其他位置为零。它充当乘法恒等式：对于兼容维度的任何矩阵\\ (A\\) ，",
+    "status": "auto"
+  },
+  "fb2ec93bc193": {
+    "zh": "8/23",
+    "status": "auto"
+  },
+  "1b9586253a6a": {
+    "zh": "C = AB =\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "f30edb7d270c": {
+    "zh": "c_ {22} & = (0) (0) + (4) (5) + (-1) (-3) = 23",
+    "status": "auto"
+  },
+  "18e7e36fe2a4": {
+    "zh": "c_ {12} & = (1) (0) + (-2) (5) + (3) (-3) = -19\\\\ [6pt]",
+    "status": "auto"
+  },
+  "4f70b89f1ccd": {
+    "zh": "\\ end {aligned}",
+    "status": "auto"
+  },
+  "a01ac3d1475a": {
+    "zh": "A\\ cdot I = I\\ cdot A = A",
+    "status": "auto"
+  },
+  "d6b92d1852ca": {
+    "zh": "3 & 5\\\\ [6pt]",
+    "status": "auto"
+  },
+  "85b559a08c70": {
+    "zh": "\\ begin {pmatrix}",
+    "status": "auto"
+  },
+  "7a7e3701e04a": {
+    "zh": "1-2",
+    "status": "auto"
+  },
+  "e350fa780efc": {
+    "zh": "0 ... 1",
+    "status": "auto"
+  },
+  "b9757df1b6eb": {
+    "zh": "=",
+    "status": "auto"
+  },
+  "16780510e339": {
+    "zh": "右分配率：\\ ((B + C) A = BA + CA\\)。乘法从右边分布在相加上。",
+    "status": "auto"
+  },
+  "882112475f3c": {
+    "zh": "对于兼容维度的矩阵，矩阵乘法满足以下属性：",
+    "status": "auto"
+  },
+  "205c292c9954": {
+    "zh": "左分配率：\\ (A (B + C) = AB + AC\\)。乘法分布在左侧的加法上。",
+    "status": "auto"
+  },
+  "cd9412abeae5": {
+    "zh": "\\cdot",
+    "status": "auto"
+  },
+  "1cc7e2ce0921": {
+    "zh": "1 & 0 \\\\[6pt]",
+    "status": "auto"
+  },
+  "0571dbf497b5": {
+    "zh": "结合律：\\( (AB)C = A(BC) \\)。连续乘积的计算顺序不影响结果。",
+    "status": "auto"
+  },
+  "c9d24e9c5581": {
+    "zh": "非交换性：一般情况下，\\ (AB\\ neq BA\\) ，即使两种产品都已定义。",
+    "status": "auto"
+  },
+  "22cddb765271": {
+    "zh": "对于顺序的每个平方矩阵\\ (n\\) ，一个关联一个实数，称为 [n.决定因素](../determinant/) 矩阵，表示为\\ (\\ det (A)\\)。行列式编码有关矩阵的基本信息，包括它是否可逆，如 [逆矩阵](../inverse-matrix/)。",
+    "status": "auto"
   }
 }

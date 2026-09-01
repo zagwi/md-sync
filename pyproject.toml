@@ -10,7 +10,6 @@ keywords = ["markdown", "sync", "translation", "html", "resume", "static-site"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
-    "Environment :: X11 Applications :: Qt",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -40,14 +39,12 @@ Documentation = "https://github.com/md-sync/md-sync#readme"
 
 [project.optional-dependencies]
 build = ["pyinstaller>=6.0"]
-gui = ["PySide6>=6.6"]
 pdf = ["PyMuPDF>=1.24"]
 dev = [
     "ruff>=0.5",
     "mypy>=1.10",
     "pre-commit>=3.7",
     "pytest>=8.0",
-    "PySide6>=6.6",
 ]
 
 [project.scripts]
@@ -84,7 +81,6 @@ ignore = ["E501", "F403", "F405", "E402", "B027", "C401", "SIM102", "SIM110", "E
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B", "SIM", "PTH"]
 "tests/manual/*" = ["E402", "B", "SIM", "PTH", "UP"]
-"md_sync/qt_app.py" = ["B", "SIM", "PTH", "E702"]
 
 [tool.ruff.format]
 quote-style = "double"

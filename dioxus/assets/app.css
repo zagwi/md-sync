@@ -27,6 +27,9 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* 原生 button 重置：避免 UA 默认边框/背景/字体（折叠头、开关、分段控件等裸 button） */
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 0; }
+
 html, body { height: 100%; }
 
 body {
@@ -97,6 +100,7 @@ body {
 .mt-2 { margin-top: 0.5rem; }
 .mt-3 { margin-top: 0.75rem; }
 .mt-4 { margin-top: 1rem; }
+.mt-5 { margin-top: 1.25rem; }
 .mb-1 { margin-bottom: 0.25rem; }
 .mb-2\.5 { margin-bottom: 0.625rem; }
 .mb-3 { margin-bottom: 0.75rem; }
@@ -137,6 +141,8 @@ body {
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
   overflow: hidden;
 }
+/* 含绝对定位浮层的卡片不裁剪内部弹层（如渲染主题下拉），避免下拉被卡片外框遮挡 */
+.card:has(.theme-dropdown) { overflow: visible; }
 .card-header {
   display: flex;
   flex-direction: column;
@@ -206,6 +212,9 @@ body {
 .btn-ghost { background: transparent; color: hsl(var(--foreground)); }
 .btn-ghost:hover:not(:disabled) { background: hsl(var(--accent)); }
 .btn-icon { width: 2.25rem; padding-inline: 0; }
+/* 危险操作：outline + 红色调，用于「清除输出」「规范化源文档」等破坏性动作 */
+.btn-outline-destructive { border-color: hsl(var(--destructive) / 0.35); background: transparent; color: hsl(var(--destructive)); }
+.btn-outline-destructive:hover:not(:disabled) { background: hsl(var(--destructive) / 0.08); }
 
 /* ── 表单 ── */
 .field-label {
@@ -347,19 +356,6 @@ body {
 .format-icon.docx { background: hsl(221 83% 53% / 0.12); color: hsl(221 83% 48%); }
 .format-icon.violet { background: hsl(263 70% 50% / 0.12); color: hsl(263 70% 48%); }
 .format-icon.neutral { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
-
-.format-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 9999px;
-  flex-shrink: 0;
-}
-.format-dot.html { background: hsl(25 95% 45%); }
-.format-dot.markdown { background: hsl(207 90% 36%); }
-.format-dot.destructive { background: hsl(var(--destructive)); }
-.format-dot.docx { background: hsl(221 83% 48%); }
-.format-dot.violet { background: hsl(263 70% 48%); }
-.format-dot.neutral { background: hsl(var(--muted-foreground)); }
 
 /* ── 主题下拉 ── */
 .theme-dropdown {

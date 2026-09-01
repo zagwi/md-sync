@@ -4,7 +4,6 @@ use serde_json::json;
 use crate::api;
 use crate::state::{save_and_apply, toggle_in_vec, AppState, StatusKind};
 use crate::types::FORMATS;
-use crate::components::theme_dropdown::ThemeDropdown;
 
 #[component]
 pub fn OutputSettings() -> Element {
@@ -44,63 +43,62 @@ pub fn OutputSettings() -> Element {
     rsx! {
         section { class: "card",
             div { class: "card-header",
-                div { class: "flex items-center gap-2",
+                div { class: "flex items-center gap-2 flex-wrap",
                     svg { class: "size-4 text-muted-foreground", fill: "none", view_box: "0 0 24 24", stroke: "currentColor", stroke_width: "2",
                         path { stroke_linecap: "round", stroke_linejoin: "round",
                             d: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" }
                         path { stroke_linecap: "round", stroke_linejoin: "round", d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }
                     }
                     h2 { class: "text-base font-semibold", "输出设置" }
+                    p { class: "text-xs text-muted-foreground ml-auto text-right",
+                        "配置源文档、输出目录与输出格式。" }
                 }
-                p { class: "text-xs text-muted-foreground", "配置源文档、输出目录、渲染主题与产物格式。" }
             }
 
             div { class: "card-body flex flex-col gap-4",
-                // 源文件
-                div { class: "flex flex-col sm:flex-row gap-2 items-end",
-                    div { class: "flex-1",
-                        label { class: "field-label", "源文件（Markdown）" }
-                        input {
-                            class: "shadcn-input",
-                            placeholder: "选择或输入 .md 源文件路径",
-                            value: "{state.source.read()}",
-                            onchange: move |evt| {
-                                let v = evt.value();
-                                if v.is_empty() { return; }
-                                *state.source.write() = v.clone();
-                                dioxus::prelude::spawn(async move {
-                                    save_and_apply(state, json!({ "source": v })).await;
-                                });
-                            },
+                // 源文件 / 输出目录：md 以上两列并排，窄屏堆叠
+                div { class: "grid grid-cols-1 md:grid-cols-2 gap-4",
+                    // 源文件
+                    div { class: "flex flex-col sm:flex-row gap-2 items-end",
+                        div { class: "flex-1",
+                            label { class: "field-label", "源文件（Markdown）" }
+                            input {
+                                class: "shadcn-input",
+                                placeholder: "选择或输入 .md 源文件路径",
+                                value: "{state.source.read()}",
+                                onchange: move |evt| {
+                                    let v = evt.value();
+                                    if v.is_empty() { return; }
+                                    *state.source.write() = v.clone();
+                                    dioxus::prelude::spawn(async move {
+                                        save_and_apply(state, json!({ "source": v })).await;
+                                    });
+                                },
+                            }
                         }
+                        UploadButton { state: state }
                     }
-                    UploadButton { state: state }
-                }
 
-                // 输出目录
-                div { class: "flex flex-col sm:flex-row gap-2 items-end",
-                    div { class: "flex-1",
-                        label { class: "field-label", "输出目录" }
-                        input {
-                            class: "shadcn-input",
-                            placeholder: "选择或输入输出目录路径",
-                            value: "{state.output_dir.read()}",
-                            onchange: move |evt| {
-                                let v = evt.value();
-                                if v.is_empty() { return; }
-                                *state.output_dir.write() = v.clone();
-                                dioxus::prelude::spawn(async move {
-                                    save_and_apply(state, json!({ "output_dir": v })).await;
-                                });
-                            },
+                    // 输出目录
+                    div { class: "flex flex-col sm:flex-row gap-2 items-end",
+                        div { class: "flex-1",
+                            label { class: "field-label", "输出目录" }
+                            input {
+                                class: "shadcn-input",
+                                placeholder: "选择或输入输出目录路径",
+                                value: "{state.output_dir.read()}",
+                                onchange: move |evt| {
+                                    let v = evt.value();
+                                    if v.is_empty() { return; }
+                                    *state.output_dir.write() = v.clone();
+                                    dioxus::prelude::spawn(async move {
+                                        save_and_apply(state, json!({ "output_dir": v })).await;
+                                    });
+                                },
+                            }
                         }
+                        BrowseDirButton { state: state }
                     }
-                    BrowseDirButton { state: state }
-                }
-
-                // 渲染主题
-                div { class: "grid grid-cols-1 sm:grid-cols-2 gap-3",
-                    ThemeDropdown { state: state }
                 }
 
                 // 输出格式矩阵
@@ -149,8 +147,8 @@ pub fn OutputSettings() -> Element {
                 // 命名策略 + 状态闪烁
                 div { class: "flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3",
                     div {
-                        p { class: "text-sm font-medium", "产物重名处理" }
-                        p { class: "text-xs text-muted-foreground", "多版本产物文件名冲突时的策略" }
+                        p { class: "text-sm font-medium", "输出重名处理" }
+                        p { class: "text-xs text-muted-foreground", "多版本输出文件名冲突时的策略" }
                     }
                     div { class: "flex items-center gap-4 sm:ml-auto",
                         div { class: "segmented",
@@ -194,33 +192,10 @@ pub fn OutputSettings() -> Element {
                     }
                 }
 
-                // CTA
-                div { class: "flex flex-wrap items-center gap-2.5 border-t border-border pt-4",
+                // CTA：主操作在前，监听次之，导航/危险操作右侧分组
+                div { class: "flex flex-wrap items-center gap-2.5 mt-5",
                     button {
-                        class: if watching { "btn btn-outline" } else { "btn btn-primary" },
-                        disabled: syncing,
-                        onclick: move |_| {
-                            let next = !*state.watching.read();
-                            dioxus::prelude::spawn(async move {
-                                match api::set_watch(next).await {
-                                    Ok(r) => {
-                                        *state.watching.write() = r.watching;
-                                        *state.status.write() = StatusKind::Ok(
-                                            if r.watching { "已开启持续监听".into() } else { "已停止监听".into() }
-                                        );
-                                    }
-                                    Err(e) => *state.status.write() = StatusKind::Err(e),
-                                }
-                            });
-                        },
-                        svg { class: "size-4", fill: "none", view_box: "0 0 24 24", stroke: "currentColor", stroke_width: "2",
-                            path { stroke_linecap: "round", stroke_linejoin: "round",
-                                d: if watching { "M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9 9.5v5a1 1 0 001.5.87l4.5-2.5a1 1 0 000-1.74L10.5 8.63A1 1 0 009 9.5z" } else { "M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" } }
-                        }
-                        if watching { "停止监听" } else { "持续监听" }
-                    }
-                    button {
-                        class: "btn btn-secondary",
+                        class: "btn btn-primary",
                         disabled: syncing || busy,
                         onclick: move |_| {
                             let mut state = state;
@@ -247,33 +222,17 @@ pub fn OutputSettings() -> Element {
                         if syncing { "同步中…" } else { "同步输出" }
                     }
                     button {
-                        class: "btn btn-ghost",
-                        onclick: move |_| {
-                            let mut state = state;
-                            dioxus::prelude::spawn(async move {
-                                match api::refresh().await {
-                                    Ok(_) => {
-                                        *state.status.write() = StatusKind::Ok("输出状态已刷新".into());
-                                        if let Ok(p) = api::fetch_state().await { state.apply_runtime(&p); }
-                                    }
-                                    Err(e) => *state.status.write() = StatusKind::Err(e),
-                                }
-                            });
-                        },
-                        svg { class: "size-4", fill: "none", view_box: "0 0 24 24", stroke: "currentColor", stroke_width: "2",
-                            path { stroke_linecap: "round", stroke_linejoin: "round",
-                                d: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" } }
-                        "刷新状态"
-                    }
-                    button {
                         class: "btn btn-outline",
+                        disabled: syncing,
                         onclick: move |_| {
-                            let mut state = state;
+                            let next = !*state.watching.read();
                             dioxus::prelude::spawn(async move {
-                                match api::clear_outputs().await {
+                                match api::set_watch(next).await {
                                     Ok(r) => {
-                                        *state.status.write() = StatusKind::Ok(format!("已清除 {} 个产物", r.removed));
-                                        if let Ok(p) = api::fetch_state().await { state.apply_runtime(&p); }
+                                        *state.watching.write() = r.watching;
+                                        *state.status.write() = StatusKind::Ok(
+                                            if r.watching { "已开启持续监听".into() } else { "已停止监听".into() }
+                                        );
                                     }
                                     Err(e) => *state.status.write() = StatusKind::Err(e),
                                 }
@@ -281,11 +240,12 @@ pub fn OutputSettings() -> Element {
                         },
                         svg { class: "size-4", fill: "none", view_box: "0 0 24 24", stroke: "currentColor", stroke_width: "2",
                             path { stroke_linecap: "round", stroke_linejoin: "round",
-                                d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" } }
-                        "清除产物"
+                                d: if watching { "M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9 9.5v5a1 1 0 001.5.87l4.5-2.5a1 1 0 000-1.74L10.5 8.63A1 1 0 009 9.5z" } else { "M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" } }
+                        }
+                        if watching { "停止监听" } else { "持续监听" }
                     }
                     button {
-                        class: "btn btn-outline",
+                        class: "btn btn-outline ml-auto",
                         onclick: move |_| {
                             let mut state = state;
                             dioxus::prelude::spawn(async move {
@@ -303,6 +263,25 @@ pub fn OutputSettings() -> Element {
                             path { stroke_linecap: "round", stroke_linejoin: "round",
                                 d: "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" } }
                         "打开输出目录"
+                    }
+                    button {
+                        class: "btn btn-outline-destructive",
+                        onclick: move |_| {
+                            let mut state = state;
+                            dioxus::prelude::spawn(async move {
+                                match api::clear_outputs().await {
+                                    Ok(r) => {
+                                        *state.status.write() = StatusKind::Ok(format!("已清除 {} 个输出", r.removed));
+                                        if let Ok(p) = api::fetch_state().await { state.apply_runtime(&p); }
+                                    }
+                                    Err(e) => *state.status.write() = StatusKind::Err(e),
+                                }
+                            });
+                        },
+                        svg { class: "size-4", fill: "none", view_box: "0 0 24 24", stroke: "currentColor", stroke_width: "2",
+                            path { stroke_linecap: "round", stroke_linejoin: "round",
+                                d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" } }
+                        "清除输出"
                     }
                 }
             }
